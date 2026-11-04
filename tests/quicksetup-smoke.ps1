@@ -572,7 +572,8 @@ try {
   Assert-True (@($catalog | Where-Object { $_.id -eq "github-copilot-desktop" -and $_.windowsMode -eq "manual" }).Count -eq 1) "The canonical catalog did not identify Copilot Desktop as manual."
   Assert-True (@($catalog | Where-Object { $_.id -eq "docker-desktop" -and $_.windowsMode -eq "detection-only" }).Count -eq 1) "The canonical catalog did not mark Docker Desktop as detection-only."
   $guiList = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "list" }
-  Assert-True ($guiList.ExitCode -eq 0 -and $guiList.Events.Count -eq 1 -and $guiList.Events[0].type -eq "catalog") "The GUI worker list action did not return one structured catalog event: $($guiList.StandardError)"
+  $guiListEvents = $guiList.Events | ConvertTo-Json -Compress -Depth 12
+  Assert-True ($guiList.ExitCode -eq 0 -and $guiList.Events.Count -eq 1 -and $guiList.Events[0].type -eq "catalog") "The GUI worker list action did not return one structured catalog event (exit $($guiList.ExitCode); stderr: $($guiList.StandardError); events: $guiListEvents)"
   Assert-True (@($guiList.Events[0].data | Where-Object { $_.id -eq "github-copilot-desktop" }).Count -eq 1) "The GUI worker catalog omitted Copilot Desktop."
   $guiPlan = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "plan"; packageIds = @("github-cli") }
   Assert-True ($guiPlan.ExitCode -eq 0 -and @($guiPlan.Events | Where-Object { $_.type -eq "install-plan" }).Count -eq 1) "The GUI worker did not return a structured install plan: $($guiPlan.StandardError)"
