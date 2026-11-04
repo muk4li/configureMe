@@ -63,7 +63,7 @@ Der JSON-Report enthält OS/Architektur, Bootstrap-Version, angeforderte Version
 
 | Paket | Verhalten dieses MVP |
 |---|---|
-| Git | Manuelle Installation über [Git for Windows](https://github.com/git-for-windows/git/releases/latest). Der offizielle x64-EXE-Release liefert SHA-256-Metadaten, dokumentiert aber keinen vom Bootstrap verifizierten Silent-Aufruf und keine dafür gepinnte Publisher-Identität; daher keine automatische Ausführung |
+| Git | Neuester offizieller Git-for-Windows-x64-EXE-Release. Vor dem Start werden der offizielle Release-Digest (wenn veröffentlicht), PE-Architektur und gültige Authenticode-Signatur geprüft; der Signer-CN muss exakt `Johannes Schindelin` sein. Verwendet werden ausschließlich `/VERYSILENT /NORESTART /NOCANCEL /SP-`; vorhandene Installationen werden nicht aktualisiert, und es wird kein Neustart angefordert |
 | GitHub CLI | Offizielle x64-MSI aus dem GitHub-CLI-Releasefeed; gültige GitHub-Authenticode-Signatur erforderlich; Start über `msiexec.exe` |
 | VS Code | Offizielles stabiles Benutzer-Setup; Signaturprüfung; Dark-Theme-Einstellung nur im Profil des aktuellen Benutzers, vorherige Datei wird gesichert |
 | Node.js | Neueste stabile Active-LTS-Version aus dem offiziellen Node-Index; x64-MSI mit SHA-256 aus `SHASUMS256.txt` plus Authenticode |
@@ -73,12 +73,15 @@ Der JSON-Report enthält OS/Architektur, Bootstrap-Version, angeforderte Version
 | 7-Zip | x64-Installer-Link von der offiziellen Projektseite; gültige Herausgebersignatur; `/S` ist in der Hersteller-FAQ dokumentiert |
 | Firefox | Offizieller stabiler x64-Enterprise-MSI-Kanal; gültige Mozilla-Signatur; bestehende Profile bleiben unberührt |
 | OpenSSH Client | Vorhandene Windows Capability erkennen; fehlend nur nach Bestätigung und in erhöhter Sitzung über `Add-WindowsCapability` ergänzen |
-| Copilot Desktop | Vorhandene Installation erkennen; andernfalls manuelle Prüfung der [offiziellen Releases](https://github.com/github/app/releases), des Pakets, der Signatur und der Server-Unterstützung |
+| Copilot Desktop | Vorhandene Installation (einschließlich Version 1.1.34) erkennen und unverändert lassen. Das offizielle Release veröffentlicht ein Windows-x64-Setup-EXE; es wird nicht automatisch ausgeführt, weil keine verifizierten stillen Schalter oder per-user-Installationsdetails dokumentiert sind. Für Windows Server 2022 ist eine ausdrückliche optionale Kompatibilitätsbestätigung erforderlich; danach nur interaktive Installation nach Prüfung der gültigen `GitHub, Inc.`-Signatur |
+| LibreOffice | Optionaler Katalogeintrag; nicht im Standardprofil ausgewählt. Nur nach Ergänzung der Paket-ID `libreoffice` in der lokalen Profil-JSON wird das offizielle stabile x64-MSI geladen und dessen veröffentlichter SHA-256 sowie Authenticode-Signer `The Document Foundation` geprüft |
 | Teams | Kein klassischer Teams-Client; Web-Fallback unter [teams.microsoft.com/v2](https://teams.microsoft.com/v2) |
 | Docker Desktop | Nur lesende Versions-/Kontext-/Engine-Diagnose, wenn vorhanden; sonst `Not supported`. Docker Desktop ist auf Windows Server 2022 nicht offiziell unterstützt und wird nicht installiert oder geändert |
 | Copilot CLI | Optionaler manueller Installationsweg nach [offizieller Anleitung](https://docs.github.com/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli); Node.js 22+ bzw. PowerShell 6+ und berechtigtes Abo erforderlich |
 
-Die bestehenden Katalog-IDs `powershell` und `7zip` bleiben für v1-Profile erhalten; das neue Serverprofil verwendet zusätzlich die stabilen Namen `powershell-7` und `seven-zip`. Copilot Desktop und CLI haben eigene IDs (`github-copilot-desktop`, `github-copilot-cli`) und sind nicht mit der vorhandenen VS-Code-Copilot-Erweiterung `github-copilot` gleichzusetzen. Es gibt keine Änderung am Repository `myConfigs-data`.
+LibreOffice wird nicht standardmäßig ausgewählt. Um es optional zu installieren, ergänze `"libreoffice"` in `bootstrap\windows-server-2022-developer\config\windows-server-2022-developer.json` unter `packages`, prüfe den Plan erneut mit `-DryRun` und bestätige erst dann den Installationsplan. Copilot Desktop und CLI haben eigene IDs (`github-copilot-desktop`, `github-copilot-cli`) und sind nicht mit der vorhandenen VS-Code-Copilot-Erweiterung `github-copilot` gleichzusetzen. Es gibt keine Änderung am Repository `myConfigs-data`.
+
+Zum Zeitpunkt der Prüfung war `v1.1.34` das aktuelle Copilot-Desktop-Release. Das offizielle GitHub-Release-API-Metadatum für `GitHub-Copilot-windows-x64-setup.exe` veröffentlichte SHA-256 `4a8070a63b228895344a6c4f4536a01a62085e02821829b21786638234580e00`; der heruntergeladene Installer stimmte damit überein und hatte eine gültige Authenticode-Signatur mit Subject `CN="GitHub, Inc.", O="GitHub, Inc.", L=San Francisco, S=California, C=US`. Diese Prüfung ist kein Versions-Pin. Da kein offiziell dokumentierter stiller Installationsweg oder per-user-Verhalten verifiziert wurde, führt configureMe das EXE nicht aus.
 
 Jede automatische Paketdefinition legt den Installer-Typ (`msi`, `exe`, `msix` oder `windows-capability`) und die Zielarchitektur explizit fest. MSI-Dateien werden als OLE/Windows-Installer-Datenbank sowie über Windows Installer auf x64 geprüft und mit `msiexec.exe` gestartet. EXE-Dateien müssen gültige PE-Dateien sein und werden direkt mit paketbezogenen Argumenten gestartet. Beim Python-MSIX werden Manifestidentität und x64-Architektur geprüft; `Add-AppxPackage` prüft die kryptografische MSIX-Signatur und Publisherbindung vor der Bereitstellung. Das offizielle `pymanager install default` installiert anschließend die stabile Python-Laufzeit per-user. HTTPS, erlaubte Redirect-Hosts, erwarteter Herausgeber und verfügbare offizielle Hash-Metadaten werden vor der Ausführung geprüft. Bei nicht vertrauenswürdiger Signatur, Publisher, Hash, Architektur oder Dateityp wird die Ausführung verweigert und ein manueller Schritt berichtet.
 
@@ -92,7 +95,7 @@ Für eine manuelle VS-Code-Erweiterungsauswahl sind die Marketplace-IDs: Python 
 - **Microsoft/Teams:** im Browser auf `https://teams.microsoft.com/v2` anmelden.
 - **Copilot Desktop oder CLI:** separat starten und den offiziellen interaktiven GitHub-Anmeldeablauf verwenden.
 
-Der Bootstrap wurde mit Windows PowerShell 5.1 auf dem Entwicklungsserver syntaktisch und per Mock-Smoke-Test/Dry-Run geprüft. Es wurde keine echte Softwareinstallation ausgeführt. Ein frischer Windows Server 2022 End-to-End-Installationslauf und die praktische Herstellerunterstützung jeder Anwendung sind damit nicht bestätigt.
+Der Bootstrap wurde syntaktisch und mit Mock-Smoke-Tests sowie Dry-Runs geprüft. Es wurden keine echten Installer ausgeführt. Das CI validiert auf `windows-2022` ebenfalls nur Mock-Tests, Dry-Runs und ZIP-Erstellung. Es fand kein frischer Windows Server 2022 End-to-End-Installationslauf statt; die praktische Herstellerunterstützung jeder Anwendung ist nicht bestätigt. Copilot Desktop bleibt auf diesem Betriebssystem insbesondere von der ausdrücklichen optionalen Kompatibilitätsbestätigung abhängig.
 
 ## Release-Erstellung
 

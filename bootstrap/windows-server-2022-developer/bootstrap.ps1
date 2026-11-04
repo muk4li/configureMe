@@ -4,6 +4,7 @@ param(
   [switch]$DryRun,
   [switch]$List,
   [switch]$SkipOptional,
+  [switch]$ConfirmCopilotDesktopServerCompatibility,
   [string]$ReportPath = ".\setup-report.json"
 )
 
@@ -20,9 +21,9 @@ Import-Module (Join-Path $moduleDirectory "Installation.psm1") -Force
 $knownPackageIds = @(
   "git", "github-cli", "vscode", "nodejs-lts", "python", "dotnet-10-sdk",
   "powershell-7", "seven-zip", "firefox", "openssh-client",
-  "github-copilot-desktop", "teams", "docker-desktop", "github-copilot-cli"
+  "github-copilot-desktop", "libreoffice", "teams", "docker-desktop", "github-copilot-cli"
 )
-$optionalPackageIds = @("github-copilot-desktop", "teams", "docker-desktop", "github-copilot-cli")
+$optionalPackageIds = @("github-copilot-desktop", "libreoffice", "teams", "docker-desktop", "github-copilot-cli")
 $requestedVersions = @{
   "git" = "latest stable"
   "github-cli" = "latest stable"
@@ -34,7 +35,8 @@ $requestedVersions = @{
   "seven-zip" = "latest stable"
   "firefox" = "latest stable"
   "openssh-client" = "Windows Server capability"
-  "github-copilot-desktop" = "Latest official release; manual review"
+  "github-copilot-desktop" = "Latest official release; interactive install only"
+  "libreoffice" = "Latest stable x64 release; optional"
   "teams" = "Current desktop client; support not asserted"
   "docker-desktop" = "Existing installation only; no updates"
   "github-copilot-cli" = "Optional; user-selected"
@@ -130,7 +132,8 @@ foreach ($id in $profileData.packages) {
       $result.Notes += " The detected client is not an assertion of official Windows Server 2022 support; the web fallback remains available."
     }
     if ($id -eq "github-copilot-desktop") {
-      $result.Notes += " Practical use on Windows Server 2022 is not an official support guarantee."
+      $result.InstallerType = "exe"
+      $result.Notes += " Existing app and user data were not modified. Practical use on Windows Server 2022 is not an official support guarantee."
     }
     $packageResults.Add($result)
     continue
@@ -145,11 +148,20 @@ foreach ($id in $profileData.packages) {
   }
 
   if ($id -eq "github-copilot-desktop") {
+    $definition = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview
     $result.Status = "Requires user action"
-    $result.Source = "https://github.com/github/app/releases"
-    $result.Method = "Manual review and installation"
-    $result.Notes = "Copilot Desktop is distinct from VS Code extensions. No verified Server 2022 support, installer type, or silent installation route is asserted. Review the official release and sign in interactively."
-    $manualSteps.Add("Review and install GitHub Copilot Desktop manually only after checking the official release, package type, publisher signature, and Server support: $($result.Source)")
+    $result.InstallerType = $definition.InstallerType
+    $result.Source = $definition.Source
+    $result.Method = $definition.Method
+    $result.CompatibilityConfirmed = [bool]$ConfirmCopilotDesktopServerCompatibility
+    $result.Notes = $definition.Notes
+    if ($ConfirmCopilotDesktopServerCompatibility) {
+      $result.Notes += " The operator explicitly confirmed compatibility for this Server 2022 deployment; this is not an official support statement."
+      $manualSteps.Add("Install GitHub Copilot Desktop interactively from the official release after verifying the GitHub, Inc. signature. Sign in interactively; the bootstrap does not handle tokens: $($result.Source)")
+    } else {
+      $result.Notes += " Windows Server 2022 compatibility has not been confirmed for this deployment."
+      $manualSteps.Add("GitHub Copilot Desktop requires user action. To record optional compatibility confirmation for this Server 2022 deployment, rerun with -ConfirmCopilotDesktopServerCompatibility, then install interactively from the official release after verifying the GitHub, Inc. signature: $($result.Source)")
+    }
     $packageResults.Add($result)
     continue
   }
@@ -272,13 +284,17 @@ if ($DryRun) {
           $result.RestartRequired = [bool]$installResult.RestartRequired
           Sync-QuickSetupProcessPath
           $result.DetectedVersion = Get-QuickSetupDetectedVersion -Id $id
-          if ($result.DetectedVersion) {
+          $verifiedVersion = $result.DetectedVersion
+          $versionVerified = $verifiedVersion -and (
+            $id -ne "git" -or $verifiedVersion -match "^\d+\.\d+(?:\.\d+)?(?:\.windows\.\d+)?$"
+          )
+          if ($versionVerified) {
             $result.Status = "Installed"
             $result.Notes = $definition.Notes
           } else {
             $result.Status = "Failed"
-            $result.ErrorCode = "verification-failed"
-            $result.Notes = "The installer returned success, but the installed package could not be verified with its expected command or registry entry."
+            $result.ErrorCode = if ($id -eq "git") { "git-version-verification-failed" } else { "verification-failed" }
+            $result.Notes = if ($id -eq "git") { "The installer returned success, but git --version did not return a verified version." } else { "The installer returned success, but the installed package could not be verified with its expected command or registry entry." }
             $errors.Add("$($result.Name) could not be verified after installation.")
           }
         }

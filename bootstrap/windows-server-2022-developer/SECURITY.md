@@ -13,11 +13,12 @@ The bootstrap itself is local and version-controlled. It does not fetch or execu
 - A typed `YES` is required before installer or Windows Optional Capability changes. No reboot is requested.
 - System-wide installers and OpenSSH Client require an elevated session. The bootstrap does not elevate itself; rerun it under the same Windows account, not `Run as different user`.
 - Python uses the official x64 Python install manager MSIX and its documented per-user runtime installation command. The package publisher and architecture are checked before deployment; Windows validates the package signature. Existing Python versions and virtual environments are not removed.
-- Git is detected but not silently installed. Its current official release EXE has release SHA-256 metadata, but this bootstrap has not verified an authoritative supported silent command line or pinned signer identity. Install it manually from the official Git for Windows release page.
+- Git is installed only when missing, from the official Git for Windows x64 release asset. The official asset digest is checked when available, the Authenticode signature must be valid with the exact signer common name `Johannes Schindelin`, and only the documented Inno Setup switches `/VERYSILENT /NORESTART /NOCANCEL /SP-` are used. Existing Git is never updated.
 - VS Code's Dark Modern setting is merged for the current Windows user after a backup. JSONC/invalid settings are left unchanged with a manual instruction.
 - Docker Desktop is only inspected if present. It is not supported on Windows Server 2022 and is never installed or reconfigured here.
-- Copilot Desktop is a separate app from editor extensions. Its installer/support status must be reviewed manually. Teams uses the web fallback. Copilot CLI remains optional and user-installed.
-- Git remains manual because a vendor-supported silent invocation and expected publisher identity have not been verified for this bootstrap.
+- Copilot Desktop is a separate app from editor extensions. The official Windows x64 release EXE has no verified documented silent switches or per-user installation behavior, so it remains interactive and manual. Windows Server 2022 compatibility is not asserted and requires explicit optional confirmation; authenticate interactively and never provide tokens to the bootstrap.
+- LibreOffice is an optional profile package, not selected by default. When selected, the official stable x64 MSI's published SHA-256 and valid `The Document Foundation` Authenticode signer are required before execution.
+- Teams uses the web fallback. Copilot CLI remains optional and user-installed.
 - GitHub and Microsoft sign-in are interactive user actions after setup. Credentials and tokens are never put in the archive or reports.
 
 ## Package manifest and CI
