@@ -24,7 +24,8 @@ function Invoke-GuiWorkerTestRequest {
   $process = New-Object System.Diagnostics.Process
   $process.StartInfo = $startInfo
   if (!$process.Start()) { throw "The GUI worker process could not be started." }
-  $process.StandardInput.WriteLine((ConvertTo-Json -InputObject $Request -Compress -Depth 8))
+  $requestJson = ConvertTo-Json -InputObject $Request -Compress -Depth 8
+  $process.StandardInput.WriteLine($requestJson)
   $process.StandardInput.Close()
   $output = $process.StandardOutput.ReadToEnd()
   $errorOutput = $process.StandardError.ReadToEnd()
@@ -33,6 +34,7 @@ function Invoke-GuiWorkerTestRequest {
     ExitCode = $process.ExitCode
     Events = @($output -split "`r?`n" | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
     StandardError = $errorOutput
+    RequestJson = $requestJson
   }
 }
 
@@ -573,7 +575,7 @@ try {
   Assert-True (@($catalog | Where-Object { $_.id -eq "docker-desktop" -and $_.windowsMode -eq "detection-only" }).Count -eq 1) "The canonical catalog did not mark Docker Desktop as detection-only."
   $guiList = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "list" }
   $guiListEvents = $guiList.Events | ConvertTo-Json -Compress -Depth 12
-  Assert-True ($guiList.ExitCode -eq 0 -and $guiList.Events.Count -eq 1 -and $guiList.Events[0].type -eq "catalog") "The GUI worker list action did not return one structured catalog event (exit $($guiList.ExitCode); stderr: $($guiList.StandardError); events: $guiListEvents)"
+  Assert-True ($guiList.ExitCode -eq 0 -and $guiList.Events.Count -eq 1 -and $guiList.Events[0].type -eq "catalog") "The GUI worker list action did not return one structured catalog event (exit $($guiList.ExitCode); request: $($guiList.RequestJson); stderr: $($guiList.StandardError); events: $guiListEvents)"
   Assert-True (@($guiList.Events[0].data | Where-Object { $_.id -eq "github-copilot-desktop" }).Count -eq 1) "The GUI worker catalog omitted Copilot Desktop."
   $guiPlan = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "plan"; packageIds = @("github-cli") }
   Assert-True ($guiPlan.ExitCode -eq 0 -and @($guiPlan.Events | Where-Object { $_.type -eq "install-plan" }).Count -eq 1) "The GUI worker did not return a structured install plan: $($guiPlan.StandardError)"
