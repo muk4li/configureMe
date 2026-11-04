@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "windows-server",
+  "name": "Windows Server Setup",
+  "description": "Command-line essentials. GUI applications are intentionally excluded.",
+  "platform": "windows",
+  "packages": ["git", "github-cli", "powershell"],
+  "options": {
+    "interactiveAuthentication": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "linux-developer",
+  "name": "Linux Developer Setup",
+  "description": "A roadmap profile. Linux installation adapters are not yet enabled.",
+  "platform": "linux",
+  "packages": [],
+  "options": {
+    "configureGit": true
+  }
+}

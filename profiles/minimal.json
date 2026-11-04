@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal",
+  "name": "Minimal Setup",
+  "description": "Essential tools for a fresh Windows workstation.",
+  "platform": "windows",
+  "packages": ["git", "github-cli", "7zip"],
+  "options": {
+    "configureGit": true,
+    "interactiveAuthentication": true
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "ai-developer",
+  "name": "AI Developer Setup",
+  "description": "Developer tools with a reminder to install AI products manually.",
+  "platform": "windows",
+  "packages": ["git", "github-cli", "vscode", "nodejs-lts", "python"],
+  "options": {
+    "configureGit": true,
+    "interactiveAuthentication": true
+  }
+}
