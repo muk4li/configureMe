@@ -10,8 +10,9 @@ import { expandDependencies, listProfiles, LocalConfigurationProvider, planSchem
 describe("profile configuration", () => {
   it("loads every bundled profile through the validator", async () => {
     const profiles = await listProfiles();
-    expect(profiles).toHaveLength(5);
+    expect(profiles).toHaveLength(6);
     expect(profiles.map((profile) => profile.id)).toContain("developer");
+    expect(profiles.map((profile) => profile.id)).toContain("windows-server-2022-developer");
   });
 
   it("rejects duplicate and unknown package identifiers", () => {
@@ -45,12 +46,21 @@ describe("profile configuration", () => {
     expect(expandDependencies(["github-cli", "git"], "windows")).toEqual(["git", "github-cli"]);
   });
 
-  it("defines a fixed WinGet ID for every automated Windows catalog entry", () => {
+  it("defines fixed WinGet IDs for legacy WinGet strategies", () => {
     expect(
       catalog
-        .filter((item) => item.platforms.windows?.supported)
+        .filter((item) => item.windowsPackageId)
         .every((item) => typeof item.windowsPackageId === "string" && item.windowsPackageId.length > 0),
     ).toBe(true);
+  });
+
+  it("includes the standalone Windows Server profile and its required package IDs", async () => {
+    const profile = await new LocalConfigurationProvider().getProfile("windows-server-2022-developer");
+    expect(profile?.packages).toEqual(expect.arrayContaining([
+      "git", "github-cli", "vscode", "nodejs-lts", "python", "dotnet-10-sdk",
+      "powershell-7", "seven-zip", "firefox", "openssh-client",
+      "github-copilot-desktop", "teams", "docker-desktop", "github-copilot-cli",
+    ]));
   });
 
   it("generates a fixed, locally confirmed Windows bootstrap from the catalog", () => {

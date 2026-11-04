@@ -5,6 +5,22 @@ import { catalog, type PackageDefinition } from "@/lib/catalog";
 import type { Profile } from "@/lib/profiles";
 
 const steps = ["Target", "Packages", "Review"];
+const serverQuickSetupLabels: Record<string, string> = {
+  git: "Manual fallback",
+  "github-cli": "Official signed MSI",
+  vscode: "Official signed user setup",
+  "nodejs-lts": "Active LTS MSI",
+  python: "Manual fallback",
+  "dotnet-10-sdk": "Official signed SDK installer",
+  "powershell-7": "Official signed MSI",
+  "seven-zip": "Official signed installer",
+  firefox: "Official signed MSI",
+  "openssh-client": "Windows capability",
+  "github-copilot-desktop": "Manual / support warning",
+  teams: "Web fallback",
+  "docker-desktop": "Detection only / unsupported",
+  "github-copilot-cli": "Optional / manual",
+};
 
 function dependenciesFor(ids: string[]) {
   const resolved = new Set<string>();
@@ -29,8 +45,10 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
   const [downloaded, setDownloaded] = useState(false);
   const resolvedIds = useMemo(() => dependenciesFor(packageIds), [packageIds]);
   const availablePackages = useMemo(
-    () => catalog.filter((item) => item.platforms.windows?.supported),
-    [],
+    () => catalog.filter((item) => item.platforms.windows?.supported && (
+      profile?.id === "windows-server-2022-developer" || Boolean(item.windowsPackageId)
+    )),
+    [profile?.id],
   );
 
   function chooseProfile(id: string) {
@@ -71,7 +89,9 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `configureme-${profile.id}.zip`;
+      link.download = profile.id === "windows-server-2022-developer"
+        ? "configureMe-WindowsServer2022-Developer-QuickSetup.zip"
+        : `configureme-${profile.id}.zip`;
       document.body.append(link);
       link.click();
       link.remove();
@@ -87,9 +107,9 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
   const stepContent = step === 0 ? (
     <>
       <h2>Choose your starting profile</h2>
-      <p>Automated bootstrap is currently in preview for Windows x64 only. Windows Server allows command-line tools only; other platforms are planned.</p>
+      <p>Automated bootstrap is currently in preview for Windows x64 only. The Windows Server 2022 profile uses a standalone PowerShell package without a WinGet dependency.</p>
       <div className="choice-list">
-        <label className="choice-row"><input type="radio" name="platform" checked readOnly /><span><strong>Windows x64</strong><small>Windows 10/11 preview; Windows Server is restricted to command-line packages.</small></span><em>Preview</em></label>
+        <label className="choice-row"><input type="radio" name="platform" checked readOnly /><span><strong>Windows x64</strong><small>Windows 10/11 legacy WinGet preview and a standalone Windows Server 2022 quick setup.</small></span><em>Preview</em></label>
         <label className="choice-row" aria-disabled="true"><input type="radio" name="platform" disabled /><span><strong>Linux</strong><small>Package adapters are not enabled yet.</small></span><em>Planned</em></label>
         <label className="choice-row" aria-disabled="true"><input type="radio" name="platform" disabled /><span><strong>macOS</strong><small>Homebrew / PKG support is not enabled yet.</small></span><em>Planned</em></label>
         <label className="field-label" htmlFor="profile-select">Profile</label>
@@ -101,13 +121,17 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
   ) : step === 1 ? (
     <>
       <h2>Select the packages</h2>
-      <p>Only packages with a fixed, catalog-owned WinGet strategy are available for this Windows plan.</p>
+      <p>{profile?.id === "windows-server-2022-developer"
+        ? "The standalone package uses verified official installers where available and reports manual or unsupported items explicitly."
+        : "This legacy Windows plan includes only packages with a fixed, catalog-owned WinGet strategy."}</p>
       <div className="choice-list">
         {availablePackages.map((item: PackageDefinition) => (
           <label className="choice-row" key={item.id}>
             <input type="checkbox" checked={packageIds.includes(item.id)} onChange={() => togglePackage(item.id)} />
             <span><strong>{item.name}</strong><small>{item.description}</small></span>
-            <em>WinGet</em>
+            <em>{profile?.id === "windows-server-2022-developer"
+              ? serverQuickSetupLabels[item.id]
+              : item.platforms.windows?.label}</em>
           </label>
         ))}
       </div>
@@ -118,9 +142,9 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
       <h2>Review before downloading</h2>
       <p>The bootstrap checks the machine, shows the requested packages, and asks you to type YES before installation.</p>
       <div className="panel" style={{ padding: 14 }}>
-        <div className="summary-row"><span>Operating system</span><strong>{profile?.id === "windows-server" ? "Windows Server · x64 (limited)" : "Windows 10 / 11 · x64"}</strong></div>
+        <div className="summary-row"><span>Operating system</span><strong>{profile?.id === "windows-server-2022-developer" ? "Windows Server 2022 Desktop Experience · x64" : profile?.id === "windows-server" ? "Windows Server · x64 (limited)" : "Windows 10 / 11 · x64"}</strong></div>
         <div className="summary-row"><span>Profile</span><strong>{profile?.name}</strong></div>
-        <div className="summary-row"><span>Installer</span><strong>WinGet, if available</strong></div>
+        <div className="summary-row"><span>Installer</span><strong>{profile?.id === "windows-server-2022-developer" ? "Standalone PowerShell bootstrap; no WinGet required" : "WinGet"}</strong></div>
         <ul className="summary-packages">{resolvedIds.map((id) => <li key={id}>{catalog.find((item) => item.id === id)?.name ?? id}</li>)}</ul>
       </div>
       {error && <div className="error-note" role="alert">{error}</div>}

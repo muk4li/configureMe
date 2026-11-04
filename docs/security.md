@@ -29,3 +29,11 @@ Die Artefakte sind **nicht signiert**. Es gibt keinen eingebetteten, unabhängig
 | Unbeabsichtigte Installation | Lokaler Dry-Run, sichtbare Zusammenfassung und explizite Eingabe `YES`; der Browser installiert nichts. Kein automatischer Neustart oder Sicherheits-Bypass. |
 
 Die WinGet-CLI und die jeweiligen Paketquellen bleiben externe Vertrauensabhängigkeiten. Die App pinnt keine Paketversionen. Prüfe Bundle und Paketquelle vor dem Einsatz auf einem wichtigen System.
+
+## Standalone Windows Server 2022 Quick Setup
+
+Das Profil `windows-server-2022-developer` ist ein getrenntes, versioniertes ZIP-Paket mit lokalem PowerShell-5.1-Einstiegspunkt und geprüften Modulen. Es benötigt weder das Webportal noch WinGet. Profile enthalten nur fest bekannte IDs, keine URLs, Argumente oder Befehle. Der Installationspfad verwendet ausschließlich HTTPS mit regulärer Zertifikatsprüfung, begrenzten Wiederholungen und Redirect-Host-Allowlist. Signaturen müssen gültig sein und zum erwarteten Herausgeber passen; verfügbare offizielle Hash-Metadaten werden zusätzlich geprüft. Es wird kein heruntergeladenes Skript direkt ausgeführt.
+
+Git, Python, Copilot Desktop und Copilot CLI haben bewusst nur manuelle Hinweise. Teams wird als Web-Fallback behandelt. Docker Desktop wird ausschließlich erkannt und lesend inspiziert; eine vorhandene Installation wird nicht geändert. OpenSSH Client nutzt die Windows Capability nach gesonderter bestätigter Installation. Der Report enthält nur Paket-, Versions-, OS- und Fehlerdaten, keine Tokens oder Umgebungsvariablen.
+
+Der GitHub-Release/ZIP-Prozess ist aktuell unsigniert. Die neben dem ZIP erzeugte SHA-256-Datei erkennt nur versehentliche Korruption und ist kein unabhängiger Vertrauensanker. Bis ein Signatur-/Provenienzprozess eingerichtet ist, darf das Paket nicht als vollständig vertrauenswürdiges öffentliches Onboarding beworben werden. Der neue Pfad wurde auf dem Entwicklungsserver per PowerShell-5.1-Syntaxcheck und Dry-Run geprüft; eine echte Installation oder ein frischer Windows Server 2022 End-to-End-Test fand nicht statt. Details stehen in [der Quick-Setup-Kurzanleitung](quickstart-windows-server-2022.md).

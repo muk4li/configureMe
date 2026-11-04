@@ -1,12 +1,12 @@
 # Windows-Bootstrap
 
-Der MVP erzeugt einen Windows-x64-Plan für die im Katalog freigegebenen WinGet-IDs. Windows 10/11 ist die primäre Zielumgebung. Windows Server wird nicht als vollständig validiert beworben; dort lässt der Bootstrap nur Git, GitHub CLI und PowerShell 7 zu.
+configureMe enthält zwei Windows-Installationspfade:
 
-Benötigt werden Windows PowerShell 5.1, WinGet (App Installer) und Internetzugang. Git, Node.js, Python oder GitHub CLI müssen nicht vorinstalliert sein. Ist WinGet nicht verfügbar, bricht das Skript ab, bevor es Software installiert, und nennt offizielle manuelle Quellen.
+- Die bestehenden Windows-Profile verwenden weiterhin die festen WinGet-IDs aus dem Katalog.
+- Das Profil `windows-server-2022-developer` erzeugt ein eigenständiges ZIP unter `bootstrap\windows-server-2022-developer`. Dieses ZIP läuft lokal mit Windows PowerShell 5.1 und benötigt weder WinGet noch den configureMe-Webserver. Das vollständige Zielsystem ist Windows Server 2022 x64 mit Desktop Experience.
 
-1. ZIP vom vertrauenswürdigen configureMe-Portal herunterladen und Inhalte prüfen.
-2. `.\install.ps1 -DryRun` in Windows PowerShell ausführen.
-3. Den Plan und die Paketliste prüfen.
-4. `.\install.ps1` ausführen und nur nach eigener Prüfung exakt `YES` bestätigen.
+Für den Quick Setup Ablauf, Status je Paket, Report-Formate, Quellen und Release-Hinweise siehe [Kurzanleitung Windows Server 2022](quickstart-windows-server-2022.md). Das ZIP kann reproduzierbar mit `scripts\New-WindowsServer2022QuickSetup.ps1` gebaut werden.
 
-Der Installer fordert selbst keine Administratorrechte an. Einzelne WinGet-Installer können eigene Dialoge anzeigen. Installationsfehler werden gesammelt; ein erneuter Lauf überspringt erkannte Programme. Die Prüfsumme ist keine Signatur. Windows-Bootstrap wurde in dieser Entwicklungsumgebung nicht auf einem frischen Windows-Zielsystem end-to-end ausgeführt und bleibt Preview.
+Automatische Herstellerinstallationen erfolgen erst nach einer sichtbaren Planübersicht und der Eingabe `YES`. Bereits installierte Programme werden nicht aktualisiert. Der Bootstrap prüft Downloads per HTTPS/TLS, erwartete Redirect-Hosts, Authenticode-Herausgeber und verfügbare offizielle Hash-Metadaten. Für Git und Python bleiben sichere manuelle Wege; OpenSSH erfordert Administratorrechte. Docker Desktop wird auf Server nicht installiert und nur lesend geprüft. Teams erhält einen Web-Fallback.
+
+Das ZIP ist aktuell nicht signiert. Ein SHA-256-Beileger ist kein Herkunftsnachweis. Weder Release-Signierung noch ein frischer Windows Server 2022 End-to-End-Installationslauf sind durch dieses MVP zugesichert. Es wurden keine Softwareinstallationen auf dem Entwicklungsserver ausgeführt.
