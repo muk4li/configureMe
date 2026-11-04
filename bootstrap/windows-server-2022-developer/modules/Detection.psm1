@@ -274,6 +274,7 @@ function Get-QuickSetupPythonDiagnostics {
   $python = Get-Command python -ErrorAction SilentlyContinue | Select-Object -First 1
   $py = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
   $version = $null
+  $launcherVersion = $null
   $pipAvailable = $false
   if ($python) {
     try {
@@ -283,13 +284,34 @@ function Get-QuickSetupPythonDiagnostics {
       $pipAvailable = ($LASTEXITCODE -eq 0 -and $pipOutput -match "pip\s+\d+")
     } catch { }
   }
+  if ($py) {
+    try {
+      $output = & $py.Source --version 2>&1 | Out-String
+      if ($LASTEXITCODE -eq 0 -and $output -match "Python\s+(\d+\.\d+\.\d+)") {
+        $launcherVersion = $Matches[1]
+      }
+    } catch { }
+  }
   [pscustomobject]@{
     Version = $version
+    LauncherVersion = $launcherVersion
     PythonCommand = [bool]$python
     PyLauncher = [bool]$py
     Pip = $pipAvailable
-    Complete = [bool]($python -and $py -and $pipAvailable)
+    Complete = [bool]($python -and $version -and $py -and $launcherVersion -and $pipAvailable)
   }
+}
+
+function Sync-QuickSetupProcessPath {
+  param(
+    [string]$MachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine"),
+    [string]$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  )
+
+  $pathEntries = @($env:Path -split ";" | Where-Object { $_ })
+  $pathEntries += @($MachinePath -split ";" | Where-Object { $_ })
+  $pathEntries += @($UserPath -split ";" | Where-Object { $_ })
+  $env:Path = (@($pathEntries | Select-Object -Unique) -join ";")
 }
 
 function Get-QuickSetupWebView2Version {
@@ -345,4 +367,4 @@ function Set-QuickSetupVsCodeDarkTheme {
   [pscustomobject]@{ Success = $true; Notes = "Dark theme set for the current Windows user only." }
 }
 
-Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme
+Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme

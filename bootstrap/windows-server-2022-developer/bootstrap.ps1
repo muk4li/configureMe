@@ -8,7 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$bootstrapVersion = "0.1.0-preview"
+$bootstrapVersion = "0.2.0"
 $root = $PSScriptRoot
 $moduleDirectory = Join-Path $root "modules"
 Import-Module (Join-Path $moduleDirectory "Logging.psm1") -Force
@@ -28,7 +28,7 @@ $requestedVersions = @{
   "github-cli" = "latest stable"
   "vscode" = "latest stable"
   "nodejs-lts" = "latest stable Active LTS"
-  "python" = "latest stable"
+  "python" = "latest stable via Python install manager"
   "dotnet-10-sdk" = "latest stable .NET 10 SDK"
   "powershell-7" = "latest stable 7.x"
   "seven-zip" = "latest stable"
@@ -182,6 +182,8 @@ foreach ($id in $profileData.packages) {
     if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
       $result.Status = "Requires user action"
       $result.Source = "https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse"
+      $result.InstallerType = "windows-capability"
+      $result.RequiresAdministrator = $true
       $result.Method = "Windows Optional Capability (administrator required)"
       $result.Notes = "Open an elevated PowerShell session for the confirmed Windows capability step, or follow Microsoft's instructions."
       $manualSteps.Add("Install the OpenSSH Client capability from an elevated PowerShell session: $($result.Source)")
@@ -200,6 +202,8 @@ foreach ($id in $profileData.packages) {
     } else {
       $result.RequestedVersion = $definition.Version
       $result.Source = $definition.Source
+      $result.InstallerType = $definition.InstallerType
+      $result.RequiresAdministrator = [bool]$definition.RequiresAdministrator
       $result.Method = $definition.Method
       $result.Notes = $definition.Notes
       if (!$definition.Automatic) {
@@ -209,6 +213,10 @@ foreach ($id in $profileData.packages) {
         $result.Status = "Requires user action"
         $result.Notes = "Dry run only; no installer was downloaded or executed. $($definition.Notes)"
         $plannedInstallations.Add([pscustomobject]@{ Id = $id; Result = $result; Definition = $definition })
+      } elseif ($definition.RequiresAdministrator -and !(Test-QuickSetupAdministratorRequirement -RequiresAdministrator $true -IsAdministrator ([Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))) {
+        $result.Status = "Requires user action"
+        $result.Notes = "This installation requires an elevated session. No installer was downloaded or started. $($definition.Notes)"
+        $manualSteps.Add("$($result.Name) requires administrator rights. Re-run the reviewed bootstrap elevated using the same Windows account; do not use Run as different user.")
       } else {
         $plannedInstallations.Add([pscustomobject]@{ Id = $id; Result = $result; Definition = $definition })
       }
@@ -228,7 +236,7 @@ foreach ($id in $profileData.packages) {
 Write-Host ""
 Write-Host "Planned package actions:"
 foreach ($result in $packageResults) {
-  Write-Host ("- {0}: {1}; requested: {2}; detected: {3}; {4}" -f $result.Name, $result.Status, $result.RequestedVersion, $(if ($result.DetectedVersion) { $result.DetectedVersion } else { "not installed" }), $result.Method)
+  Write-Host ("- {0}: {1}; type: {2}; administrator required: {3}; requested: {4}; detected: {5}; {6}" -f $result.Name, $result.Status, $result.InstallerType, $result.RequiresAdministrator, $result.RequestedVersion, $(if ($result.DetectedVersion) { $result.DetectedVersion } else { "not installed" }), $result.Method)
 }
 if ($DryRun) {
   if ($plannedInstallations.Count -gt 0) {
@@ -251,6 +259,8 @@ if ($DryRun) {
         $definition = $planned.Definition
         $result.RequestedVersion = $definition.Version
         $result.Source = $definition.Source
+        $result.InstallerType = $definition.InstallerType
+        $result.RequiresAdministrator = [bool]$definition.RequiresAdministrator
         $result.Method = $definition.Method
         $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $definition
         if ($installResult.ExitCode -notin @(0, 3010)) {
@@ -260,6 +270,7 @@ if ($DryRun) {
           $errors.Add("$($result.Name) installer exit code $($installResult.ExitCode).")
         } else {
           $result.RestartRequired = [bool]$installResult.RestartRequired
+          Sync-QuickSetupProcessPath
           $result.DetectedVersion = Get-QuickSetupDetectedVersion -Id $id
           if ($result.DetectedVersion) {
             $result.Status = "Installed"
@@ -314,7 +325,7 @@ foreach ($result in $packageResults) {
   }
   if ($result.Id -eq "python" -and $result.Status -in @("Installed", "Already installed")) {
     $pythonDiagnostics = Get-QuickSetupPythonDiagnostics
-    $result.Notes += " Python command: $($pythonDiagnostics.PythonCommand); py launcher: $($pythonDiagnostics.PyLauncher); pip: $($pythonDiagnostics.Pip)."
+    $result.Notes += " Python: $($pythonDiagnostics.Version); py: $($pythonDiagnostics.LauncherVersion); pip: $($pythonDiagnostics.Pip)."
     if (!$pythonDiagnostics.Complete) {
       $manualSteps.Add("Verify or complete Python command setup with python --version, py --version, and python -m pip --version.")
     }

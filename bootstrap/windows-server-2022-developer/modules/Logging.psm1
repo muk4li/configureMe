@@ -24,6 +24,8 @@ function New-QuickSetupPackageResult {
     Name = $Name
     RequestedVersion = $RequestedVersion
     DetectedVersion = $null
+    InstallerType = "manual"
+    RequiresAdministrator = $false
     Source = $null
     Method = $null
     Status = "Requires user action"
@@ -63,7 +65,7 @@ function Write-QuickSetupReport {
     $requested = if ($package.RequestedVersion) { $package.RequestedVersion } else { "unspecified" }
     $source = if ($package.Source) { $package.Source } else { "none" }
     $errorCode = if ($package.ErrorCode) { $package.ErrorCode } else { "none" }
-    $lines += "- $($package.Name): $($package.Status); requested: $requested; detected: $version; source: $source; method: $($package.Method); error: $errorCode; restart required: $($package.RestartRequired); $($package.Notes)"
+    $lines += "- $($package.Name): $($package.Status); installer type: $($package.InstallerType); administrator required: $($package.RequiresAdministrator); requested: $requested; detected: $version; source: $source; method: $($package.Method); error: $errorCode; restart required: $($package.RestartRequired); $($package.Notes)"
   }
   if ($Report.ManualSteps.Count -gt 0) {
     $lines += ""
