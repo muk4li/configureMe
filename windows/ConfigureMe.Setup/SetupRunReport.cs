@@ -23,13 +23,31 @@ internal sealed class SetupRunReport
 
     public string JsonPath { get; }
 
-    public void Record(string id, string name, string status, string? notes = null, string? detectedVersion = null)
+    public void Record(string id, string name, string status, string? notes = null, string? detectedVersion = null,
+        string? errorCode = null, string? phase = null, int? workerExitCode = null)
     {
         _packages[id] = JsonSerializer.SerializeToElement(new
         {
             Id = id, Name = name, Status = status, Notes = notes, DetectedVersion = detectedVersion,
-            ErrorCode = status == "Failed" ? "gui-operation-error" : null
+            ErrorCode = errorCode ?? (status == "Failed" ? "gui-operation-error" : null),
+            Phase = phase, WorkerExitCode = workerExitCode
         });
+    }
+
+    public void RecordWorkerFailure(string id, string name, PowerShellWorkerException failure)
+    {
+        if (StatusOf(id) is null or "Pending")
+            Record(id, name, "Failed", failure.StructuredMessage ?? failure.Message,
+                errorCode: failure.ErrorCode ?? "powershell-worker-error", phase: failure.Phase,
+                workerExitCode: failure.ExitCode);
+        else if (_packages.TryGetValue(id, out var existing))
+        {
+            var fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(existing.GetRawText())!;
+            fields["WorkerExitCode"] = JsonSerializer.SerializeToElement(failure.ExitCode);
+            fields["WorkerPhase"] = JsonSerializer.SerializeToElement(failure.Phase);
+            fields["WorkerMessage"] = JsonSerializer.SerializeToElement(failure.StructuredMessage);
+            _packages[id] = JsonSerializer.SerializeToElement(fields);
+        }
     }
 
     public string? StatusOf(string id) => _packages.TryGetValue(id, out var package)
@@ -71,7 +89,8 @@ internal sealed class SetupRunReport
             _finishedAt = DateTime.UtcNow.ToString("o");
         }
         var packages = _packages.Values.ToArray();
-        var errors = packages.Where(item => PowerShellWorkerClient.ReadString(item, "Status") == "Failed")
+        var errors = packages.Where(item => PowerShellWorkerClient.ReadString(item, "Status") == "Failed" ||
+            PowerShellWorkerClient.ReadString(item, "ErrorCode") == "verification-refused")
             .Select(item => $"{PowerShellWorkerClient.ReadString(item, "Name")}: {PowerShellWorkerClient.ReadString(item, "Notes")}").ToArray();
         var summary = !_completed ? "In progress" : errors.Length > 0 ? "Completed with failures" :
             packages.Any(item => PowerShellWorkerClient.ReadString(item, "Status") == "Dry run") ? "Dry run complete" :

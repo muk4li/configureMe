@@ -92,10 +92,16 @@ try {
     Assert-True ($parseErrors.Count -eq 0) "PowerShell parse failed in $file`: $($parseErrors -join '; ')"
   }
 
+  Import-Module (Join-Path $moduleRoot "Logging.psm1") -Force
   Import-Module (Join-Path $moduleRoot "Verification.psm1") -Force
   Import-Module (Join-Path $moduleRoot "Downloads.psm1") -Force
   Import-Module (Join-Path $moduleRoot "Detection.psm1") -Force
   Import-Module (Join-Path $moduleRoot "Installation.psm1") -Force
+  Import-Module (Join-Path $moduleRoot "GuiWorker.psm1") -Force
+  $progressState = @{ Phase = "preparation" }
+  $callback = New-QuickSetupGuiProgressCallback -Id "python" -ProgressState $progressState
+  & $callback "installation-started"
+  Assert-True ($progressState.Phase -eq "installation-started") "The Python progress callback could not update its phase across module scope."
   $profile = Get-Content -LiteralPath (Join-Path $packageRoot "config\windows-server-2022-developer.json") -Raw | ConvertFrom-Json
   $expectedIds = @("git", "github-cli", "vscode", "nodejs-lts", "python", "dotnet-10-sdk", "powershell-7", "seven-zip", "firefox", "openssh-client")
   Assert-True (@($profile.packages | Where-Object { $_ -in $expectedIds }).Count -eq $expectedIds.Count) "The profile is missing a required P0 package."

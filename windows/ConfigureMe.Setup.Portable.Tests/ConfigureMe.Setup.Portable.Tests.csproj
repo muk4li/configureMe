@@ -21,12 +21,15 @@
     <Compile Include="..\ConfigureMe.Setup\PackageDownloadPlan.cs" Link="Source\PackageDownloadPlan.cs" />
     <Compile Include="..\ConfigureMe.Setup\PowerShellWorkerClient.cs" Link="Source\PowerShellWorkerClient.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupRunReport.cs" Link="Source\SetupRunReport.cs" />
+    <Compile Include="..\ConfigureMe.Setup\WorkerDiagnostic.cs" Link="Source\WorkerDiagnostic.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\GlobalUsings.cs" Link="Tests\GlobalUsings.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\EngineBundleTests.cs" Link="Tests\EngineBundleTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\InstallPlanResolverTests.cs" Link="Tests\InstallPlanResolverTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\PackageInstallQueueTests.cs" Link="Tests\PackageInstallQueueTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\PackageDownloadPlanTests.cs" Link="Tests\PackageDownloadPlanTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\PowerShellWorkerClientTests.cs" Link="Tests\PowerShellWorkerClientTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\GuiWorkerProcessTests.cs" Link="Tests\GuiWorkerProcessTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\WorkerDiagnosticTests.cs" Link="Tests\WorkerDiagnosticTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

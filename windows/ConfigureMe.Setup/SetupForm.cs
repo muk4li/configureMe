@@ -23,6 +23,7 @@ internal sealed class SetupForm : Form
     private readonly Dictionary<string, CheckBox> _selection = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Label> _statusLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Button> _packageButtons = new(StringComparer.Ordinal);
+    private readonly List<(TableLayoutPanel Group, int PackageCount)> _categoryGroups = [];
     private readonly HashSet<string> _developerProfileIds;
     private readonly PackageInstallQueue _installQueue;
     private readonly Label _systemLabel = new();
@@ -39,8 +40,11 @@ internal sealed class SetupForm : Form
     private readonly List<Button> _exclusiveButtons = [];
     private SetupRunReport? _runReport;
     private WorkerEvent? _lastSystemEvent;
+    private bool _reflowingPackages;
+    private bool _isAdministrator;
+    private string? _lastFailureText;
 
-    public SetupForm()
+    public SetupForm(bool runStartupDetection = true)
     {
         _engine = EngineBundle.ExtractVerified();
         _worker = new PowerShellWorkerClient(_engine);
@@ -61,7 +65,7 @@ internal sealed class SetupForm : Form
         {
             _states.Add(package.Id, new PackageViewState());
         }
-        _developerProfileIds = LoadDeveloperProfile(_engine.ProfilePath);
+        _developerProfileIds = LoadDeveloperProfile(_engine.ProfilePath, _packageById);
         _installQueue = new PackageInstallQueue(InstallOnePackageAsync);
         _installQueue.PackageStarted += id => PostToUi(() => QueuePackageStarted(id));
         _installQueue.PackageCompleted += id => PostToUi(() => QueuePackageFinished(id, null));
@@ -76,7 +80,8 @@ internal sealed class SetupForm : Form
         InitializeWindow();
         BuildLayout();
         BuildPackageList();
-        Shown += async (_, _) =>
+        LoadDeveloperProfileSelection();
+        if (runStartupDetection) Shown += async (_, _) =>
         {
             await CheckSystemAsync();
             LoadDeveloperProfileSelection();
@@ -94,6 +99,7 @@ internal sealed class SetupForm : Form
         Font = new Font("Segoe UI", 9F);
         AutoScaleMode = AutoScaleMode.Dpi;
         DoubleBuffered = true;
+        DpiChanged += (_, _) => BeginInvoke(ReflowPackageList);
         FormClosing += (_, args) =>
         {
             if (!_operationInProgress && !_installQueue.IsBusy) return;
@@ -159,6 +165,7 @@ internal sealed class SetupForm : Form
         var listPanel = new Panel { Dock = DockStyle.Fill, BackColor = WindowColor };
         var packageList = new FlowLayoutPanel
         {
+            Name = "PackageList",
             Dock = DockStyle.Fill,
             AutoScroll = true,
             FlowDirection = FlowDirection.TopDown,
@@ -240,59 +247,123 @@ internal sealed class SetupForm : Form
     {
         foreach (var category in _packages.GroupBy(item => item.Category))
         {
-            var group = new Panel
+            var packages = category.ToArray();
+            var group = new TableLayoutPanel
             {
-                Width = Math.Max(500, _packageList.ClientSize.Width - 20),
-                AutoSize = true,
+                Name = $"Category:{category.Key}",
+                ColumnCount = 1,
+                RowCount = packages.Length + 1,
+                AutoSize = false,
+                GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
                 BackColor = WindowColor,
-                Margin = new Padding(0, 0, 0, 12)
+                Margin = new Padding(0, 0, 0, 12),
+                Padding = new Padding(0, 0, 0, 6)
             };
+            group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             var heading = new Label
             {
+                Name = $"CategoryHeading:{category.Key}",
                 Text = category.Key,
                 Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
                 ForeColor = AccentColor,
-                Height = 30,
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
+                AutoEllipsis = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            group.Controls.Add(heading);
-            foreach (var package in category)
+            group.Controls.Add(heading, 0, 0);
+            for (var index = 0; index < packages.Length; index++)
             {
-                group.Controls.Add(CreatePackageRow(package));
+                group.Controls.Add(CreatePackageRow(packages[index]), 0, index + 1);
             }
+            _categoryGroups.Add((group, packages.Length));
             _packageList.Controls.Add(group);
         }
+        _packageList.SizeChanged += (_, _) => ReflowPackageList();
+        ReflowPackageList();
+    }
 
-        _packageList.SizeChanged += (_, _) =>
+    private void ReflowPackageList()
+    {
+        if (_reflowingPackages || _categoryGroups.Count == 0) return;
+        _reflowingPackages = true;
+        try
         {
-            foreach (Control control in _packageList.Controls)
+            _packageList.SuspendLayout();
+            var rowHeight = Math.Max(82, Font.Height * 4 + 22);
+            var headingHeight = Math.Max(32, Font.Height * 2 + 4);
+            var width = Math.Max(480, _packageList.ClientSize.Width - _packageList.Padding.Horizontal -
+                SystemInformation.VerticalScrollBarWidth - 4);
+            foreach (var (group, count) in _categoryGroups)
             {
-                control.Width = Math.Max(500, _packageList.ClientSize.Width - 25);
+                group.SuspendLayout();
+                group.Width = width;
+                group.Height = headingHeight + count * rowHeight + group.Padding.Vertical;
+                group.RowStyles.Clear();
+                group.RowStyles.Add(new RowStyle(SizeType.Absolute, headingHeight));
+                for (var index = 0; index < count; index++)
+                    group.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight));
+                group.ResumeLayout(true);
             }
-        };
+        }
+        finally
+        {
+            _packageList.ResumeLayout(true);
+            _reflowingPackages = false;
+        }
+    }
+
+    internal void AssertPackageLayout()
+    {
+        ReflowPackageList();
+        _packageList.PerformLayout();
+        var visibleRows = 0;
+        foreach (var (group, count) in _categoryGroups)
+        {
+            group.PerformLayout();
+            if (group.Width <= 0 || group.Height <= 0 || group.RowStyles.Count != count + 1)
+                throw new InvalidDataException($"Kategorie '{group.Name}' hat keine vollständige Größe.");
+            var previousBottom = -1;
+            for (var index = 0; index < count; index++)
+            {
+                var row = group.GetControlFromPosition(0, index + 1)
+                    ?? throw new InvalidDataException($"In '{group.Name}' fehlt Paketzeile {index + 1}.");
+                if (!group.Visible || !row.Visible || row.Height < Font.Height * 2 || row.Width < 400 || row.Top < previousBottom ||
+                    row.Bottom > group.ClientSize.Height || row.Controls.Count != 4)
+                    throw new InvalidDataException($"Paketzeile '{row.Name}' wird abgeschnitten oder überlagert.");
+                if (row.Controls.Find(row.Name.Replace("Package:", "PackageName:"), true).Length != 1 ||
+                    row.Controls.Find(row.Name.Replace("Package:", "PackageStatus:"), true).Length != 1)
+                    throw new InvalidDataException($"In '{row.Name}' fehlen sichtbare Paketinformationen.");
+                previousBottom = row.Bottom;
+                visibleRows++;
+            }
+        }
+        if (visibleRows != _packages.Count || visibleRows == 0)
+            throw new InvalidDataException("Die Paketliste enthält nicht alle unterstützten Katalogpakete.");
+        if (_packageList.ClientSize.Height < _categoryGroups.Sum(item => item.Group.Height) &&
+            !_packageList.VerticalScroll.Visible)
+            throw new InvalidDataException("Die lange Paketliste ist nicht vertikal scrollbar.");
     }
 
     private Control CreatePackageRow(PackageDefinition package)
     {
         var row = new TableLayoutPanel
         {
+            Name = $"Package:{package.Id}",
             ColumnCount = 4,
             RowCount = 1,
-            Height = 76,
-            Width = Math.Max(500, _packageList.ClientSize.Width - 20),
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Fill,
             BackColor = PanelColor,
             Margin = new Padding(0, 2, 0, 2),
             Padding = new Padding(10, 6, 8, 6)
         };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 132));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Math.Max(34, Font.Height * 2)));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Math.Max(132, Font.Height * 9)));
 
         var checkBox = new CheckBox
         {
+            Name = $"PackageSelection:{package.Id}",
             Dock = DockStyle.Fill,
             AutoSize = false,
             Text = "",
@@ -302,18 +373,33 @@ internal sealed class SetupForm : Form
         _selection.Add(package.Id, checkBox);
         row.Controls.Add(checkBox, 0, 0);
 
-        var description = new Label
+        var descriptionPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Text = $"{package.Name}\n{package.Description}",
-            ForeColor = Color.White,
-            AutoEllipsis = true,
-            TextAlign = ContentAlignment.MiddleLeft
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(0),
+            BackColor = PanelColor
         };
-        row.Controls.Add(description, 1, 0);
+        descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 48));
+        descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 52));
+        descriptionPanel.Controls.Add(new Label
+        {
+            Name = $"PackageName:{package.Id}", Text = package.Name,
+            Dock = DockStyle.Fill, Font = new Font(Font, FontStyle.Bold), ForeColor = Color.White,
+            AutoEllipsis = true, TextAlign = ContentAlignment.BottomLeft
+        }, 0, 0);
+        descriptionPanel.Controls.Add(new Label
+        {
+            Name = $"PackageDescription:{package.Id}", Text = package.Description,
+            Dock = DockStyle.Fill, ForeColor = MutedColor,
+            AutoEllipsis = true, TextAlign = ContentAlignment.TopLeft
+        }, 0, 1);
+        row.Controls.Add(descriptionPanel, 1, 0);
 
         var status = new Label
         {
+            Name = $"PackageStatus:{package.Id}",
             Dock = DockStyle.Fill,
             Text = "Nicht geprüft",
             ForeColor = MutedColor,
@@ -325,6 +411,7 @@ internal sealed class SetupForm : Form
 
         var action = new Button
         {
+            Name = $"PackageAction:{package.Id}",
             Text = package.WindowsMode == "automatic" ? "Installieren" : package.WindowsMode == "web-fallback" ? "Öffnen" : "Details",
             Dock = DockStyle.Fill,
             FlatStyle = FlatStyle.Flat,
@@ -383,14 +470,33 @@ internal sealed class SetupForm : Form
     {
         if (_operationInProgress || _installQueue.IsBusy) return;
         _operationInProgress = true;
+        _lastFailureText = null;
+        foreach (var (id, state) in _states)
+        {
+            state.Detection = PackageDetectionState.Checking;
+            state.Status = "Wird geprüft";
+            state.Error = null;
+            UpdatePackageRow(id);
+        }
         SetBusyState(true, "System und Programme werden geprüft …", marquee: true);
         try
         {
-            await _worker.RunAsync("detect", _packages.Select(item => item.Id).ToArray(), false, HandleWorkerEvent);
+            var detection = await _worker.RunAsync("detect", _packages.Select(item => item.Id).ToArray(), false);
+            foreach (var item in detection.Events) ApplyWorkerEvent(item);
             _currentActionLabel.Text = "Systemprüfung abgeschlossen.";
         }
         catch (Exception exception)
         {
+            ShowFailure(WorkerDiagnostic.Describe("Systemprüfung", "worker-error", "detection", exception.Message));
+            foreach (var (id, state) in _states.Where(item => item.Value.Detection == PackageDetectionState.Checking))
+            {
+                state.Detection = string.IsNullOrWhiteSpace(state.DetectedVersion)
+                    ? PackageDetectionState.Failed : PackageDetectionState.Installed;
+                state.Status = state.Detection == PackageDetectionState.Installed ? "Bereits installiert" : "Erkennung fehlgeschlagen";
+                state.Error = exception.Message;
+                UpdatePackageRow(id);
+            }
+            _currentActionLabel.Text = "Systemprüfung fehlgeschlagen; Paketstatus prüfen.";
             AppendLog($"Systemprüfung fehlgeschlagen: {exception.Message}", error: true);
             MessageBox.Show(this, exception.Message, "Systemprüfung fehlgeschlagen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
@@ -442,10 +548,19 @@ internal sealed class SetupForm : Form
             return;
         }
 
-        var toInstall = ordered.Where(id => !_states[id].IsInstalled).ToArray();
+        if (!dryRun && ordered.Any(id => _packageById[id].WindowsMode == "automatic" &&
+            _states[id].Detection is PackageDetectionState.Unknown or PackageDetectionState.Checking or PackageDetectionState.Failed))
+        {
+            MessageBox.Show(this, "Die Erkennung ist für mindestens ein automatisches Paket unvollständig. Bitte zuerst das System erneut prüfen.",
+                "Erkennung erforderlich", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var toInstall = ordered.Where(id => _states[id].Detection == PackageDetectionState.Missing).ToArray();
 
         _runReport = null;
         _reportPath = null;
+        _lastFailureText = null;
         _operationInProgress = true;
         SetBusyState(true, "Installationsplan wird vorbereitet …", marquee: true);
         try
@@ -460,6 +575,10 @@ internal sealed class SetupForm : Form
                 item => PowerShellWorkerClient.ReadString(item, "installerType"), StringComparer.Ordinal);
             if (ordered.Any(id => !installerTypes.ContainsKey(id)))
                 throw new InvalidDataException("Der Worker-Plan ist unvollständig.");
+            var administratorAvailable = planEvent.Data.EnumerateArray().ToDictionary(
+                item => PowerShellWorkerClient.ReadString(item, "id")!,
+                item => item.TryGetProperty("administratorAvailable", out var available) && available.ValueKind == JsonValueKind.True,
+                StringComparer.Ordinal);
             _runReport = new SetupRunReport();
             _reportPath = _runReport.JsonPath;
             if (_lastSystemEvent is not null) _runReport.Apply(_lastSystemEvent);
@@ -492,7 +611,8 @@ internal sealed class SetupForm : Form
                 return;
             }
 
-            var automaticPackages = toInstall.Where(id => PackageDownloadPlan.NeedsDownload(_packageById[id], installerTypes[id])).ToArray();
+            var automaticPackages = toInstall.Where(id => PackageDownloadPlan.NeedsDownload(_packageById[id], installerTypes[id]) &&
+                administratorAvailable[id]).ToArray();
             var downloaded = await DownloadSelectedPackagesAsync(automaticPackages);
             if (downloaded is null)
             {
@@ -505,10 +625,11 @@ internal sealed class SetupForm : Form
                 return;
             }
 
-            var queueIds = PackageDownloadPlan.SelectQueue(toInstall, _packageById, installerTypes, downloaded);
+            var queueIds = PackageDownloadPlan.SelectQueue(toInstall, _packageById, installerTypes, administratorAvailable, downloaded);
             foreach (var id in queueIds)
             {
-                _states[id].Status = _packageById[id].WindowsMode == "automatic" ? "Wartet auf Installation" : "Manuelle Aktion erforderlich";
+                _states[id].Status = !administratorAvailable[id] ? "Administratorrechte erforderlich" :
+                    _packageById[id].WindowsMode == "automatic" ? "Bereit zur Installation" : "Manuelle Aktion erforderlich";
                 UpdatePackageRow(id);
             }
             var added = _installQueue.Enqueue(queueIds);
@@ -523,6 +644,7 @@ internal sealed class SetupForm : Form
         {
             _runReport?.MarkPending("Failed", exception.Message);
             SaveRunReport(completed: true);
+            ShowFailure(WorkerDiagnostic.Describe("Installationsplan", "worker-error", "metadata", exception.Message));
             AppendLog($"Installationsplan fehlgeschlagen: {exception.Message}", error: true);
             MessageBox.Show(this, exception.Message, "Installationsplan fehlgeschlagen", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -577,12 +699,18 @@ internal sealed class SetupForm : Form
                 {
                     PostToUi(() =>
                     {
-                        _states[id].Status = "Fehlgeschlagen";
-                        _states[id].Error = exception.Message;
-                        _runReport?.Record(id, PackageName(id), "Failed", exception.Message);
+                        var failure = exception as PowerShellWorkerException;
+                        var code = failure?.ErrorCode ?? (failure?.Phase == "verification-started" ? "verification-error" : "download-error");
+                        var detail = WorkerDiagnostic.Describe(PackageName(id), code, failure?.Phase ?? "download-started",
+                            failure?.StructuredMessage ?? exception.Message, failure?.ExitCode);
+                        _states[id].Status = code == "verification-refused" ? "Integritätsprüfung verweigert" : "Fehlgeschlagen";
+                        _states[id].Error = detail;
+                        _runReport?.Record(id, PackageName(id), "Failed", detail,
+                            errorCode: code, phase: failure?.Phase ?? "download-started", workerExitCode: failure?.ExitCode);
                         SaveRunReport();
                         UpdatePackageRow(id);
-                        AppendLog($"Download oder Sicherheitsprüfung für {PackageName(id)} fehlgeschlagen: {exception.Message}", error: true);
+                        ShowFailure(detail);
+                        AppendLog(detail, error: true);
                     });
                     return (Id: id, Ready: false);
                 }
@@ -623,7 +751,7 @@ internal sealed class SetupForm : Form
         PostToUi(() => ApplyWorkerEvent(workerEvent));
     }
 
-    private void ApplyWorkerEvent(WorkerEvent workerEvent)
+    internal void ApplyWorkerEvent(WorkerEvent workerEvent)
     {
         if (workerEvent.Type == "system-detected") _lastSystemEvent = workerEvent;
         _runReport?.Apply(workerEvent);
@@ -635,9 +763,17 @@ internal sealed class SetupForm : Form
                 break;
             case "package-detected" when workerEvent.PackageId is { } detectedId && _states.TryGetValue(detectedId, out var detectedState):
                 detectedState.DetectedVersion = PowerShellWorkerClient.ReadString(workerEvent.Data, "detectedVersion");
-                detectedState.Status = detectedState.IsInstalled ? "Bereits installiert" : "Bereit";
+                detectedState.Detection = workerEvent.Status == "error" ? PackageDetectionState.Failed :
+                    !string.IsNullOrWhiteSpace(detectedState.DetectedVersion) ? PackageDetectionState.Installed : PackageDetectionState.Missing;
+                detectedState.Status = detectedState.IsInstalled ? "Bereits installiert" :
+                    detectedState.Detection == PackageDetectionState.Failed ? "Erkennung fehlgeschlagen" :
+                    _packageById[detectedId].WindowsMode == "detection-only" ? "Nicht unterstützt" :
+                    _packageById[detectedId].WindowsMode is "manual" or "web-fallback" ? "Manuelle Aktion erforderlich" :
+                    _packageById[detectedId].Elevated && !_isAdministrator ? "Administratorrechte erforderlich" : "Nicht installiert";
                 detectedState.Details = workerEvent.Data.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object
                     ? details.ToString() : PowerShellWorkerClient.ReadString(workerEvent.Data, "details");
+                detectedState.Error = workerEvent.Status == "error" ?
+                    PowerShellWorkerException.SafeText(workerEvent.Message) : null;
                 UpdatePackageRow(detectedId);
                 break;
             case "package-status" when workerEvent.PackageId is { } statusId && _states.TryGetValue(statusId, out var statusState):
@@ -670,10 +806,24 @@ internal sealed class SetupForm : Form
                 if (workerEvent.Data.ValueKind == JsonValueKind.Object)
                 {
                     finishedState.DetectedVersion = PowerShellWorkerClient.ReadString(workerEvent.Data, "DetectedVersion") ?? finishedState.DetectedVersion;
-                    finishedState.Error = PowerShellWorkerClient.ReadString(workerEvent.Data, "Notes");
+                    finishedState.Error = PowerShellWorkerException.SafeText(PowerShellWorkerClient.ReadString(workerEvent.Data, "Notes"));
                 }
-                finishedState.Status = TranslateStatus(workerEvent.Status);
+                if (workerEvent.Status is "Installed" or "Already installed") finishedState.Detection = PackageDetectionState.Installed;
+                var errorCode = PowerShellWorkerClient.ReadString(workerEvent.Data, "ErrorCode");
+                finishedState.Status = errorCode switch
+                {
+                    "administrator-required" => "Administratorrechte erforderlich",
+                    "verification-refused" => "Integritätsprüfung verweigert",
+                    _ => TranslateStatus(workerEvent.Status)
+                };
+                finishedState.CurrentPhase = PowerShellWorkerClient.ReadString(workerEvent.Data, "Phase");
                 UpdatePackageRow(finishedId);
+                if (workerEvent.Status == "Failed" || errorCode == "verification-refused")
+                    ShowFailure(WorkerDiagnostic.Describe(PackageName(finishedId), errorCode, finishedState.CurrentPhase,
+                        finishedState.Error, installerExitCode: workerEvent.Data.ValueKind == JsonValueKind.Object &&
+                            workerEvent.Data.TryGetProperty("InstallerExitCode", out var installerExit) &&
+                            installerExit.ValueKind == JsonValueKind.Number && installerExit.TryGetInt32(out var code)
+                                ? code : null));
                 AppendLog($"{PackageName(finishedId)}: {finishedState.Status}{(string.IsNullOrWhiteSpace(finishedState.Error) ? "" : $" — {finishedState.Error}")}",
                     error: workerEvent.Status == "Failed");
                 break;
@@ -686,7 +836,8 @@ internal sealed class SetupForm : Form
                 AppendLog(workerEvent.Message ?? "PowerShell-Engine", error: workerEvent.Status == "error");
                 break;
             case "worker-error":
-                AppendLog(workerEvent.Message ?? "Workerfehler", error: true);
+                ShowFailure(WorkerDiagnostic.Describe(PackageName(workerEvent.PackageId), "worker-error", null, workerEvent.Message));
+                AppendLog(PowerShellWorkerException.SafeText(workerEvent.Message) ?? "Workerfehler", error: true);
                 break;
         }
     }
@@ -696,6 +847,7 @@ internal sealed class SetupForm : Form
         if (workerEvent.PackageId is { } packageId && _states.TryGetValue(packageId, out var state))
         {
             state.Status = status;
+            state.CurrentPhase = workerEvent.Type;
             UpdatePackageRow(packageId);
             _currentActionLabel.Text = $"{status}: {PackageName(packageId)}";
         }
@@ -711,6 +863,7 @@ internal sealed class SetupForm : Form
         var architecture = PowerShellWorkerClient.ReadString(operatingSystem, "Architecture") ?? "unbekannt";
         var systemSupported = operatingSystem.TryGetProperty("IsSupported", out var supported) && supported.ValueKind == JsonValueKind.True;
         var administrator = data.TryGetProperty("isAdministrator", out var admin) && admin.ValueKind == JsonValueKind.True;
+        _isAdministrator = administrator;
         var adminText = administrator ? "Administratorrechte vorhanden" : "ohne Administratorrechte";
         _systemLabel.Text = $"{caption} · {architecture} · {adminText} · {(systemSupported ? "unterstütztes Ziel" : "nicht unterstütztes Ziel")}";
         _systemLabel.ForeColor = systemSupported ? MutedColor : Color.FromArgb(255, 190, 96);
@@ -763,12 +916,19 @@ internal sealed class SetupForm : Form
     {
         if (exception is not null)
         {
-            _states[id].Status = "Fehlgeschlagen";
-            _states[id].Error = exception.Message;
-            _runReport?.RecordFailureIfPending(id, PackageName(id), exception.Message);
+            var failure = exception as PowerShellWorkerException;
+            var detail = WorkerDiagnostic.Describe(PackageName(id), failure?.ErrorCode ?? "worker-error",
+                failure?.Phase ?? _states[id].CurrentPhase,
+                failure?.StructuredMessage ?? exception.Message, failure?.ExitCode);
+            _states[id].Status = failure?.ErrorCode == "verification-refused"
+                ? "Integritätsprüfung verweigert" : "Fehlgeschlagen";
+            _states[id].Error = detail;
+            if (failure is not null) _runReport?.RecordWorkerFailure(id, PackageName(id), failure);
+            else _runReport?.RecordFailureIfPending(id, PackageName(id), detail);
             SaveRunReport();
             UpdatePackageRow(id);
-            AppendLog($"{PackageName(id)} fehlgeschlagen: {exception.Message}", error: true);
+            ShowFailure(detail);
+            AppendLog(detail, error: true);
         }
 
         if (!_installQueue.IsBusy)
@@ -810,11 +970,12 @@ internal sealed class SetupForm : Form
         }
     }
 
-    private void SelectMissing()
+    internal void SelectMissing()
     {
         foreach (var (id, checkBox) in _selection)
         {
-            checkBox.Checked = !_states[id].IsInstalled;
+            checkBox.Checked = _states[id].Detection == PackageDetectionState.Missing &&
+                _packageById[id].WindowsMode == "automatic";
         }
     }
 
@@ -840,12 +1001,14 @@ internal sealed class SetupForm : Form
             : $"{state.Status} · {state.DetectedVersion}";
         _statusLabels[id].ForeColor = state.Status switch
         {
-            "Fehlgeschlagen" or "Nicht unterstützt" => Color.FromArgb(255, 138, 138),
-            "Erfolgreich" or "Bereits installiert" => Color.FromArgb(130, 220, 160),
+            "Fehlgeschlagen" or "Erkennung fehlgeschlagen" or "Integritätsprüfung verweigert" => Color.FromArgb(255, 138, 138),
+            "Nicht unterstützt" or "Administratorrechte erforderlich" => Color.FromArgb(255, 190, 96),
+            "Erfolgreich installiert" or "Bereits installiert" => Color.FromArgb(130, 220, 160),
             "Manuelle Aktion erforderlich" => Color.FromArgb(255, 190, 96),
             _ => MutedColor
         };
         var package = _packageById[id];
+        _toolTip.SetToolTip(_statusLabels[id], state.Error ?? _statusLabels[id].Text);
         var busy = _operationInProgress || _installQueue.IsBusy;
         _packageButtons[id].Enabled = !busy;
         _selection[id].Enabled = !busy;
@@ -913,7 +1076,10 @@ internal sealed class SetupForm : Form
 
     private void SetBusyState(bool busy, string message, bool marquee)
     {
-        _currentActionLabel.Text = message;
+        _currentActionLabel.Text = !busy && _lastFailureText is not null ?
+            _lastFailureText[..Math.Min(_lastFailureText.Length, 180)] : message;
+        _currentActionLabel.ForeColor = !busy && _lastFailureText is not null
+            ? Color.FromArgb(255, 138, 138) : MutedColor;
         _progressBar.Visible = busy && marquee;
         if (_progressBar.Visible)
         {
@@ -948,6 +1114,14 @@ internal sealed class SetupForm : Form
         _log.ScrollToCaret();
     }
 
+    private void ShowFailure(string detail)
+    {
+        _lastFailureText = detail;
+        _currentActionLabel.Text = detail[..Math.Min(detail.Length, 180)];
+        _currentActionLabel.ForeColor = Color.FromArgb(255, 138, 138);
+        _toolTip.SetToolTip(_currentActionLabel, detail);
+    }
+
     private string PackageName(string? id) =>
         id is not null && _packageById.TryGetValue(id, out var package) ? package.Name : id ?? "System";
 
@@ -955,9 +1129,9 @@ internal sealed class SetupForm : Form
     {
         "installed" or "Already installed" => "Bereits installiert",
         "already-installed" => "Bereits installiert",
-        "missing" => "Bereit",
-        "ready" => "Bereit",
-        "Installed" => "Erfolgreich",
+        "missing" => "Nicht installiert",
+        "ready" => "Bereit zur Installation",
+        "Installed" => "Erfolgreich installiert",
         "Failed" => "Fehlgeschlagen",
         "Requires user action" => "Manuelle Aktion erforderlich",
         "Not supported" or "unsupported" => "Nicht unterstützt",
@@ -976,12 +1150,13 @@ internal sealed class SetupForm : Form
         BeginInvoke(action);
     }
 
-    private static HashSet<string> LoadDeveloperProfile(string profilePath)
+    private static HashSet<string> LoadDeveloperProfile(string profilePath, IReadOnlyDictionary<string, PackageDefinition> packages)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(profilePath));
-        return document.RootElement.GetProperty("packages")
+        var ids = document.RootElement.GetProperty("packages")
             .EnumerateArray()
             .Select(item => item.GetString()!)
-            .ToHashSet(StringComparer.Ordinal);
+            .ToArray();
+        return InstallPlanResolver.Resolve(ids, packages).ToHashSet(StringComparer.Ordinal);
     }
 }

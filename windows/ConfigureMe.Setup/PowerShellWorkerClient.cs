@@ -1,10 +1,64 @@
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ConfigureMe.Setup;
 
 internal sealed record WorkerRunResult(int ExitCode, IReadOnlyList<WorkerEvent> Events, string StandardError);
+
+internal sealed class PowerShellWorkerException : Exception
+{
+    public int ExitCode { get; }
+    public string? PackageId { get; }
+    public string? Phase { get; }
+    public string? ErrorCode { get; }
+    public string? StructuredMessage { get; }
+    public bool HasStandardError { get; }
+
+    public PowerShellWorkerException(int exitCode, string action, IReadOnlyList<string>? requestedIds,
+        IReadOnlyList<WorkerEvent> events, bool hasStandardError)
+        : base(BuildMessage(exitCode, action, requestedIds, events))
+    {
+        ExitCode = exitCode;
+        HasStandardError = hasStandardError;
+        var failure = events.LastOrDefault(IsPackageFailure)
+            ?? events.LastOrDefault(item => item.Type == "worker-error")
+            ?? events.LastOrDefault(item => item.Type == "operation-completed" && item.Status == "unsupported");
+        PackageId = failure?.PackageId ?? requestedIds?.FirstOrDefault();
+        ErrorCode = failure is null ? null : PowerShellWorkerClient.ReadString(failure.Data, "ErrorCode");
+        Phase = failure is null ? null : PowerShellWorkerClient.ReadString(failure.Data, "Phase");
+        Phase ??= events.LastOrDefault(item => item.PackageId == PackageId && item.Type is
+            "download-started" or "download-completed" or "verification-started" or "verification-completed" or
+            "installation-started" or "installation-completed")?.Type;
+        StructuredMessage = SafeText(failure?.Message ?? (failure is null ? null :
+            PowerShellWorkerClient.ReadString(failure.Data, "Notes")));
+    }
+
+    private static string BuildMessage(int exitCode, string action, IReadOnlyList<string>? requestedIds,
+        IReadOnlyList<WorkerEvent> events)
+    {
+        var failure = events.LastOrDefault(IsPackageFailure)
+            ?? events.LastOrDefault(item => item.Type == "worker-error");
+        var id = failure?.PackageId ?? requestedIds?.FirstOrDefault() ?? action;
+        var detail = SafeText(failure?.Message ?? (failure is null ? null :
+            PowerShellWorkerClient.ReadString(failure.Data, "Notes")));
+        return $"PowerShell-Worker für {id} beendete sich mit Code {exitCode}. " +
+            (detail ?? "Es liegt keine strukturierte Fehlermeldung vor.");
+    }
+
+    public static string? SafeText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var value = Regex.Replace(text, @"(?i)\b(token|password|secret|authorization)\b\s*[:=]\s*\S+", "$1=[ausgeblendet]");
+        value = Regex.Replace(value, @"(?i)(https?://[^\s?]+)\?\S+", "$1?[Parameter ausgeblendet]");
+        return value.Replace('\r', ' ').Replace('\n', ' ').Trim()[..Math.Min(value.Trim().Length, 700)];
+    }
+
+    private static bool IsPackageFailure(WorkerEvent item) =>
+        item.Type is "package-installation-completed" or "package-download-failed" &&
+        (item.Status == "Failed" || PowerShellWorkerClient.ReadString(item.Data, "ErrorCode") == "verification-refused");
+}
 
 internal sealed class PowerShellWorkerClient(EngineBundle engine)
 {
@@ -86,10 +140,8 @@ internal sealed class PowerShellWorkerClient(EngineBundle engine)
         if (protocolError is not null) throw protocolError;
         if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException(
-                string.IsNullOrWhiteSpace(standardError)
-                    ? $"The PowerShell worker exited with code {process.ExitCode}."
-                    : $"The PowerShell worker exited with code {process.ExitCode}: {standardError.Trim()}");
+            throw new PowerShellWorkerException(process.ExitCode, action, packageIds, events,
+                !string.IsNullOrWhiteSpace(standardError));
         }
 
         return new WorkerRunResult(process.ExitCode, events, standardError);

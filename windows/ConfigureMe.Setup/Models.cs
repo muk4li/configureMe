@@ -71,5 +71,9 @@ internal sealed class PackageViewState
     public string? DetectedVersion { get; set; }
     public string? Details { get; set; }
     public string? Error { get; set; }
-    public bool IsInstalled => !string.IsNullOrWhiteSpace(DetectedVersion);
+    public string? CurrentPhase { get; set; }
+    public PackageDetectionState Detection { get; set; } = PackageDetectionState.Unknown;
+    public bool IsInstalled => Detection == PackageDetectionState.Installed;
 }
+
+internal enum PackageDetectionState { Unknown, Checking, Missing, Installed, Failed }

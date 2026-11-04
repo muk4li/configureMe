@@ -40,6 +40,22 @@ function Write-QuickSetupGuiPackageEvent {
   Write-QuickSetupEvent -Type $Type -PackageId $Id -Status $Status -Message $Message -Data $Data
 }
 
+function New-QuickSetupGuiProgressCallback {
+  param(
+    [Parameter(Mandatory = $true)][string]$Id,
+    [Parameter(Mandatory = $true)][hashtable]$ProgressState
+  )
+  # GetNewClosure creates a dynamic module. Capture the FunctionInfo while still
+  # inside GuiWorker so the callback keeps the private event writer's module scope.
+  $eventWriter = Get-Command -Name Write-QuickSetupGuiPackageEvent -CommandType Function -ErrorAction Stop
+  $packageId = $Id
+  return {
+    param([string]$stage)
+    $ProgressState.Phase = $stage
+    & $eventWriter -Type $stage -Id $packageId -Status $stage
+  }.GetNewClosure()
+}
+
 function Invoke-QuickSetupGuiWorker {
   Set-QuickSetupGuiWorkerMode
   $inputReader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $false)
@@ -77,11 +93,19 @@ function Invoke-QuickSetupGuiWorker {
 
   if ($request.action -eq "detect") {
     foreach ($id in $packageIds) {
-      $version = Get-QuickSetupDetectedVersion -Id $id
-      $details = if ($id -eq "docker-desktop") { Get-QuickSetupDockerDiagnostics } else { $null }
-      Write-QuickSetupGuiPackageEvent -Type "package-detected" -Id $id -Status $(if ($version) { "installed" } else { "missing" }) -Data @{
-        detectedVersion = $version
-        details = $details
+      try {
+        $version = Get-QuickSetupDetectedVersion -Id $id
+        $details = if ($id -eq "docker-desktop") { Get-QuickSetupDockerDiagnostics } else { $null }
+        Write-QuickSetupGuiPackageEvent -Type "package-detected" -Id $id -Status $(if ($version) { "installed" } else { "missing" }) -Data @{
+          detectedVersion = $version
+          details = $details
+        }
+      } catch {
+        $diagnostic = ConvertTo-QuickSetupSafeDiagnostic $_.Exception.Message
+        Write-QuickSetupGuiPackageEvent -Type "package-detected" -Id $id -Status "error" -Message $diagnostic -Data @{
+          detectedVersion = $null
+          detectionError = $diagnostic
+        }
       }
     }
     return 0
@@ -131,34 +155,48 @@ function Invoke-QuickSetupGuiWorker {
       Write-QuickSetupGuiPackageEvent -Type "package-status" -Id $id -Status "already-installed" -Message "Existing installation preserved; no download was started."
       return 0
     }
-    $definition = Get-QuickSetupInstallerDefinition -Id $id
-    if (!$definition -or !$definition.Automatic -or $definition.InstallerType -notin @("msi", "exe", "msix")) {
-      throw "Package '$id' has no verified automatic installer."
+    $downloadPhase = "metadata"
+    try {
+      $definition = Get-QuickSetupInstallerDefinition -Id $id
+      if (!$definition -or !$definition.Automatic -or $definition.InstallerType -notin @("msi", "exe", "msix")) {
+        throw "Package '$id' has no verified automatic installer."
+      }
+      $cachePath = Get-QuickSetupInstallerCachePath -Id $id -Definition $definition
+      $temporaryPath = $cachePath + "." + [guid]::NewGuid().ToString("N") + ".download"
+      $downloadPhase = "download-started"
+      Write-QuickSetupGuiPackageEvent -Type "download-started" -Id $id -Status "downloading" -Message "Downloading from the configured official source."
+      Assert-QuickSetupSafePath -Path $cachePath
+      if (Test-Path -LiteralPath $cachePath -PathType Leaf) {
+        $temporaryPath = $cachePath
+      } else {
+        Get-QuickSetupOfficialDownload -Uri $definition.Uri -Destination $temporaryPath -AllowedHosts $definition.AllowedHosts -ExpectedSha256 $definition.Sha256 -ExpectedSha512 $definition.Sha512 | Out-Null
+      }
+      $downloadPhase = "verification-started"
+      Write-QuickSetupGuiPackageEvent -Type "download-completed" -Id $id -Status "downloaded"
+      Write-QuickSetupGuiPackageEvent -Type "verification-started" -Id $id -Status "verifying"
+      if ($definition.InstallerType -eq "msix") {
+        Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType "msix" -ExpectedArchitecture $definition.ExpectedArchitecture -ExpectedPackageName $definition.PackageName -ExpectedPackagePublisher $definition.PackagePublisher | Out-Null
+      } else {
+        Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType $definition.InstallerType -ExpectedArchitecture $definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$definition.AllowX86BootstrapForX64) | Out-Null
+        $signature = Test-QuickSetupAuthenticodePublisher -Path $temporaryPath -ExpectedPublisher $definition.Publisher -ExpectedCommonName $definition.ExpectedCommonName
+        if (!$signature.IsValid) { throw $signature.Message }
+      }
+      if ($temporaryPath -ne $cachePath) {
+        Move-Item -LiteralPath $temporaryPath -Destination $cachePath -Force
+      }
+      Write-QuickSetupGuiPackageEvent -Type "verification-completed" -Id $id -Status "verified"
+      Write-QuickSetupGuiPackageEvent -Type "package-status" -Id $id -Status "ready" -Message "Download and installer checks completed."
+      return 0
+    } catch {
+      $diagnostic = ConvertTo-QuickSetupSafeDiagnostic $_.Exception.Message
+      $refused = $_.Exception.Message -match "signature|publisher|SHA-256|SHA-512|hash|architecture|file type|redirected outside|not an allowed official"
+      $errorCode = if ($refused) { "verification-refused" } elseif ($downloadPhase -eq "metadata") { "metadata-error" } elseif ($downloadPhase -eq "verification-started") { "verification-error" } else { "download-error" }
+      Write-QuickSetupGuiPackageEvent -Type "package-download-failed" -Id $id -Status "Failed" -Message $diagnostic -Data @{
+        ErrorCode = $errorCode
+        Phase = $downloadPhase
+      }
+      return 1
     }
-    $cachePath = Get-QuickSetupInstallerCachePath -Id $id -Definition $definition
-    $temporaryPath = $cachePath + "." + [guid]::NewGuid().ToString("N") + ".download"
-    Write-QuickSetupGuiPackageEvent -Type "download-started" -Id $id -Status "downloading" -Message "Downloading from the configured official source."
-    Assert-QuickSetupSafePath -Path $cachePath
-    if (Test-Path -LiteralPath $cachePath -PathType Leaf) {
-      $temporaryPath = $cachePath
-    } else {
-      Get-QuickSetupOfficialDownload -Uri $definition.Uri -Destination $temporaryPath -AllowedHosts $definition.AllowedHosts -ExpectedSha256 $definition.Sha256 -ExpectedSha512 $definition.Sha512 | Out-Null
-    }
-    Write-QuickSetupGuiPackageEvent -Type "download-completed" -Id $id -Status "downloaded"
-    Write-QuickSetupGuiPackageEvent -Type "verification-started" -Id $id -Status "verifying"
-    if ($definition.InstallerType -eq "msix") {
-      Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType "msix" -ExpectedArchitecture $definition.ExpectedArchitecture -ExpectedPackageName $definition.PackageName -ExpectedPackagePublisher $definition.PackagePublisher | Out-Null
-    } else {
-      Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType $definition.InstallerType -ExpectedArchitecture $definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$definition.AllowX86BootstrapForX64) | Out-Null
-      $signature = Test-QuickSetupAuthenticodePublisher -Path $temporaryPath -ExpectedPublisher $definition.Publisher -ExpectedCommonName $definition.ExpectedCommonName
-      if (!$signature.IsValid) { throw $signature.Message }
-    }
-    if ($temporaryPath -ne $cachePath) {
-      Move-Item -LiteralPath $temporaryPath -Destination $cachePath -Force
-    }
-    Write-QuickSetupGuiPackageEvent -Type "verification-completed" -Id $id -Status "verified"
-    Write-QuickSetupGuiPackageEvent -Type "package-status" -Id $id -Status "ready" -Message "Download and installer checks completed."
-    return 0
   }
 
   if ($request.confirmed -ne $true) {
@@ -180,6 +218,7 @@ function Invoke-QuickSetupGuiWorker {
     $catalogPackage = Get-QuickSetupPackageDefinition -Id $id
     $name = [string]$catalogPackage.name
     $result = New-QuickSetupPackageResult -Id $id -Name $name -RequestedVersion "latest stable"
+    $progressState = @{ Phase = "detection" }
     try {
       $detectedVersion = Get-QuickSetupDetectedVersion -Id $id
       $result.DetectedVersion = $detectedVersion
@@ -206,7 +245,13 @@ function Invoke-QuickSetupGuiWorker {
         $result.Status = "Not supported"
         $result.Notes = $operatingSystem.Reasons -join " "
       } else {
-        $installer = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview:$false
+        $progressState.Phase = "metadata"
+        $preview = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview
+        if ($preview -and $preview.RequiresAdministrator -and !$isAdministrator) {
+          $installer = $preview
+        } else {
+          $installer = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview:$false
+        }
         if (!$installer -or !$installer.Automatic) {
           $result.Status = "Requires user action"
           $result.Method = "Manual; no verified automatic installer"
@@ -214,6 +259,8 @@ function Invoke-QuickSetupGuiWorker {
           $manualSteps.Add("$name has no verified automatic installation route: $($catalogPackage.website)")
         } elseif (!(Test-QuickSetupAdministratorRequirement -RequiresAdministrator ([bool]$installer.RequiresAdministrator) -IsAdministrator $isAdministrator)) {
           $result.Status = "Requires user action"
+          $result.ErrorCode = "administrator-required"
+          $result.Phase = "preflight"
           $result.RequiresAdministrator = $true
           $result.Method = [string]$installer.Method
           $result.Source = [string]$installer.Source
@@ -227,10 +274,7 @@ function Invoke-QuickSetupGuiWorker {
           $result.Method = [string]$installer.Method
           $result.Notes = [string]$installer.Notes
           Write-QuickSetupGuiPackageEvent -Type "package-status" -Id $id -Status "installing" -Message "Installation preparation started."
-          $progressCallback = {
-            param($stage)
-            Write-QuickSetupGuiPackageEvent -Type $stage -Id $id -Status $stage
-          }.GetNewClosure()
+          $progressCallback = New-QuickSetupGuiProgressCallback -Id $id -ProgressState $progressState
           $cachePath = if ($installer.InstallerType -in @("msi", "exe", "msix")) {
             Get-QuickSetupInstallerCachePath -Id $id -Definition $installer
           } else { $null }
@@ -238,7 +282,9 @@ function Invoke-QuickSetupGuiWorker {
           $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $installer -ProgressCallback $progressCallback -CachedInstallerPath $cachedInstaller
           if ($installResult.ExitCode -notin @(0, 3010)) {
             $result.Status = "Failed"
-            $result.ErrorCode = [string]$installResult.ExitCode
+            $result.ErrorCode = "installer-exit"
+            $result.InstallerExitCode = [int]$installResult.ExitCode
+            $result.Phase = "installation"
             $result.Notes = "$($installer.Notes) Installer exited with code $($installResult.ExitCode)."
             $errors.Add("$name installer exit code $($installResult.ExitCode).")
           } else {
@@ -250,6 +296,7 @@ function Invoke-QuickSetupGuiWorker {
             } else {
               $result.Status = "Failed"
               $result.ErrorCode = if ($id -eq "git") { "git-version-verification-failed" } else { "verification-failed" }
+              $result.Phase = "post-install-verification"
               $result.Notes = "The installer returned success, but the installed package could not be verified."
               $errors.Add("$name could not be verified after installation.")
             }
@@ -257,11 +304,25 @@ function Invoke-QuickSetupGuiWorker {
         }
       }
     } catch {
-      $result.Status = if ($_.Exception.Message -match "signature|publisher|SHA-256|redirected outside|not an allowed official") { "Requires user action" } else { "Failed" }
-      $result.ErrorCode = if ($result.Status -eq "Requires user action") { "verification-refused" } else { "install-error" }
-      $result.Notes = $_.Exception.Message
-      if ($result.Status -eq "Failed") { $errors.Add("$name`: $($_.Exception.Message)") }
-      else { $manualSteps.Add("$name was not run because verification refused the installer. Review the official source manually: $($catalogPackage.website)") }
+      $diagnostic = ConvertTo-QuickSetupSafeDiagnostic $_.Exception.Message
+      $result.Phase = [string]$progressState.Phase
+      $integrityRefused = $_.Exception.Message -match "signature|publisher|SHA-256|SHA-512|hash|architecture|file type|redirected outside|not an allowed official"
+      $result.Status = if ($integrityRefused) { "Requires user action" } else { "Failed" }
+      $result.ErrorCode = if ($integrityRefused) { "verification-refused" } else {
+        switch ($progressState.Phase) {
+          "metadata" { "metadata-error" }
+          "download-started" { "download-error" }
+          "download-completed" { "verification-error" }
+          "verification-started" { "verification-error" }
+          "verification-completed" { "installer-error" }
+          "installation-started" { "installer-error" }
+          "installation-completed" { "post-install-verification-error" }
+          default { "worker-error" }
+        }
+      }
+      $result.Notes = $diagnostic
+      $errors.Add("$name`: $diagnostic")
+      if ($integrityRefused) { $manualSteps.Add("$name was not run because verification refused the installer. Review the official source manually: $($catalogPackage.website)") }
     }
     if ($result.Status -in @("Installed", "Already installed")) {
       if ($id -eq "vscode") {
@@ -269,7 +330,7 @@ function Invoke-QuickSetupGuiWorker {
           $theme = Set-QuickSetupVsCodeDarkTheme
           $result.Notes += " $($theme.Notes)"
           if (!$theme.Success) { $manualSteps.Add("Set VS Code Dark Modern manually: $($theme.Notes)") }
-        } catch { $manualSteps.Add("Set VS Code Dark Modern manually: $($_.Exception.Message)") }
+        } catch { $manualSteps.Add("Set VS Code Dark Modern manually: $(ConvertTo-QuickSetupSafeDiagnostic $_.Exception.Message)") }
       }
       if ($id -eq "firefox") { $manualSteps.Add("Import the bundled assets/firefox-bookmarks.html using Firefox Bookmark Manager. Set its dark theme manually.") }
       if ($id -eq "github-cli") { $manualSteps.Add("Sign in interactively with gh auth login. The setup does not collect credentials.") }
@@ -299,4 +360,4 @@ function Invoke-QuickSetupGuiWorker {
   return 0
 }
 
-Export-ModuleMember -Function Invoke-QuickSetupGuiWorker, Resolve-QuickSetupGuiDependencies
+Export-ModuleMember -Function Invoke-QuickSetupGuiWorker, Resolve-QuickSetupGuiDependencies, New-QuickSetupGuiProgressCallback

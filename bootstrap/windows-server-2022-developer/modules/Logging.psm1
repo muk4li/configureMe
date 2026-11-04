@@ -23,6 +23,15 @@ function Write-QuickSetupEvent {
   [Console]::Out.WriteLine($line)
 }
 
+function ConvertTo-QuickSetupSafeDiagnostic {
+  param([string]$Message)
+  if (!$Message) { return "" }
+  $safe = [regex]::Replace($Message, '(?i)\b(token|password|secret|authorization)\b\s*[:=]\s*\S+', '$1=[redacted]')
+  $safe = [regex]::Replace($safe, '(?i)(https?://[^\s?]+)\?\S+', '$1?[parameters redacted]')
+  $safe = $safe -replace '[\r\n]', ' '
+  return $safe.Substring(0, [Math]::Min($safe.Length, 700))
+}
+
 function Write-QuickSetupLog {
   param(
     [Parameter(Mandatory = $true)][string]$Message,
@@ -60,6 +69,8 @@ function New-QuickSetupPackageResult {
     Method = $null
     Status = "Requires user action"
     ErrorCode = $null
+    Phase = $null
+    InstallerExitCode = $null
     Notes = $null
     RestartRequired = $false
   }
@@ -113,4 +124,4 @@ function Write-QuickSetupReport {
   Write-QuickSetupLog "Reports written to '$Path' and '$textPath'."
 }
 
-Export-ModuleMember -Function Set-QuickSetupGuiWorkerMode, Write-QuickSetupEvent, Write-QuickSetupLog, New-QuickSetupPackageResult, Write-QuickSetupReport
+Export-ModuleMember -Function Set-QuickSetupGuiWorkerMode, Write-QuickSetupEvent, Write-QuickSetupLog, New-QuickSetupPackageResult, Write-QuickSetupReport, ConvertTo-QuickSetupSafeDiagnostic

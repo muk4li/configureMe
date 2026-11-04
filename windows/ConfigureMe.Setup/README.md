@@ -24,4 +24,6 @@ CI packages the EXE, this README, `SECURITY.md`, version metadata, a per-file SH
 
 The Windows CI runner validates the build, worker contract, queue/controller tests, and package contents. It does not install third-party applications or prove an interactive GUI run on a clean Windows Server 2022 Desktop Experience host. That platform-specific GUI/E2E check remains outstanding until performed on the target system.
 
+The published EXE also runs `--layout-self-test` in CI. This checks the native package rows, category bounds, vertical scrolling, resize, and simulated scale without installing software. Follow the [Windows Server 2022 GUI retest](../../docs/windows-setup-0.3.0-retest.md) for visual inspection and a real installer run on the target machine.
+
 On Linux, the non-UI engine, queue, and report tests can run with .NET 10 SDK and PowerShell 7 using `dotnet test windows/ConfigureMe.Setup.Portable.Tests/ConfigureMe.Setup.Portable.Tests.csproj`; the WinForms app can be cross-compiled but not executed there.
