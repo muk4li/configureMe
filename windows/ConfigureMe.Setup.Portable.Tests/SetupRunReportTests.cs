@@ -22,6 +22,38 @@ public sealed class SetupRunReportTests
     }
 
     [Fact]
+    public void WorkerExitEnrichesTheStructuredFailureWithoutErasingLaterPackages()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "configureme-report-worker-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var report = new SetupRunReport(root);
+            report.Record("seven-zip", "7-Zip", "Pending");
+            report.Record("python", "Python", "Pending");
+            var failed = new WorkerEvent("package-installation-completed", "seven-zip", "Failed",
+                "Mock installer failed", JsonSerializer.SerializeToElement(new
+                {
+                    Id = "seven-zip", Name = "7-Zip", Status = "Failed", ErrorCode = "installer-error",
+                    Phase = "installation-started", Notes = "Mock installer failed"
+                }));
+            report.Apply(failed);
+            var exception = new PowerShellWorkerException(1, "install", ["seven-zip"], [failed], false);
+            report.RecordWorkerFailure("seven-zip", "7-Zip", exception);
+            report.Apply(new WorkerEvent("package-installation-completed", "python", "Installed", null,
+                JsonSerializer.SerializeToElement(new { Id = "python", Name = "Python", Status = "Installed", DetectedVersion = "3.13.0" })));
+            report.Write(completed: true);
+
+            using var document = JsonDocument.Parse(File.ReadAllText(report.JsonPath));
+            var packages = document.RootElement.GetProperty("Packages");
+            Assert.Equal(1, packages[0].GetProperty("WorkerExitCode").GetInt32());
+            Assert.Equal("installer-error", packages[0].GetProperty("ErrorCode").GetString());
+            Assert.Equal("Installed", packages[1].GetProperty("Status").GetString());
+            Assert.Equal("Completed with failures", document.RootElement.GetProperty("Summary").GetString());
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void AggregatesOperationsAndKeepsCompletedStateAfterLateEvent()
     {
         var root = Path.Combine(Path.GetTempPath(), "configureme-report-test-" + Guid.NewGuid().ToString("N"));

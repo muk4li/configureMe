@@ -7,6 +7,35 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--layout-self-test")
+        {
+            try
+            {
+                Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                using var form = new SetupForm(runStartupDetection: false);
+                form.Show();
+                Application.DoEvents();
+                foreach (var size in new[] { new System.Drawing.Size(1180, 900), new System.Drawing.Size(900, 700) })
+                {
+                    form.Size = size;
+                    Application.DoEvents();
+                    form.AssertPackageLayout();
+                }
+                form.Scale(new System.Drawing.SizeF(1.5f, 1.5f));
+                Application.DoEvents();
+                form.AssertPackageLayout();
+                Environment.ExitCode = 0;
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine(exception);
+                Environment.ExitCode = 1;
+            }
+            return;
+        }
+
         if (args.Length == 1 && args[0] == "--self-test")
         {
             try

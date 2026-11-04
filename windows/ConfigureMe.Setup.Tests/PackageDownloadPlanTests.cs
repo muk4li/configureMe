@@ -20,9 +20,13 @@ public sealed class PackageDownloadPlanTests
             ["github-copilot-desktop"] = "exe", ["teams"] = "manual"
         };
         IReadOnlySet<string> downloaded = new HashSet<string> { "git" };
+        var administratorAvailable = types.Keys.ToDictionary(id => id, _ => true);
 
         Assert.False(PackageDownloadPlan.NeedsDownload(packages["openssh-client"], types["openssh-client"]));
         Assert.Equal(["git", "openssh-client", "teams"], PackageDownloadPlan.SelectQueue(
-            ["git", "openssh-client", "github-copilot-desktop", "teams"], packages, types, downloaded));
+            ["git", "openssh-client", "github-copilot-desktop", "teams"], packages, types, administratorAvailable, downloaded));
+        administratorAvailable["github-copilot-desktop"] = false;
+        Assert.Contains("github-copilot-desktop", PackageDownloadPlan.SelectQueue(
+            ["github-copilot-desktop"], packages, types, administratorAvailable, downloaded));
     }
 }

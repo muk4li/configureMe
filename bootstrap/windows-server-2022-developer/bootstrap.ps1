@@ -53,7 +53,7 @@ if ($GuiWorker) {
   try {
     $workerExitCode = Invoke-QuickSetupGuiWorker
   } catch {
-    Write-QuickSetupEvent -Type "worker-error" -Status "failed" -Message $_.Exception.Message
+    Write-QuickSetupEvent -Type "worker-error" -Status "failed" -Message (ConvertTo-QuickSetupSafeDiagnostic $_.Exception.Message)
     $workerExitCode = 1
   }
   exit [int]$workerExitCode

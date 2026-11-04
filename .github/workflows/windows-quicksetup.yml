@@ -52,6 +52,8 @@ jobs:
           $env:PATH = "$env:WINDIR\System32;$env:WINDIR"
           & $executable --self-test
           if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its embedded engine/worker startup self-test." }
+          & $executable --layout-self-test
+          if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its category/row layout self-test." }
 
       - name: Package unsigned setup development artifact
         shell: powershell

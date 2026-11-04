@@ -9,9 +9,11 @@ internal static class PackageDownloadPlan
         IReadOnlyList<string> missingIds,
         IReadOnlyDictionary<string, PackageDefinition> packages,
         IReadOnlyDictionary<string, string?> installerTypes,
+        IReadOnlyDictionary<string, bool> administratorAvailable,
         IReadOnlySet<string> downloaded)
     {
         return missingIds.Where(id =>
-            !NeedsDownload(packages[id], installerTypes.GetValueOrDefault(id)) || downloaded.Contains(id)).ToArray();
+            !administratorAvailable[id] || !NeedsDownload(packages[id], installerTypes.GetValueOrDefault(id)) ||
+            downloaded.Contains(id)).ToArray();
     }
 }
