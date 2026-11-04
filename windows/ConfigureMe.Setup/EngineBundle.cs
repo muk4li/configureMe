@@ -22,14 +22,19 @@ internal sealed class EngineBundle
     ];
 
     private readonly string _engineRoot;
+    private readonly Dictionary<string, string> _hashes;
 
-    private EngineBundle(string engineRoot) => _engineRoot = engineRoot;
+    private EngineBundle(string engineRoot, Dictionary<string, string> hashes)
+    {
+        _engineRoot = engineRoot;
+        _hashes = hashes;
+    }
 
     public string BootstrapPath => Path.Combine(_engineRoot, "bootstrap.ps1");
     public string CatalogPath => Path.Combine(_engineRoot, "config", "catalog.json");
     public string ProfilePath => Path.Combine(_engineRoot, "config", "windows-server-2022-developer.json");
 
-    public static EngineBundle ExtractVerified()
+    public static EngineBundle ExtractVerified(string? applicationDataRoot = null)
     {
         var assembly = Assembly.GetExecutingAssembly();
         using var manifestStream = assembly.GetManifestResourceStream("ConfigureMe.Engine.manifest.json")
@@ -45,15 +50,14 @@ internal sealed class EngineBundle
         }
 
         var manifestHash = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var appData = applicationDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var engineBase = Path.Combine(appData, "configureMe", "engine");
-        Directory.CreateDirectory(engineBase);
-        RejectReparsePoint(engineBase);
+        CreateSafeDirectory(engineBase);
         var destination = Path.Combine(engineBase, manifestHash);
-        Directory.CreateDirectory(destination);
-        RejectReparsePoint(destination);
+        CreateSafeDirectory(destination);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in manifest.Files)
         {
             if (!ResourceNames.Contains(file.ResourceName, StringComparer.Ordinal) || !seen.Add(file.ResourceName))
@@ -85,11 +89,10 @@ internal sealed class EngineBundle
             }
 
             var parent = Path.GetDirectoryName(targetPath)!;
-            Directory.CreateDirectory(parent);
-            RejectReparsePoint(parent);
+            CreateSafeDirectory(parent);
+            ValidatePath(targetPath);
             if (File.Exists(targetPath))
             {
-                RejectReparsePoint(targetPath);
                 var existingHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(targetPath))).ToLowerInvariant();
                 if (!existingHash.Equals(actualHash, StringComparison.OrdinalIgnoreCase))
                 {
@@ -99,19 +102,58 @@ internal sealed class EngineBundle
             else
             {
                 var temporaryPath = targetPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                File.WriteAllBytes(temporaryPath, bytes);
-                File.Move(temporaryPath, targetPath);
+                try
+                {
+                    using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        output.Write(bytes);
+                    }
+                    ValidatePath(targetPath);
+                    File.Move(temporaryPath, targetPath);
+                }
+                finally
+                {
+                    if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+                }
             }
+            hashes.Add(targetPath, actualHash);
         }
 
-        return new EngineBundle(destination);
+        return new EngineBundle(destination, hashes);
     }
 
-    private static void RejectReparsePoint(string path)
+    public void VerifyUnchanged()
     {
-        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        foreach (var (path, expectedHash) in _hashes)
         {
-            throw new IOException($"The PowerShell engine path '{path}' is a reparse point; refusing to use it.");
+            ValidatePath(path);
+            if (!Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new IOException($"The extracted engine file '{path}' was modified; refusing to run it.");
+            }
+        }
+    }
+
+    internal static void CreateSafeDirectory(string path)
+    {
+        ValidatePath(path);
+        Directory.CreateDirectory(path);
+        ValidatePath(path);
+    }
+
+    internal static void ValidatePath(string path)
+    {
+        for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+        {
+            try
+            {
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                {
+                    throw new IOException($"The setup path '{current}' is a reparse point; refusing to use it.");
+                }
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
         }
     }
 

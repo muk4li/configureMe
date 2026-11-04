@@ -113,8 +113,9 @@ try {
   Assert-True ($gitPreview.Automatic -and (($gitPreview.Arguments -join " ") -ceq "/VERYSILENT /NORESTART /NOCANCEL /SP-")) "Git did not use only the approved documented Inno Setup switches."
   Assert-True ($gitPreview.Publisher -ceq "Johannes Schindelin" -and $gitPreview.ExpectedCommonName -ceq "Johannes Schindelin") "Git did not pin the exact approved signer identity."
   $copilotPreview = Get-QuickSetupInstallerDefinition -Id "github-copilot-desktop" -OfflinePreview
-  Assert-True (!$copilotPreview.Automatic -and $copilotPreview.InstallerType -eq "exe" -and !$copilotPreview.Arguments) "Copilot Desktop was given an unverified automatic or silent install route."
-  Assert-True ($copilotPreview.Notes -match "no verified silent switches" -and $copilotPreview.Notes -match "per-user") "Copilot Desktop does not explain its unverified silent and per-user behavior."
+  Assert-True ($copilotPreview.Automatic -and $copilotPreview.InstallerType -eq "exe" -and ($copilotPreview.Arguments -join " ") -ceq "/S") "Copilot Desktop does not use the reviewed NSIS silent install switch."
+  Assert-True ($copilotPreview.Version -eq "1.1.34" -and $copilotPreview.Sha256 -eq "4a8070a63b228895344a6c4f4536a01a62085e02821829b21786638234580e00") "Copilot Desktop release was not pinned to the reviewed official bytes."
+  Assert-True ($copilotPreview.AllowX86BootstrapForX64 -and $copilotPreview.ExpectedCommonName -ceq "GitHub, Inc." -and !$copilotPreview.RequiresAdministrator) "Copilot Desktop did not declare the verified bootstrap architecture, signer, and current-user install."
   $libreOfficePreview = Get-QuickSetupInstallerDefinition -Id "libreoffice" -OfflinePreview
   Assert-True ($libreOfficePreview.Automatic -and $libreOfficePreview.InstallerType -eq "msi" -and $libreOfficePreview.Publisher -eq "The Document Foundation" -and $libreOfficePreview.ExpectedCommonName -eq "The Document Foundation") "LibreOffice did not declare its optional MSI and exact signer."
   Assert-True (@($profile.packages | Where-Object { $_ -eq "libreoffice" }).Count -eq 0) "LibreOffice was selected in the default profile."
@@ -411,6 +412,24 @@ try {
   }
   $gitInstallResult = Invoke-QuickSetupPackageInstall -Id "git" -Definition $gitInstallDefinition -DownloadProvider $gitDownloadProvider -SignatureProvider $gitSignatureProvider -ProcessRunner $gitProcessRunner
   Assert-True ($gitInstallResult.ExitCode -eq 0 -and !$gitInstallResult.RestartRequired -and $script:gitInstallCalls -eq 1) "Git installation did not complete without a restart."
+  $copilotMockDefinition = $copilotPreview.PSObject.Copy()
+  $copilotMockBytes = New-TestPeBytes -Machine 0x014c
+  $copilotMockDefinition.Sha256 = (Get-FileHash -InputStream ([IO.MemoryStream]::new($copilotMockBytes)) -Algorithm SHA256).Hash
+  $script:copilotInstallCalls = 0
+  $copilotMockResult = Invoke-QuickSetupPackageInstall -Id "github-copilot-desktop" -Definition $copilotMockDefinition -DownloadProvider {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, $copilotMockBytes)
+    return $uri
+  } -SignatureProvider {
+    param($path)
+    [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN="GitHub, Inc.", O="GitHub, Inc."' } }
+  } -ProcessRunner {
+    param($path, $arguments)
+    $script:copilotInstallCalls++
+    Assert-True (($arguments -join " ") -ceq "/S" -and $path -match "installer\.exe$") "Copilot Desktop did not start its verified NSIS installer silently."
+    return 0
+  }
+  Assert-True ($copilotMockResult.ExitCode -eq 0 -and $script:copilotInstallCalls -eq 1) "The mock Copilot Desktop installer did not run exactly once."
   $script:gitInstallCalls = 0
   $gitWrongSignerRefused = $false
   try {
@@ -573,7 +592,7 @@ try {
   Assert-True ($LASTEXITCODE -eq 0) "The bootstrap list mode failed: $($listOutput -join "`n")"
   Assert-True (($listOutput -join "`n") -match "OpenSSH Client") "List mode omitted OpenSSH Client."
   $catalog = Get-QuickSetupPackageCatalog
-  Assert-True (@($catalog | Where-Object { $_.id -eq "github-copilot-desktop" -and $_.windowsMode -eq "manual" }).Count -eq 1) "The canonical catalog did not identify Copilot Desktop as manual."
+  Assert-True (@($catalog | Where-Object { $_.id -eq "github-copilot-desktop" -and $_.windowsMode -eq "automatic" -and "git" -in $_.dependencies }).Count -eq 1) "The canonical catalog did not identify Copilot Desktop as automatic with Git dependency."
   Assert-True (@($catalog | Where-Object { $_.id -eq "docker-desktop" -and $_.windowsMode -eq "detection-only" }).Count -eq 1) "The canonical catalog did not mark Docker Desktop as detection-only."
   $guiList = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "list" }
   $guiListEvents = $guiList.Events | ConvertTo-Json -Compress -Depth 12
@@ -603,8 +622,8 @@ try {
   if ($copilotReport.Status -eq "Already installed") {
     Assert-True ($copilotReport.DetectedVersion -eq "1.1.34" -and $copilotReport.Notes -match "user data were not modified") "An existing Copilot Desktop install or its user data was not preserved."
   } else {
-    Assert-True ($copilotReport.Status -eq "Requires user action" -and $copilotReport.InstallerType -eq "exe" -and !$copilotReport.CompatibilityConfirmed) "Copilot Desktop dry-run did not report manual-only installation and unconfirmed Server compatibility."
-    Assert-True ($copilotReport.Notes -match "no verified silent switches" -and $copilotReport.Notes -match "per-user") "Copilot Desktop report implied unsupported installer behavior."
+    Assert-True ($copilotReport.Status -eq "Requires user action" -and $copilotReport.InstallerType -eq "exe" -and $copilotReport.RequestedVersion -eq "1.1.34") "Copilot Desktop dry-run did not report its pinned automatic installation plan."
+    Assert-True ($copilotReport.Notes -match "x86 NSIS bootstrap" -and $copilotReport.Notes -match "Windows Server compatibility") "Copilot Desktop dry-run omitted reviewed installer or platform limits."
   }
   if (Get-Command git -ErrorAction SilentlyContinue) {
     Assert-True (@($report.Packages | Where-Object { $_.Id -eq "git" -and $_.Status -eq "Already installed" }).Count -eq 1) "The existing Git installation was not detected."
@@ -616,14 +635,6 @@ try {
   Assert-True ($LASTEXITCODE -eq 0) "Dry-run with -SkipOptional failed: $($optionalOutput -join "`n")"
   $optionalReport = Get-Content -LiteralPath $optionalReportPath -Raw | ConvertFrom-Json
   Assert-True (@($optionalReport.Packages | Where-Object { $_.Id -eq "github-copilot-cli" -and $_.Status -eq "Skipped by user" }).Count -eq 1) "-SkipOptional did not report the Copilot CLI as skipped."
-  if ($copilotReport.Status -ne "Already installed") {
-    $confirmedReportPath = Join-Path $temporaryDirectory "copilot-confirmed-report.json"
-    $confirmedOutput = & powershell.exe -NoProfile -NonInteractive -File (Join-Path $packageRoot "bootstrap.ps1") -DryRun -ConfirmCopilotDesktopServerCompatibility -ReportPath $confirmedReportPath 2>&1
-    Assert-True ($LASTEXITCODE -eq 0) "Dry-run with explicit Copilot compatibility confirmation failed: $($confirmedOutput -join "`n")"
-    $confirmedReport = Get-Content -LiteralPath $confirmedReportPath -Raw | ConvertFrom-Json
-    $confirmedCopilotReport = @($confirmedReport.Packages | Where-Object { $_.Id -eq "github-copilot-desktop" }) | Select-Object -First 1
-    Assert-True ($confirmedCopilotReport.CompatibilityConfirmed -and $confirmedCopilotReport.Status -eq "Requires user action") "Explicit Copilot compatibility confirmation triggered automatic installation or was not recorded."
-  }
 
   $zipPath = Join-Path $temporaryDirectory "configureMe-WindowsServer2022-Developer-QuickSetup.zip"
   $packagingScript = Join-Path $repositoryRoot "scripts\New-WindowsServer2022QuickSetup.ps1"

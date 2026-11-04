@@ -138,6 +138,7 @@ function Invoke-QuickSetupGuiWorker {
     $cachePath = Get-QuickSetupInstallerCachePath -Id $id -Definition $definition
     $temporaryPath = $cachePath + "." + [guid]::NewGuid().ToString("N") + ".download"
     Write-QuickSetupGuiPackageEvent -Type "download-started" -Id $id -Status "downloading" -Message "Downloading from the configured official source."
+    Assert-QuickSetupSafePath -Path $cachePath
     if (Test-Path -LiteralPath $cachePath -PathType Leaf) {
       $temporaryPath = $cachePath
     } else {
@@ -172,7 +173,9 @@ function Invoke-QuickSetupGuiWorker {
   $results = New-Object System.Collections.Generic.List[object]
   $errors = New-Object System.Collections.Generic.List[string]
   $manualSteps = New-Object System.Collections.Generic.List[string]
-  $reportPath = Join-Path (Join-Path $env:LOCALAPPDATA "configureMe\Reports") "setup-report.json"
+  $reportDirectory = Join-Path (Join-Path $env:LOCALAPPDATA "configureMe\Reports\operations") ([guid]::NewGuid().ToString("N"))
+  Assert-QuickSetupSafePath -Path $reportDirectory
+  $reportPath = Join-Path $reportDirectory "setup-report.json"
   foreach ($id in $orderedIds) {
     $catalogPackage = Get-QuickSetupPackageDefinition -Id $id
     $name = [string]$catalogPackage.name
@@ -259,6 +262,18 @@ function Invoke-QuickSetupGuiWorker {
       $result.Notes = $_.Exception.Message
       if ($result.Status -eq "Failed") { $errors.Add("$name`: $($_.Exception.Message)") }
       else { $manualSteps.Add("$name was not run because verification refused the installer. Review the official source manually: $($catalogPackage.website)") }
+    }
+    if ($result.Status -in @("Installed", "Already installed")) {
+      if ($id -eq "vscode") {
+        try {
+          $theme = Set-QuickSetupVsCodeDarkTheme
+          $result.Notes += " $($theme.Notes)"
+          if (!$theme.Success) { $manualSteps.Add("Set VS Code Dark Modern manually: $($theme.Notes)") }
+        } catch { $manualSteps.Add("Set VS Code Dark Modern manually: $($_.Exception.Message)") }
+      }
+      if ($id -eq "firefox") { $manualSteps.Add("Import the bundled assets/firefox-bookmarks.html using Firefox Bookmark Manager. Set its dark theme manually.") }
+      if ($id -eq "github-cli") { $manualSteps.Add("Sign in interactively with gh auth login. The setup does not collect credentials.") }
+      if ($id -eq "github-copilot-desktop") { $manualSteps.Add("Open GitHub Copilot Desktop and sign in interactively.") }
     }
     $results.Add($result)
     Write-QuickSetupGuiPackageEvent -Type "package-installation-completed" -Id $id -Status $result.Status -Message $result.Notes -Data $result

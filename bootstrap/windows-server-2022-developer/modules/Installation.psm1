@@ -1,3 +1,20 @@
+function Get-QuickSetupCopilotInstallerDefinition {
+  # Verified official v1.1.34 bytes: Tauri NSIS 3.11, asInvoker, current-user installer.
+  # NSIS /S is case sensitive. Tauri starts the app after silent setup only with /R; do not pass /R.
+  return [pscustomobject]@{
+    Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; AllowX86BootstrapForX64 = $true
+    RequiresAdministrator = $false; Version = "1.1.34"
+    Uri = [uri]"https://github.com/github/app/releases/download/v1.1.34/GitHub-Copilot-windows-x64-setup.exe"
+    Sha256 = "4a8070a63b228895344a6c4f4536a01a62085e02821829b21786638234580e00"
+    AllowedHosts = @("github.com", "release-assets.githubusercontent.com")
+    Publisher = "GitHub, Inc."; ExpectedCommonName = "GitHub, Inc."
+    Method = "Pinned official Tauri NSIS x64 package; current-user silent setup /S"
+    Arguments = @("/S")
+    Source = "https://github.com/github/app/releases/tag/v1.1.34"
+    Notes = "Pinned reviewed 1.1.34 build; x86 NSIS bootstrap carries x64 payload. SHA-256 and exact trusted GitHub, Inc. signer are required. Existing installations are preserved. Windows Server compatibility still requires the real target test. Sign in interactively after installation."
+  }
+}
+
 function Invoke-QuickSetupInstallerProcess {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
@@ -28,6 +45,7 @@ function Get-QuickSetupInstallerCachePath {
     $key = [BitConverter]::ToString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($keyText))).Replace("-", "").ToLowerInvariant()
   } finally { $sha256.Dispose() }
   $cacheDirectory = Join-Path $env:LOCALAPPDATA "configureMe\cache"
+  Assert-QuickSetupSafePath -Path $cacheDirectory
   if (!(Test-Path -LiteralPath $cacheDirectory)) { New-Item -ItemType Directory -Path $cacheDirectory -Force | Out-Null }
   if ((Get-Item -LiteralPath $cacheDirectory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
     throw "The installer cache directory is a reparse point; refusing to use it."
@@ -48,8 +66,7 @@ function Get-QuickSetupGithubReleaseInstaller {
   $release = if ($ReleaseProvider) {
     & $ReleaseProvider $Repository
   } else {
-    $headers = @{ "User-Agent" = "configureMe-Windows-QuickSetup"; "Accept" = "application/vnd.github+json" }
-    Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers -TimeoutSec 60 -ErrorAction Stop
+    Get-QuickSetupOfficialMetadata -Uri "https://api.github.com/repos/$Repository/releases/latest" -AllowedHosts @("api.github.com") -Json
   }
   $asset = @($release.assets | Where-Object { $_.name -match $AssetPattern }) | Select-Object -First 1
   if (!$asset -or $asset.browser_download_url -notmatch "^https://github\.com/$([regex]::Escape($Repository))/releases/download/") {
@@ -78,7 +95,7 @@ function Get-QuickSetupLibreOfficeInstaller {
   $index = if ($WebRequestProvider) {
     & $WebRequestProvider $indexUri
   } else {
-    Invoke-WebRequest -Uri $indexUri.AbsoluteUri -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
+    Get-QuickSetupOfficialMetadata -Uri $indexUri -AllowedHosts @("download.documentfoundation.org")
   }
   $versions = @(
     [regex]::Matches([string]$index.Content, 'href="(?<version>\d+\.\d+\.\d+)/"') |
@@ -98,7 +115,7 @@ function Get-QuickSetupLibreOfficeInstaller {
   $mirrorList = if ($WebRequestProvider) {
     & $WebRequestProvider $mirrorListUri
   } else {
-    Invoke-WebRequest -Uri $mirrorListUri.AbsoluteUri -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
+    Get-QuickSetupOfficialMetadata -Uri $mirrorListUri -AllowedHosts @("download.documentfoundation.org")
   }
   $escapedName = [regex]::Escape($fileName)
   $pathMatch = [regex]::Match([string]$mirrorList.Content, "(?is)<li><span class=""mirrorbrain-label"">Path:</span>\s*(?<path>/[^<]+)</li>")
@@ -175,34 +192,34 @@ function Get-QuickSetupInstallerDefinition {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = "latest stable Git for Windows x64"; Source = "https://github.com/git-for-windows/git/releases/latest"; Publisher = "Johannes Schindelin"; ExpectedCommonName = "Johannes Schindelin"; Method = "Official release x64 EXE; exact Johannes Schindelin signer; Inno Setup documented silent switches"; Arguments = @("/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-"); Notes = "The release digest is checked when official metadata provides it. Authenticode must be valid and the signer common name must exactly equal Johannes Schindelin. Existing Git is detected first and is never updated." }
       }
       "github-copilot-desktop" {
-        return [pscustomobject]@{ Automatic = $false; InstallerType = "exe"; Version = "latest official release; manual only"; Source = "https://github.com/github/app/releases"; Method = "Interactive manual install only"; Notes = "The official release publishes GitHub-Copilot-windows-x64-setup.exe, but no verified silent switches or installer scope/per-user behavior are documented. Do not automate its execution on Windows Server 2022. Confirm compatibility explicitly and verify GitHub, Inc. Authenticode signature before launching it interactively." }
+        return Get-QuickSetupCopilotInstallerDefinition
       }
       "libreoffice" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = "latest stable x64"; Source = "https://www.libreoffice.org/download/download-libreoffice/"; Method = "Official Document Foundation x64 MSI via msiexec /qn"; Arguments = @("/qn", "/norestart"); Publisher = "The Document Foundation"; ExpectedCommonName = "The Document Foundation"; Notes = "Optional package; resolves the current stable x64 MSI from the official Document Foundation directory, validates its official SHA-256 and exact Authenticode signer common name, and installs only when selected in the local profile." }
       }
       "github-cli" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://github.com/cli/cli/releases"; Method = "Official x64 MSI via msiexec /qn"; Notes = "Version is resolved from the official GitHub release feed only after confirmation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://github.com/cli/cli/releases"; Method = "Official x64 MSI via msiexec /qn"; Notes = "The CLI resolves official release metadata while preparing the plan; installer bytes require confirmation." }
       }
       "vscode" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $false; Version = "latest stable"; Source = "https://code.visualstudio.com/docs/setup/windows"; Method = "Current-user VS Code setup"; Notes = "Official user installer and documented silent options; applies only to the current Windows user." }
       }
       "nodejs-lts" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable Active LTS"; Source = "https://nodejs.org/en/download/"; Method = "Official x64 MSI via msiexec /qn"; Notes = "Version is resolved from the official Node.js distribution index only after confirmation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable Active LTS"; Source = "https://nodejs.org/en/download/"; Method = "Official x64 MSI via msiexec /qn"; Notes = "The CLI resolves the official Node.js index while preparing the plan; installer bytes require confirmation." }
       }
       "python" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msix"; RequiresAdministrator = $false; Version = "latest stable via Python install manager"; Source = "https://www.python.org/downloads/windows/"; Method = "Official Python install manager MSIX and per-user runtime"; Notes = "Uses the Python install manager and its documented runtime installation command. Windows validates the signed MSIX package during deployment." }
       }
       "dotnet-10-sdk" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable .NET 10 SDK"; Source = "https://learn.microsoft.com/dotnet/core/install/windows"; Method = "Official .NET SDK installer /quiet"; Notes = "Version is resolved from Microsoft's .NET 10 release feed only after confirmation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable .NET 10 SDK"; Source = "https://learn.microsoft.com/dotnet/core/install/windows"; Method = "Official .NET SDK installer /quiet"; Notes = "The CLI resolves Microsoft's .NET 10 feed while preparing the plan; installer bytes require confirmation." }
       }
       "powershell-7" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://learn.microsoft.com/powershell/scripting/install/install-powershell-on-windows"; Method = "Official x64 MSI via msiexec /qn"; Notes = "Version is resolved from Microsoft's official PowerShell release feed only after confirmation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://learn.microsoft.com/powershell/scripting/install/install-powershell-on-windows"; Method = "Official x64 MSI via msiexec /qn"; Notes = "The CLI resolves official PowerShell release metadata while preparing the plan; installer bytes require confirmation." }
       }
       "seven-zip" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.7-zip.org/"; Method = "Official x64 EXE /S"; Notes = "The vendor's FAQ documents /S; the signed installer is resolved from the official site only after confirmation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.7-zip.org/"; Method = "Official x64 EXE /S"; Notes = "The vendor's FAQ documents /S; the CLI resolves official site metadata while preparing the plan, before installer confirmation." }
       }
       "firefox" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.mozilla.org/firefox/enterprise/"; Method = "Official Firefox Enterprise MSI via msiexec /qn"; Notes = "The stable MSI source is resolved only after confirmation and publisher signature validation." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.mozilla.org/firefox/enterprise/"; Method = "Official Firefox Enterprise MSI via msiexec /qn"; Notes = "The CLI prepares the stable MSI source before confirmation; installer bytes and publisher signature are checked after confirmation." }
       }
       "openssh-client" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "windows-capability"; RequiresAdministrator = $true; Version = "Windows Server capability"; Source = "Windows Optional Capability: OpenSSH.Client"; Method = "Add-WindowsCapability (after confirmation)"; Notes = "Uses the Windows-serviced OpenSSH Client capability." }
@@ -213,6 +230,7 @@ function Get-QuickSetupInstallerDefinition {
 
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   switch ($Id) {
+    "github-copilot-desktop" { return Get-QuickSetupCopilotInstallerDefinition }
     "git" {
       $release = Get-QuickSetupGithubReleaseInstaller -Repository "git-for-windows/git" -AssetPattern "^Git-[0-9.]+-64-bit\.exe$"
       return [pscustomobject]@{
@@ -257,12 +275,12 @@ function Get-QuickSetupInstallerDefinition {
       }
     }
     "nodejs-lts" {
-      $index = Invoke-RestMethod -Uri "https://nodejs.org/dist/index.json" -TimeoutSec 60 -ErrorAction Stop
+      $index = Get-QuickSetupOfficialMetadata -Uri "https://nodejs.org/dist/index.json" -AllowedHosts @("nodejs.org") -Json
       $release = @($index | Where-Object { $_.lts -and $_.version -match "^v\d+\.\d+\.\d+$" -and $_.files -contains "win-x64-msi" }) |
         Select-Object -First 1
       if (!$release) { throw "The official Node.js feed did not report a stable Windows x64 LTS MSI." }
       $fileName = "node-$($release.version)-x64.msi"
-      $sumText = (Invoke-WebRequest -Uri "https://nodejs.org/dist/$($release.version)/SHASUMS256.txt" -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop).Content
+      $sumText = (Get-QuickSetupOfficialMetadata -Uri "https://nodejs.org/dist/$($release.version)/SHASUMS256.txt" -AllowedHosts @("nodejs.org")).Content
       $hash = Test-QuickSetupSha256Text -Text $sumText -FileName $fileName
       if (!$hash) { throw "The official Node.js SHA-256 manifest did not contain the selected MSI." }
       return [pscustomobject]@{
@@ -286,7 +304,7 @@ function Get-QuickSetupInstallerDefinition {
       }
     }
     "dotnet-10-sdk" {
-      $feed = Invoke-RestMethod -Uri "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json" -TimeoutSec 60 -ErrorAction Stop
+      $feed = Get-QuickSetupOfficialMetadata -Uri "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json" -AllowedHosts @("dotnetcli.blob.core.windows.net") -Json
       $release = @($feed.releases | Where-Object { $_.sdk.version -and $_.sdk.files }) | Select-Object -First 1
       if (!$release) { throw "The official .NET 10 release feed did not report an SDK installer." }
       $file = @($release.sdk.files | Where-Object { $_.rid -eq "win-x64" -and $_.name -eq "dotnet-sdk-win-x64.exe" }) |
@@ -313,7 +331,7 @@ function Get-QuickSetupInstallerDefinition {
       }
     }
     "seven-zip" {
-      $page = Invoke-WebRequest -Uri "https://www.7-zip.org/" -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
+      $page = Get-QuickSetupOfficialMetadata -Uri "https://www.7-zip.org/" -AllowedHosts @("www.7-zip.org")
       $match = [regex]::Match([string]$page.Content, 'https://github\.com/ip7z/7zip/releases/download/[^"''<> ]+/7z\d+-x64\.exe')
       if (!$match.Success) { throw "The official 7-Zip page did not identify an x64 installer." }
       $versionMatch = [regex]::Match($match.Value, "/download/([^/]+)/")
@@ -378,11 +396,13 @@ function Invoke-QuickSetupPackageInstall {
     throw "Package '$Id' does not have a verified automatic installer."
   }
   $temporaryDirectory = Join-Path $env:TEMP ("configureMe-" + [guid]::NewGuid().ToString("N"))
+  Assert-QuickSetupSafePath -Path $temporaryDirectory
   New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
   try {
     $extension = switch ($Definition.InstallerType) { "msi" { ".msi" } "msix" { ".msix" } default { ".exe" } }
     $installerPath = if ($CachedInstallerPath) { $CachedInstallerPath } else { Join-Path $temporaryDirectory ("installer" + $extension) }
     if ($CachedInstallerPath) {
+      Assert-QuickSetupSafePath -Path $installerPath
       if (!(Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw "The verified installer cache file is missing." }
       if ($Definition.Sha256) {
         if ($Definition.Sha256 -notmatch "^[A-Fa-f0-9]{64}$" -or (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash -ine $Definition.Sha256) {

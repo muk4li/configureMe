@@ -20,6 +20,7 @@ foreach ($requiredFile in @("README.md", "SECURITY.md")) {
 if ($SourceCommitSha -notmatch "^[A-Fa-f0-9]{40,64}$") {
   throw "A valid source commit SHA is required for package provenance."
 }
+$workingTreeDirty = [bool](& git -C $repositoryRoot status --porcelain --untracked-files=all)
 
 $resolvedOutputPath = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path (Get-Location).Path $OutputPath }
 $outputDirectory = Split-Path -Parent $resolvedOutputPath
@@ -35,6 +36,7 @@ try {
     version = "0.3.0"
     architecture = "win-x64"
     sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+    workingTreeDirty = $workingTreeDirty
     buildType = "unsigned development build"
     selfContained = $true
     singleFilePublish = $true
@@ -56,6 +58,7 @@ try {
     schemaVersion = 1
     packageName = "configureMe-Setup-win-x64"
     sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+    workingTreeDirty = $workingTreeDirty
     unsigned = $true
     buildType = "development"
     files = @($manifestFiles)

@@ -114,6 +114,12 @@ function Get-QuickSetupDetectedVersion {
     }
 
     $executablePath = Join-Path $env:LOCALAPPDATA "Programs\GitHub Copilot\GitHub Copilot.exe"
+    if (!$PathExistsProvider) {
+      foreach ($candidate in @("Programs\GitHub Copilot\github.exe", "GitHub Copilot\github.exe")) {
+        $candidatePath = Join-Path $env:LOCALAPPDATA $candidate
+        if (Test-Path -LiteralPath $candidatePath -PathType Leaf) { $executablePath = $candidatePath; break }
+      }
+    }
     $executableExists = if ($PathExistsProvider) {
       [bool](& $PathExistsProvider $executablePath)
     } else {
@@ -224,6 +230,14 @@ function Get-QuickSetupDetectedVersion {
     }
     if (!$command) {
       $candidatePaths = switch ($Id) {
+        "python" {
+          # Python Install Manager registers real runtimes using PEP 514. Probe those
+          # executables rather than invoking a WindowsApps alias that could install a runtime.
+          @(Get-ChildItem "HKCU:\Software\Python\PythonCore", "HKLM:\Software\Python\PythonCore" -ErrorAction SilentlyContinue | ForEach-Object {
+            $entry = Get-ItemProperty -LiteralPath (Join-Path $_.PSPath "InstallPath") -ErrorAction SilentlyContinue
+            if ($entry.ExecutablePath) { [string]$entry.ExecutablePath }
+          })
+        }
         "git" { @((Join-Path $env:ProgramFiles "Git\cmd\git.exe")) }
         "github-cli" { @((Join-Path $env:ProgramFiles "GitHub CLI\gh.exe")) }
         "vscode" { @((Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code\bin\code.cmd")) }
@@ -247,15 +261,15 @@ function Get-QuickSetupDetectedVersion {
           }
           "github-cli" {
             $output = & $command.Source --version 2>$null | Out-String
-            if ($output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
           }
           "vscode" {
             $output = & $command.Source --version 2>$null | Out-String
-            if ($output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
           }
           "nodejs-lts" {
             $output = & $command.Source --version 2>$null | Out-String
-            if ($output -match "v?(\d+\.\d+\.\d+)") {
+            if ($LASTEXITCODE -eq 0 -and $output -match "v?(\d+\.\d+\.\d+)") {
               $nodeVersion = $Matches[1]
               $npmCommand = Get-Command npm -ErrorAction SilentlyContinue | Select-Object -First 1
               if (!$npmCommand) {
@@ -264,13 +278,13 @@ function Get-QuickSetupDetectedVersion {
               }
               if (!$npmCommand) { return "$nodeVersion (npm not found)" }
               $npmOutput = & $npmCommand.Source --version 2>$null | Out-String
-              if ($npmOutput -match "(\d+\.\d+\.\d+)") { return "$nodeVersion (npm $($Matches[1]))" }
+              if ($LASTEXITCODE -eq 0 -and $npmOutput -match "(\d+\.\d+\.\d+)") { return "$nodeVersion (npm $($Matches[1]))" }
               return "$nodeVersion (npm version unavailable)"
             }
           }
           "python" {
             $output = & $command.Source --version 2>&1 | Out-String
-            if ($output -match "Python\s+(\d+\.\d+\.\d+)") {
+            if ($LASTEXITCODE -eq 0 -and $output -match "Python\s+(\d+\.\d+\.\d+)") {
               $pythonVersion = $Matches[1]
               $pyCommand = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
               $pipOutput = & $command.Source -m pip --version 2>&1 | Out-String
@@ -281,30 +295,32 @@ function Get-QuickSetupDetectedVersion {
           }
           "dotnet-10-sdk" {
             $output = & $command.Source --list-sdks 2>$null | Out-String
-            if ($output -match "(?m)^(10\.\d+\.\d+)\s+") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(?m)^(10\.\d+\.\d+)\s+") { return $Matches[1] }
           }
           "powershell-7" {
             $output = & $command.Source -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>$null | Out-String
-            if ($output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
           }
           "seven-zip" {
             $output = & $command.Source 2>&1 | Out-String
-            if ($output -match "(\d+\.\d+)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+)") { return $Matches[1] }
           }
           "firefox" {
             $output = & $command.Source --version 2>&1 | Out-String
-            if ($output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
           }
           "github-copilot-cli" {
             $output = & $command.Source --version 2>&1 | Out-String
-            if ($output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
+            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
           }
         }
       } catch { }
-      return "detected (version command unavailable)"
+      # A command stub or an unrelated SDK/runtime is not an installed requested package.
+      return $null
     }
   }
 
+  if ($Id -in @("git", "dotnet-10-sdk")) { return $null }
   $name = Get-QuickSetupPackageName -Id $Id
   $registryPaths = @(
     "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",

@@ -17,6 +17,11 @@ internal sealed class PowerShellWorkerClient(EngineBundle engine)
         Action<WorkerEvent>? onEvent = null,
         CancellationToken cancellationToken = default)
     {
+        engine.VerifyUnchanged();
+        if (action == "install" && cancellationToken.CanBeCanceled)
+        {
+            throw new ArgumentException("An active installer must be allowed to finish.", nameof(cancellationToken));
+        }
         var executable = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Windows),
             "System32",
@@ -72,9 +77,30 @@ internal sealed class PowerShellWorkerClient(EngineBundle engine)
         });
         await process.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request, JsonOptions)).ConfigureAwait(false);
         process.StandardInput.Close();
-        var events = new List<WorkerEvent>();
         var errorsTask = process.StandardError.ReadToEndAsync();
-        while (await process.StandardOutput.ReadLineAsync().ConfigureAwait(false) is { } line)
+        var (events, protocolError) = await ReadEventsAsync(process.StandardOutput, onEvent).ConfigureAwait(false);
+
+        await process.WaitForExitAsync().ConfigureAwait(false);
+        var standardError = await errorsTask.ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (protocolError is not null) throw protocolError;
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(standardError)
+                    ? $"The PowerShell worker exited with code {process.ExitCode}."
+                    : $"The PowerShell worker exited with code {process.ExitCode}: {standardError.Trim()}");
+        }
+
+        return new WorkerRunResult(process.ExitCode, events, standardError);
+    }
+
+    internal static async Task<(IReadOnlyList<WorkerEvent> Events, InvalidDataException? ProtocolError)> ReadEventsAsync(
+        TextReader output, Action<WorkerEvent>? onEvent = null)
+    {
+        var events = new List<WorkerEvent>();
+        InvalidDataException? protocolError = null;
+        while (await output.ReadLineAsync().ConfigureAwait(false) is { } line)
         {
             WorkerEvent workerEvent;
             try
@@ -84,26 +110,15 @@ internal sealed class PowerShellWorkerClient(EngineBundle engine)
             }
             catch (JsonException exception)
             {
-                process.Kill(entireProcessTree: true);
-                throw new InvalidDataException("The PowerShell worker emitted a malformed status event.", exception);
+                protocolError ??= new InvalidDataException("The PowerShell worker emitted a malformed status event.", exception);
+                // Keep draining output. RunAsync waits for process exit before reporting the error.
+                continue;
             }
 
             events.Add(workerEvent);
             onEvent?.Invoke(workerEvent);
         }
-
-        await process.WaitForExitAsync().ConfigureAwait(false);
-        var standardError = await errorsTask.ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (process.ExitCode != 0 && events.All(item => item.Type != "worker-error"))
-        {
-            throw new InvalidOperationException(
-                string.IsNullOrWhiteSpace(standardError)
-                    ? $"The PowerShell worker exited with code {process.ExitCode}."
-                    : $"The PowerShell worker exited with code {process.ExitCode}: {standardError.Trim()}");
-        }
-
-        return new WorkerRunResult(process.ExitCode, events, standardError);
+        return (events, protocolError);
     }
 
     public static string? ReadString(JsonElement element, string propertyName)

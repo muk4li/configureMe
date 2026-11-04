@@ -5,7 +5,6 @@ param(
   [switch]$List,
   [switch]$GuiWorker,
   [switch]$SkipOptional,
-  [switch]$ConfirmCopilotDesktopServerCompatibility,
   [string]$ReportPath = ".\setup-report.json"
 )
 
@@ -21,7 +20,7 @@ Import-Module (Join-Path $moduleDirectory "Installation.psm1") -Force
 Import-Module (Join-Path $moduleDirectory "GuiWorker.psm1") -Force
 
 $knownPackageIds = @(Get-QuickSetupPackageCatalog | ForEach-Object { [string]$_.id })
-$optionalPackageIds = @("github-copilot-desktop", "libreoffice", "teams", "docker-desktop", "github-copilot-cli")
+$optionalPackageIds = @("libreoffice", "teams", "docker-desktop", "github-copilot-cli")
 $requestedVersions = @{
   "git" = "latest stable"
   "github-cli" = "latest stable"
@@ -33,7 +32,7 @@ $requestedVersions = @{
   "seven-zip" = "latest stable"
   "firefox" = "latest stable"
   "openssh-client" = "Windows Server capability"
-  "github-copilot-desktop" = "Latest official release; interactive install only"
+  "github-copilot-desktop" = "Pinned official 1.1.34 release"
   "libreoffice" = "Latest stable x64 release; optional"
   "teams" = "Current desktop client; support not asserted"
   "docker-desktop" = "Existing installation only; no updates"
@@ -156,25 +155,6 @@ foreach ($id in $profileData.packages) {
     continue
   }
 
-  if ($id -eq "github-copilot-desktop") {
-    $definition = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview
-    $result.Status = "Requires user action"
-    $result.InstallerType = $definition.InstallerType
-    $result.Source = $definition.Source
-    $result.Method = $definition.Method
-    $result.CompatibilityConfirmed = [bool]$ConfirmCopilotDesktopServerCompatibility
-    $result.Notes = $definition.Notes
-    if ($ConfirmCopilotDesktopServerCompatibility) {
-      $result.Notes += " The operator explicitly confirmed compatibility for this Server 2022 deployment; this is not an official support statement."
-      $manualSteps.Add("Install GitHub Copilot Desktop interactively from the official release after verifying the GitHub, Inc. signature. Sign in interactively; the bootstrap does not handle tokens: $($result.Source)")
-    } else {
-      $result.Notes += " Windows Server 2022 compatibility has not been confirmed for this deployment."
-      $manualSteps.Add("GitHub Copilot Desktop requires user action. To record optional compatibility confirmation for this Server 2022 deployment, rerun with -ConfirmCopilotDesktopServerCompatibility, then install interactively from the official release after verifying the GitHub, Inc. signature: $($result.Source)")
-    }
-    $packageResults.Add($result)
-    continue
-  }
-
   if ($id -eq "teams") {
     $result.Status = "Not supported"
     $result.Source = "https://teams.microsoft.com/v2"
@@ -255,6 +235,7 @@ foreach ($id in $profileData.packages) {
 }
 
 Write-Host ""
+$changesConfirmed = $false
 Write-Host "Planned package actions:"
 foreach ($result in $packageResults) {
   Write-Host ("- {0}: {1}; type: {2}; administrator required: {3}; requested: {4}; detected: {5}; {6}" -f $result.Name, $result.Status, $result.InstallerType, $result.RequiresAdministrator, $result.RequestedVersion, $(if ($result.DetectedVersion) { $result.DetectedVersion } else { "not installed" }), $result.Method)
@@ -273,6 +254,7 @@ if ($DryRun) {
     }
     Write-QuickSetupLog -Level "WARN" -Message "Cancelled. No planned installers were started."
   } else {
+    $changesConfirmed = $true
     foreach ($planned in $plannedInstallations) {
       $result = $planned.Result
       $id = $planned.Id
@@ -326,7 +308,7 @@ if ($DryRun) {
 }
 
 $vscodeResult = @($packageResults | Where-Object { $_.Id -eq "vscode" }) | Select-Object -First 1
-if (!$DryRun -and $vscodeResult -and $vscodeResult.Status -in @("Installed", "Already installed")) {
+if (!$DryRun -and $changesConfirmed -and $vscodeResult -and $vscodeResult.Status -in @("Installed", "Already installed")) {
   try {
     $themeResult = Set-QuickSetupVsCodeDarkTheme
     if (!$themeResult.Success) {
@@ -354,6 +336,9 @@ foreach ($result in $packageResults) {
     if (!$pythonDiagnostics.Complete) {
       $manualSteps.Add("Verify or complete Python command setup with python --version, py --version, and python -m pip --version.")
     }
+  }
+  if ($result.Id -eq "github-copilot-desktop" -and $result.Status -in @("Installed", "Already installed")) {
+    $manualSteps.Add("Open GitHub Copilot Desktop and sign in interactively. No credentials were collected by the bootstrap.")
   }
   if ($result.Id -eq "git") {
     $manualSteps.Add("Set git config --global user.name and user.email yourself if needed; configureMe does not invent Git identity values.")

@@ -20,4 +20,18 @@ public sealed class EngineBundleTests
             package => package.GetProperty("id").GetString() == "docker-desktop" &&
                 package.GetProperty("windowsMode").GetString() == "detection-only");
     }
+
+    [Fact]
+    public void RefusesChangedExtractedScriptBeforeAWorkerRuns()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "configureme-engine-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var engine = EngineBundle.ExtractVerified(root);
+            File.AppendAllText(engine.BootstrapPath, "\n# changed after verification\n");
+            Assert.Throws<IOException>(engine.VerifyUnchanged);
+            Assert.Throws<IOException>(() => EngineBundle.ExtractVerified(root));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
 }

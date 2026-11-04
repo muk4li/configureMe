@@ -11,6 +11,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PowerShellExecutable Condition="'$(PowerShellExecutable)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</PowerShellExecutable>
+    <PowerShellExecutable Condition="'$(PowerShellExecutable)' == '' and '$(OS)' != 'Windows_NT'">pwsh</PowerShellExecutable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,7 +29,7 @@
   </ItemGroup>
 
   <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
-    <Exec Command="powershell.exe -NoProfile -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
+    <Exec Command="$(PowerShellExecutable) -NoProfile -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
     <ItemGroup>
       <EmbeddedResource Include="$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json" LogicalName="ConfigureMe.Engine.manifest.json" />
     </ItemGroup>

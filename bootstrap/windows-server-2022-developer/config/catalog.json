@@ -145,12 +145,13 @@
     {
       "id": "github-copilot-desktop",
       "name": "GitHub Copilot Desktop",
-      "description": "Separate desktop app; detection and manual guidance only on Windows Server.",
+      "description": "Pinned official Copilot Desktop setup; verified current-user NSIS silent installation.",
       "category": "AI development",
       "website": "https://github.com/github/app",
       "elevated": false,
-      "windowsMode": "manual",
-      "platforms": { "windows": { "id": "quicksetup-copilot-desktop", "supported": true, "label": "Manual / support warning" } }
+      "windowsMode": "automatic",
+      "dependencies": ["git"],
+      "platforms": { "windows": { "id": "quicksetup-copilot-desktop", "supported": true, "label": "Pinned signed NSIS installer /S" } }
     },
     {
       "id": "libreoffice",

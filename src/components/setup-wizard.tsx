@@ -6,17 +6,17 @@ import type { Profile } from "@/lib/profiles";
 
 const steps = ["Target", "Packages", "Review"];
 const serverQuickSetupLabels: Record<string, string> = {
-  git: "Manual fallback",
+  git: "Official signed x64 installer",
   "github-cli": "Official signed MSI",
   vscode: "Official signed user setup",
   "nodejs-lts": "Active LTS MSI",
-  python: "Manual fallback",
+  python: "Official Python install manager",
   "dotnet-10-sdk": "Official signed SDK installer",
   "powershell-7": "Official signed MSI",
   "seven-zip": "Official signed installer",
   firefox: "Official signed MSI",
   "openssh-client": "Windows capability",
-  "github-copilot-desktop": "Manual / support warning",
+  "github-copilot-desktop": "Pinned signed silent installer",
   teams: "Web fallback",
   "docker-desktop": "Detection only / unsupported",
   "github-copilot-cli": "Optional / manual",

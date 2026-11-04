@@ -14,6 +14,7 @@ internal sealed class PackageInstallQueue
     public event Action<string>? PackageStarted;
     public event Action<string>? PackageCompleted;
     public event Action<string, Exception>? PackageFailed;
+    public event Action? Drained;
 
     public bool IsBusy
     {
@@ -80,7 +81,7 @@ internal sealed class PackageInstallQueue
                 {
                     _activePackageId = null;
                     _processor = null;
-                    return;
+                    break;
                 }
                 packageId = _pending.Dequeue();
                 _activePackageId = packageId;
@@ -105,5 +106,6 @@ internal sealed class PackageInstallQueue
                 }
             }
         }
+        Drained?.Invoke();
     }
 }

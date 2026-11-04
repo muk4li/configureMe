@@ -36,6 +36,10 @@ jobs:
         shell: powershell
         run: dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore
 
+      - name: Run portable engine and aggregate-report tests
+        shell: powershell
+        run: dotnet test windows\ConfigureMe.Setup.Portable.Tests\ConfigureMe.Setup.Portable.Tests.csproj --configuration Release
+
       - name: Publish self-contained Windows x64 GUI
         shell: powershell
         run: |

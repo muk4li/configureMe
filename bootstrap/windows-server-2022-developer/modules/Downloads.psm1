@@ -1,3 +1,62 @@
+function Assert-QuickSetupSafePath {
+  param([Parameter(Mandatory = $true)][string]$Path)
+  $current = [IO.Path]::GetFullPath($Path)
+  while ($current) {
+    $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+    if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw "The setup path '$current' is a reparse point; refusing to use it."
+    }
+    $parent = [IO.Path]::GetDirectoryName($current)
+    if ($parent -eq $current) { break }
+    $current = $parent
+  }
+}
+
+function Invoke-QuickSetupOfficialRequest {
+  param(
+    [Parameter(Mandatory = $true)][uri]$Uri,
+    [Parameter(Mandatory = $true)][string[]]$AllowedHosts,
+    [string]$Destination
+  )
+  $current = $Uri
+  for ($redirect = 0; $redirect -le 10; $redirect++) {
+    if ($current.Scheme -ne "https" -or $current.UserInfo -or !$current.IsDefaultPort -or
+      !(Test-QuickSetupAllowedHost -HostName $current.DnsSafeHost -AllowedHosts $AllowedHosts)) {
+      throw "The download redirected outside the allowed official HTTPS hosts."
+    }
+    $request = [Net.HttpWebRequest]::Create($current)
+    $request.AllowAutoRedirect = $false
+    $request.Timeout = 90000
+    $request.ReadWriteTimeout = 90000
+    $request.UserAgent = "configureMe-Windows-QuickSetup"
+    $request.Accept = "application/json, text/plain, */*"
+    $response = $request.GetResponse()
+    try {
+      if ([int]$response.StatusCode -in @(301, 302, 303, 307, 308)) {
+        if (!$response.Headers["Location"] -or $redirect -eq 10) { throw "The official source exceeded its redirect limit." }
+        $current = [uri]::new($current, $response.Headers["Location"])
+        continue
+      }
+      if ($Destination) {
+        Assert-QuickSetupSafePath -Path $Destination
+        $output = [IO.File]::Open($Destination, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try { $response.GetResponseStream().CopyTo($output) } finally { $output.Dispose() }
+        return $current
+      }
+      $reader = New-Object IO.StreamReader($response.GetResponseStream(), [Text.Encoding]::UTF8, $true)
+      try { return [pscustomobject]@{ Content = $reader.ReadToEnd(); Uri = $current } } finally { $reader.Dispose() }
+    } finally { $response.Dispose() }
+  }
+}
+
+function Get-QuickSetupOfficialMetadata {
+  param([uri]$Uri, [string[]]$AllowedHosts, [switch]$Json)
+  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  $response = Invoke-QuickSetupOfficialRequest -Uri $Uri -AllowedHosts $AllowedHosts
+  if ($Json) { return ($response.Content | ConvertFrom-Json -ErrorAction Stop) }
+  return $response
+}
+
 function Test-QuickSetupAllowedHost {
   param(
     [Parameter(Mandatory = $true)][string]$HostName,
@@ -22,20 +81,22 @@ function Get-QuickSetupOfficialDownload {
     [scriptblock]$DownloadProvider
   )
 
-  if ($Uri.Scheme -ne "https" -or !(Test-QuickSetupAllowedHost -HostName $Uri.DnsSafeHost -AllowedHosts $AllowedHosts)) {
+  if ($Uri.Scheme -ne "https" -or $Uri.UserInfo -or !$Uri.IsDefaultPort -or !(Test-QuickSetupAllowedHost -HostName $Uri.DnsSafeHost -AllowedHosts $AllowedHosts)) {
     throw "The download URL is not an allowed official HTTPS source."
   }
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  Assert-QuickSetupSafePath -Path $Destination
   $lastError = $null
   for ($attempt = 1; $attempt -le 3; $attempt++) {
     try {
       if ($DownloadProvider) {
         $response = & $DownloadProvider $Uri $Destination $AllowedHosts
       } else {
-        $response = Invoke-WebRequest -Uri $Uri.AbsoluteUri -UseBasicParsing -TimeoutSec 90 -MaximumRedirection 10 -OutFile $Destination -PassThru -ErrorAction Stop
+        $response = Invoke-QuickSetupOfficialRequest -Uri $Uri -Destination $Destination -AllowedHosts $AllowedHosts
       }
       $finalUri = if ($response -is [uri]) { $response } elseif ($response.BaseResponse) { $response.BaseResponse.ResponseUri } else { $null }
-      if (!$finalUri -or $finalUri.Scheme -ne "https" -or !(Test-QuickSetupAllowedHost -HostName $finalUri.DnsSafeHost -AllowedHosts $AllowedHosts)) {
+      if (!$finalUri -or $finalUri.Scheme -ne "https" -or $finalUri.UserInfo -or !$finalUri.IsDefaultPort -or
+        !(Test-QuickSetupAllowedHost -HostName $finalUri.DnsSafeHost -AllowedHosts $AllowedHosts)) {
         throw "The download redirected outside the allowed official HTTPS hosts."
       }
       if (!(Test-Path -LiteralPath $Destination) -or (Get-Item -LiteralPath $Destination).Length -eq 0) {
@@ -217,6 +278,7 @@ function Test-QuickSetupAuthenticodePublisher {
     }
   }
   $subject = [string]$signature.SignerCertificate.Subject
+  if (!$ExpectedCommonName) { $ExpectedCommonName = $ExpectedPublisher }
   if ($ExpectedCommonName) {
     $commonNameMatch = [regex]::Match($subject, '(?:^|,\s*)CN=(?:"([^"]+)"|([^,]+))')
     $commonName = if ($commonNameMatch.Groups[1].Success) { $commonNameMatch.Groups[1].Value } else { $commonNameMatch.Groups[2].Value }
@@ -239,4 +301,4 @@ function Test-QuickSetupAuthenticodePublisher {
   [pscustomobject]@{ IsValid = $true; Signer = $subject; Message = "Valid Authenticode signature from $ExpectedPublisher." }
 }
 
-Export-ModuleMember -Function Test-QuickSetupAllowedHost, Get-QuickSetupOfficialDownload, Test-QuickSetupMsixPackage, Test-QuickSetupInstallerFile, Test-QuickSetupAuthenticodePublisher
+Export-ModuleMember -Function Assert-QuickSetupSafePath, Invoke-QuickSetupOfficialRequest, Get-QuickSetupOfficialMetadata, Test-QuickSetupAllowedHost, Get-QuickSetupOfficialDownload, Test-QuickSetupMsixPackage, Test-QuickSetupInstallerFile, Test-QuickSetupAuthenticodePublisher

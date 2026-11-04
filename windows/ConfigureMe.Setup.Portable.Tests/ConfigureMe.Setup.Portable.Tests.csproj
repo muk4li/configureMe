@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PowerShellExecutable Condition="'$(PowerShellExecutable)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</PowerShellExecutable>
+    <PowerShellExecutable Condition="'$(PowerShellExecutable)' == '' and '$(OS)' != 'Windows_NT'">pwsh</PowerShellExecutable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <Compile Include="..\ConfigureMe.Setup\EngineBundle.cs" Link="Source\EngineBundle.cs" />
+    <Compile Include="..\ConfigureMe.Setup\InstallPlanResolver.cs" Link="Source\InstallPlanResolver.cs" />
+    <Compile Include="..\ConfigureMe.Setup\Models.cs" Link="Source\Models.cs" />
+    <Compile Include="..\ConfigureMe.Setup\PackageInstallQueue.cs" Link="Source\PackageInstallQueue.cs" />
+    <Compile Include="..\ConfigureMe.Setup\PackageDownloadPlan.cs" Link="Source\PackageDownloadPlan.cs" />
+    <Compile Include="..\ConfigureMe.Setup\PowerShellWorkerClient.cs" Link="Source\PowerShellWorkerClient.cs" />
+    <Compile Include="..\ConfigureMe.Setup\SetupRunReport.cs" Link="Source\SetupRunReport.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\GlobalUsings.cs" Link="Tests\GlobalUsings.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\EngineBundleTests.cs" Link="Tests\EngineBundleTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\InstallPlanResolverTests.cs" Link="Tests\InstallPlanResolverTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\PackageInstallQueueTests.cs" Link="Tests\PackageInstallQueueTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\PackageDownloadPlanTests.cs" Link="Tests\PackageDownloadPlanTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\PowerShellWorkerClientTests.cs" Link="Tests\PowerShellWorkerClientTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\bootstrap.ps1" LogicalName="ConfigureMe.Engine.bootstrap.ps1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\config\catalog.json" LogicalName="ConfigureMe.Engine.config.catalog.json" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\config\windows-server-2022-developer.json" LogicalName="ConfigureMe.Engine.config.windows-server-2022-developer.json" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Detection.psm1" LogicalName="ConfigureMe.Engine.modules.Detection.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Downloads.psm1" LogicalName="ConfigureMe.Engine.modules.Downloads.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\GuiWorker.psm1" LogicalName="ConfigureMe.Engine.modules.GuiWorker.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Installation.psm1" LogicalName="ConfigureMe.Engine.modules.Installation.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Logging.psm1" LogicalName="ConfigureMe.Engine.modules.Logging.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Verification.psm1" LogicalName="ConfigureMe.Engine.modules.Verification.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\assets\firefox-bookmarks.html" LogicalName="ConfigureMe.Engine.assets.firefox-bookmarks.html" />
+  </ItemGroup>
+
+  <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
+    <Exec Command="$(PowerShellExecutable) -NoProfile -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json" LogicalName="ConfigureMe.Engine.manifest.json" />
+    </ItemGroup>
+  </Target>
+</Project>

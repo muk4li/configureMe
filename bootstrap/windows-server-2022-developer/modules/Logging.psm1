@@ -62,7 +62,6 @@ function New-QuickSetupPackageResult {
     ErrorCode = $null
     Notes = $null
     RestartRequired = $false
-    CompatibilityConfirmed = $null
   }
 }
 
@@ -72,6 +71,8 @@ function Write-QuickSetupReport {
     [Parameter(Mandatory = $true)][string]$Path
   )
 
+  Assert-QuickSetupSafePath -Path $Path
+  Assert-QuickSetupSafePath -Path ([System.IO.Path]::ChangeExtension($Path, ".txt"))
   $directory = Split-Path -Parent $Path
   if ($directory -and !(Test-Path -LiteralPath $directory)) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null

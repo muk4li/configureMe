@@ -35,6 +35,10 @@ internal sealed class SetupForm : Form
     private CancellationTokenSource? _downloadCancellation;
     private string? _reportPath;
     private bool _isPreparingDownloads;
+    private bool _operationInProgress;
+    private readonly List<Button> _exclusiveButtons = [];
+    private SetupRunReport? _runReport;
+    private WorkerEvent? _lastSystemEvent;
 
     public SetupForm()
     {
@@ -62,6 +66,12 @@ internal sealed class SetupForm : Form
         _installQueue.PackageStarted += id => PostToUi(() => QueuePackageStarted(id));
         _installQueue.PackageCompleted += id => PostToUi(() => QueuePackageFinished(id, null));
         _installQueue.PackageFailed += (id, exception) => PostToUi(() => QueuePackageFinished(id, exception));
+        _installQueue.Drained += () => PostToUi(() =>
+        {
+            if (_installQueue.IsBusy) return;
+            SaveRunReport(completed: true);
+            SetBusyState(false, "Warteschlange abgeschlossen.", marquee: false);
+        });
 
         InitializeWindow();
         BuildLayout();
@@ -84,6 +94,12 @@ internal sealed class SetupForm : Form
         Font = new Font("Segoe UI", 9F);
         AutoScaleMode = AutoScaleMode.Dpi;
         DoubleBuffered = true;
+        FormClosing += (_, args) =>
+        {
+            if (!_operationInProgress && !_installQueue.IsBusy) return;
+            args.Cancel = true;
+            MessageBox.Show(this, "Bitte zuerst die Warteschlange abbrechen und einen aktiven Installer zu Ende laufen lassen.", "Setup läuft", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        };
     }
 
     private void BuildLayout()
@@ -178,6 +194,7 @@ internal sealed class SetupForm : Form
         StyleButton(_installSelectedButton, primary: true);
         _installSelectedButton.Click += async (_, _) => await InstallSelectedAsync();
         mainActions.Controls.Add(_installSelectedButton);
+        _exclusiveButtons.Add(_installSelectedButton);
         _cancelButton.Text = "Installation abbrechen";
         StyleButton(_cancelButton, primary: false);
         _cancelButton.Click += (_, _) => CancelPending();
@@ -347,6 +364,7 @@ internal sealed class SetupForm : Form
         var button = new Button { Text = text, AutoSize = true, Height = 34, Margin = new Padding(0, 0, 8, 0) };
         StyleButton(button, primary: false);
         button.Click += click;
+        _exclusiveButtons.Add(button);
         return button;
     }
 
@@ -363,6 +381,8 @@ internal sealed class SetupForm : Form
 
     private async Task CheckSystemAsync()
     {
+        if (_operationInProgress || _installQueue.IsBusy) return;
+        _operationInProgress = true;
         SetBusyState(true, "System und Programme werden geprüft …", marquee: true);
         try
         {
@@ -376,6 +396,7 @@ internal sealed class SetupForm : Form
         }
         finally
         {
+            _operationInProgress = false;
             SetBusyState(false, _currentActionLabel.Text, marquee: false);
         }
     }
@@ -409,6 +430,7 @@ internal sealed class SetupForm : Form
 
     private async Task ShowPlanAsync(IReadOnlyList<string> packageIds, bool dryRun)
     {
+        if (_operationInProgress || _installQueue.IsBusy) return;
         IReadOnlyList<string> ordered;
         try
         {
@@ -421,21 +443,38 @@ internal sealed class SetupForm : Form
         }
 
         var toInstall = ordered.Where(id => !_states[id].IsInstalled).ToArray();
-        if (toInstall.Length == 0 && !dryRun)
-        {
-            MessageBox.Show(this, "Alle ausgewählten Programme sind bereits installiert.", "Installationsplan", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
 
+        _runReport = null;
+        _reportPath = null;
+        _operationInProgress = true;
         SetBusyState(true, "Installationsplan wird vorbereitet …", marquee: true);
         try
         {
             var result = await _worker.RunAsync("plan", ordered, false, HandleWorkerEvent);
             var planEvent = result.Events.LastOrDefault(item => item.Type == "install-plan");
-            var summary = FormatPlan(planEvent?.Data, ordered);
+            if (planEvent?.Data.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Der Worker hat keinen gültigen Plan geliefert.");
+            var summary = FormatPlan(planEvent.Data, ordered);
+            var installerTypes = planEvent.Data.EnumerateArray().ToDictionary(
+                item => PowerShellWorkerClient.ReadString(item, "id")
+                    ?? throw new InvalidDataException("Der Worker-Plan enthält ein Paket ohne ID."),
+                item => PowerShellWorkerClient.ReadString(item, "installerType"), StringComparer.Ordinal);
+            if (ordered.Any(id => !installerTypes.ContainsKey(id)))
+                throw new InvalidDataException("Der Worker-Plan ist unvollständig.");
+            _runReport = new SetupRunReport();
+            _reportPath = _runReport.JsonPath;
+            if (_lastSystemEvent is not null) _runReport.Apply(_lastSystemEvent);
+            foreach (var id in ordered)
+                _runReport.Record(id, PackageName(id), _states[id].IsInstalled ? "Already installed" : dryRun ? "Dry run" : "Pending", detectedVersion: _states[id].DetectedVersion);
+            _runReport.Write(completed: dryRun);
             if (dryRun)
             {
                 MessageBox.Show(this, summary, "Dry-Run — keine Änderungen", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (toInstall.Length == 0)
+            {
+                SaveRunReport(completed: true);
+                MessageBox.Show(this, "Alle ausgewählten Programme sind bereits installiert.", "Installationsplan", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -448,19 +487,25 @@ internal sealed class SetupForm : Form
                 MessageBoxDefaultButton.Button2);
             if (confirmation != DialogResult.Yes)
             {
+                foreach (var id in toInstall) _runReport.Record(id, PackageName(id), "Skipped by user", "Plan not confirmed.");
+                SaveRunReport(completed: true);
                 return;
             }
 
-            var automaticPackages = toInstall.Where(id => _packageById[id].WindowsMode == "automatic").ToArray();
+            var automaticPackages = toInstall.Where(id => PackageDownloadPlan.NeedsDownload(_packageById[id], installerTypes[id])).ToArray();
             var downloaded = await DownloadSelectedPackagesAsync(automaticPackages);
             if (downloaded is null)
             {
+                foreach (var id in _runReport.MarkPending("Skipped by user", "Download phase cancelled; no installer started."))
+                {
+                    _states[id].Status = "Abgebrochen";
+                    UpdatePackageRow(id);
+                }
+                SaveRunReport(completed: true);
                 return;
             }
 
-            var queueIds = toInstall.Where(id =>
-                _packageById[id].WindowsMode != "automatic" ||
-                downloaded.Contains(id, StringComparer.Ordinal)).ToArray();
+            var queueIds = PackageDownloadPlan.SelectQueue(toInstall, _packageById, installerTypes, downloaded);
             foreach (var id in queueIds)
             {
                 _states[id].Status = _packageById[id].WindowsMode == "automatic" ? "Wartet auf Installation" : "Manuelle Aktion erforderlich";
@@ -470,16 +515,20 @@ internal sealed class SetupForm : Form
             AppendLog($"{added} Paket(e) zur Warteschlange hinzugefügt. Installationen laufen seriell.");
             if (added == 0)
             {
+                SaveRunReport(completed: true);
                 AppendLog("Es gibt keine weiteren Pakete zur Installation.");
             }
         }
         catch (Exception exception)
         {
+            _runReport?.MarkPending("Failed", exception.Message);
+            SaveRunReport(completed: true);
             AppendLog($"Installationsplan fehlgeschlagen: {exception.Message}", error: true);
             MessageBox.Show(this, exception.Message, "Installationsplan fehlgeschlagen", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
+            _operationInProgress = false;
             var busy = _installQueue.IsBusy || _isPreparingDownloads;
             SetBusyState(busy, busy ? "Warteschlange läuft …" : "Bereit", marquee: busy);
         }
@@ -530,6 +579,8 @@ internal sealed class SetupForm : Form
                     {
                         _states[id].Status = "Fehlgeschlagen";
                         _states[id].Error = exception.Message;
+                        _runReport?.Record(id, PackageName(id), "Failed", exception.Message);
+                        SaveRunReport();
                         UpdatePackageRow(id);
                         AppendLog($"Download oder Sicherheitsprüfung für {PackageName(id)} fehlgeschlagen: {exception.Message}", error: true);
                     });
@@ -543,6 +594,13 @@ internal sealed class SetupForm : Form
             }
             if (cancellation.IsCancellationRequested)
             {
+                foreach (var id in packageIds)
+                {
+                    _states[id].Status = "Abgebrochen";
+                    _runReport?.Record(id, PackageName(id), "Skipped by user", "Download phase cancelled; no installer started.");
+                    UpdatePackageRow(id);
+                }
+                SaveRunReport(completed: true);
                 return null;
             }
             return successful;
@@ -567,6 +625,9 @@ internal sealed class SetupForm : Form
 
     private void ApplyWorkerEvent(WorkerEvent workerEvent)
     {
+        if (workerEvent.Type == "system-detected") _lastSystemEvent = workerEvent;
+        _runReport?.Apply(workerEvent);
+        if (workerEvent.Type is "package-installation-completed" or "operation-completed") SaveRunReport();
         switch (workerEvent.Type)
         {
             case "system-detected":
@@ -575,7 +636,8 @@ internal sealed class SetupForm : Form
             case "package-detected" when workerEvent.PackageId is { } detectedId && _states.TryGetValue(detectedId, out var detectedState):
                 detectedState.DetectedVersion = PowerShellWorkerClient.ReadString(workerEvent.Data, "detectedVersion");
                 detectedState.Status = detectedState.IsInstalled ? "Bereits installiert" : "Bereit";
-                detectedState.Details = PowerShellWorkerClient.ReadString(workerEvent.Data, "details");
+                detectedState.Details = workerEvent.Data.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object
+                    ? details.ToString() : PowerShellWorkerClient.ReadString(workerEvent.Data, "details");
                 UpdatePackageRow(detectedId);
                 break;
             case "package-status" when workerEvent.PackageId is { } statusId && _states.TryGetValue(statusId, out var statusState):
@@ -616,8 +678,9 @@ internal sealed class SetupForm : Form
                     error: workerEvent.Status == "Failed");
                 break;
             case "report-written":
-                _reportPath = PowerShellWorkerClient.ReadString(workerEvent.Data, "jsonPath");
-                AppendLog("Abschlussbericht wurde geschrieben.");
+                // Per-operation worker reports have unique paths; export the aggregate GUI run.
+                SaveRunReport();
+                AppendLog("Paketbericht wurde geschrieben; Gesamtlauf wird separat protokolliert.");
                 break;
             case "log":
                 AppendLog(workerEvent.Message ?? "PowerShell-Engine", error: workerEvent.Status == "error");
@@ -702,6 +765,8 @@ internal sealed class SetupForm : Form
         {
             _states[id].Status = "Fehlgeschlagen";
             _states[id].Error = exception.Message;
+            _runReport?.RecordFailureIfPending(id, PackageName(id), exception.Message);
+            SaveRunReport();
             UpdatePackageRow(id);
             AppendLog($"{PackageName(id)} fehlgeschlagen: {exception.Message}", error: true);
         }
@@ -725,8 +790,10 @@ internal sealed class SetupForm : Form
         foreach (var id in canceled)
         {
             _states[id].Status = "Abgebrochen";
+            _runReport?.Record(id, PackageName(id), "Skipped by user", "Removed from the installation queue.");
             UpdatePackageRow(id);
         }
+        SaveRunReport();
         AppendLog($"{canceled.Count} wartende Installation(en) abgebrochen. Ein bereits gestarteter Installer läuft sicher zu Ende.");
         if (!_installQueue.IsBusy)
         {
@@ -779,8 +846,9 @@ internal sealed class SetupForm : Form
             _ => MutedColor
         };
         var package = _packageById[id];
-        _packageButtons[id].Enabled = !_installQueue.IsBusy || _installQueue.ActivePackageId != id;
-        _selection[id].Enabled = state.Status is not ("Download läuft" or "Installation läuft" or "Verifikation läuft");
+        var busy = _operationInProgress || _installQueue.IsBusy;
+        _packageButtons[id].Enabled = !busy;
+        _selection[id].Enabled = !busy;
         if (_packageButtons[id].Text == "Installieren" && state.IsInstalled)
         {
             _packageButtons[id].Enabled = false;
@@ -797,7 +865,7 @@ internal sealed class SetupForm : Form
         };
         var choice = MessageBox.Show(
             this,
-            $"{modeNote}\n\nQuelle: {package.Website}\n\nDie GUI führt keinen ungeprüften Installer aus. Möchtest du die offizielle Website öffnen?",
+            $"{modeNote}\n\n{_states[package.Id].Details}\n\nQuelle: {package.Website}\n\nDie GUI führt keinen ungeprüften Installer aus. Möchtest du die offizielle Website öffnen?",
             package.Name,
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
@@ -850,6 +918,19 @@ internal sealed class SetupForm : Form
         if (_progressBar.Visible)
         {
             _progressBar.Style = ProgressBarStyle.Marquee;
+        }
+        var exclusive = _operationInProgress || _installQueue.IsBusy;
+        foreach (var button in _exclusiveButtons) button.Enabled = !exclusive;
+        foreach (var id in _states.Keys) UpdatePackageRow(id);
+        _cancelButton.Enabled = _downloadCancellation is not null || _installQueue.IsBusy;
+    }
+
+    private void SaveRunReport(bool completed = false)
+    {
+        try { _runReport?.Write(completed); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            AppendLog($"Gesamtbericht konnte nicht geschrieben werden: {exception.Message}", error: true);
         }
     }
 
