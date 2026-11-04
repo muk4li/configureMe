@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "windows-server-2022-developer",
+  "name": "Windows Server 2022 Developer",
+  "description": "Windows Server 2022 x64 Desktop Experience developer tools with safe manual fallbacks.",
+  "platform": "windows",
+  "packages": [
+    "git",
+    "github-cli",
+    "vscode",
+    "nodejs-lts",
+    "python",
+    "dotnet-10-sdk",
+    "powershell-7",
+    "seven-zip",
+    "firefox",
+    "openssh-client",
+    "github-copilot-desktop",
+    "teams",
+    "docker-desktop",
+    "github-copilot-cli"
+  ],
+  "options": {
+    "interactiveAuthentication": true
+  }
+}

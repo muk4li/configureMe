@@ -1,8 +1,11 @@
 import JSZip from "jszip";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { NextResponse, type NextRequest } from "next/server";
+import path from "node:path";
 import { getSession } from "@/lib/auth";
 import { createWindowsBootstrapScript } from "@/lib/bootstrap";
+import { catalog } from "@/lib/catalog";
 import { isRateLimited } from "@/lib/rate-limit";
 import { isExpectedRequestOrigin } from "@/lib/oauth";
 import { expandDependencies, getProfile, planSchema } from "@/lib/profiles";
@@ -68,6 +71,53 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = planSchema.parse({ ...parsed.data, packages });
+  if (plan.profileId === "windows-server-2022-developer") {
+    const profilePackages = new Set(profile.packages);
+    if (packages.some((id) => !profilePackages.has(id))) {
+      return NextResponse.json({ error: "The Server 2022 bundle can only include packages defined by its profile." }, { status: 400 });
+    }
+
+    const bundleRoot = "configureMe-QuickSetup/";
+    const bundleDirectory = path.join(process.cwd(), "bootstrap", "windows-server-2022-developer");
+    const bundleFiles = [
+      "bootstrap.ps1",
+      "config/windows-server-2022-developer.json",
+      "modules/Detection.psm1",
+      "modules/Downloads.psm1",
+      "modules/Installation.psm1",
+      "modules/Logging.psm1",
+      "modules/Verification.psm1",
+      "assets/firefox-bookmarks.html",
+      "README.md",
+      "SECURITY.md",
+    ];
+    const zip = new JSZip();
+    for (const file of bundleFiles) {
+      const contents = await readFile(path.join(bundleDirectory, file));
+      if (file === "config/windows-server-2022-developer.json") {
+        const bundledProfile = JSON.parse(contents.toString("utf8")) as Record<string, unknown>;
+        bundledProfile.packages = packages;
+        zip.file(`${bundleRoot}${file}`, `${JSON.stringify(bundledProfile, null, 2)}\n`);
+      } else {
+        zip.file(`${bundleRoot}${file}`, contents);
+      }
+    }
+    const archive = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+    return new NextResponse(new Uint8Array(archive), {
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": 'attachment; filename="configureMe-WindowsServer2022-Developer-QuickSetup.zip"',
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+  const legacyUnsupportedPackages = packages.filter((id) => !catalog.find((item) => item.id === id)?.windowsPackageId);
+  if (legacyUnsupportedPackages.length > 0) {
+    return NextResponse.json({
+      error: `These packages are available only in the standalone Windows Server 2022 profile: ${legacyUnsupportedPackages.join(", ")}.`,
+    }, { status: 400 });
+  }
+
   const zip = new JSZip();
   const planJson = `${JSON.stringify(plan, null, 2)}\n`;
   const sha256 = createHash("sha256").update(planJson).digest();

@@ -2,7 +2,7 @@
 
 configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup-Pläne für neue Computer zusammenstellen lassen. Die Anwendung installiert nicht aus dem Browser und betreibt keinen Geräte-Agenten: Ein Benutzer lädt ein lokales Paket herunter, prüft es und bestätigt die Installation auf dem Zielgerät.
 
-> **v1 ist ein MVP/Preview.** Automatisierte Pläne gibt es nur für Windows x64 mit WinGet. Der Bootstrap wurde noch nicht auf einem frischen Windows-Zielsystem end-to-end validiert. Download-Pakete sind nicht signiert; SHA-256 erkennt nur zufällige Beschädigung und beweist nicht die Herkunft.
+> **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` erzeugt zusätzlich ein eigenständiges Windows Server 2022 Paket ohne WinGet- oder Webserver-Abhängigkeit. Das Paket ist unsigniert und nicht für öffentliches Vertrauens-Onboarding freigegeben; es wurde kein frischer Zielserver-Installationslauf durchgeführt.
 
 ## Funktionsumfang
 
@@ -11,6 +11,7 @@ configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup
 - Lokale JSON-Profile, Zod-Validierung und JSON-Schemas
 - Katalog mit stabilen Paket-IDs; feste WinGet-ID-Zuordnung statt frei konfigurierbarer Befehle
 - Windows-x64-Planer und ZIP-Bundle mit `install.ps1`, Plan, Prüfsumme und README
+- Standalone Windows Server 2022 Quick Setup mit PowerShell-5.1-Modulen, offiziellen signaturgeprüften Installerpfaden, manuellen Fallbacks und JSON-/Textreport
 - Lokaler Dry-Run, Bestätigungsabfrage, Erkennung vorhandener Software und kontrolliertes Fehlerreporting
 - Dockerfile, Compose, Healthcheck und deutschsprachige Deployment-/Sicherheitsdokumentation
 
@@ -21,7 +22,8 @@ GitHub-Konfigurationsprovider, Profil-Editor, Linux/macOS-Adapter, authenticode-
 - Node.js 22+ und npm für lokale Entwicklung
 - Ein GitHub OAuth App Client für die Anmeldung
 - Ein öffentlich erreichbarer configureMe-Host mit HTTPS, wenn der Dienst extern bereitgestellt wird
-- Für den Windows-Bootstrap: Windows PowerShell 5.1, Windows x64 und WinGet
+- Für bestehende Windows-Profile: Windows PowerShell 5.1, Windows x64 und WinGet
+- Für das Windows Server 2022 Quick Setup: Windows Server 2022 x64 Desktop Experience, Windows PowerShell 5.1 und Internetzugang für offizielle Vendorfeeds/-installer (kein WinGet)
 
 ## Lokal starten
 
@@ -65,6 +67,8 @@ Compose bindet den Dienst standardmäßig nur an `127.0.0.1:3000` (mit `HOST_POR
 Profile liegen in `profiles/*.json`; der Schema-Vertrag steht in `schemas/profile.schema.json`. Der Installationsplan ist zusätzlich in `schemas/install-plan.schema.json` beschrieben. Paketdefinitionen und Installationsstrategien befinden sich in `src/lib/catalog.ts`.
 
 Der Bootstrap enthält keine benutzergesteuerten URLs oder Shell-Befehle. Er prüft Betriebssystem, Architektur, Katalog-IDs und SHA-256, bietet `-DryRun` und verlangt vor der Installation die Eingabe `YES`. Die Prüfsumme ist keine Signatur. Vor dem Ausführen müssen Quelle und Bundle manuell geprüft werden.
+
+Das neue Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quickstart-windows-server-2022.md](docs/quickstart-windows-server-2022.md) beschrieben.
 
 ## Dokumentation
 
