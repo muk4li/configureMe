@@ -3,13 +3,14 @@ param(
   [string]$Profile = "windows-server-2022-developer",
   [switch]$DryRun,
   [switch]$List,
+  [switch]$GuiWorker,
   [switch]$SkipOptional,
   [switch]$ConfirmCopilotDesktopServerCompatibility,
   [string]$ReportPath = ".\setup-report.json"
 )
 
 $ErrorActionPreference = "Stop"
-$bootstrapVersion = "0.2.0"
+$bootstrapVersion = "0.3.0"
 $root = $PSScriptRoot
 $moduleDirectory = Join-Path $root "modules"
 Import-Module (Join-Path $moduleDirectory "Logging.psm1") -Force
@@ -17,12 +18,9 @@ Import-Module (Join-Path $moduleDirectory "Detection.psm1") -Force
 Import-Module (Join-Path $moduleDirectory "Downloads.psm1") -Force
 Import-Module (Join-Path $moduleDirectory "Verification.psm1") -Force
 Import-Module (Join-Path $moduleDirectory "Installation.psm1") -Force
+Import-Module (Join-Path $moduleDirectory "GuiWorker.psm1") -Force
 
-$knownPackageIds = @(
-  "git", "github-cli", "vscode", "nodejs-lts", "python", "dotnet-10-sdk",
-  "powershell-7", "seven-zip", "firefox", "openssh-client",
-  "github-copilot-desktop", "libreoffice", "teams", "docker-desktop", "github-copilot-cli"
-)
+$knownPackageIds = @(Get-QuickSetupPackageCatalog | ForEach-Object { [string]$_.id })
 $optionalPackageIds = @("github-copilot-desktop", "libreoffice", "teams", "docker-desktop", "github-copilot-cli")
 $requestedVersions = @{
   "git" = "latest stable"
@@ -50,6 +48,17 @@ if (!(Test-Path -LiteralPath $profilePath)) {
 }
 $profileData = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
 Test-QuickSetupProfile -Profile $profileData -AllowedPackageIds $knownPackageIds
+
+if ($GuiWorker) {
+  Set-QuickSetupGuiWorkerMode
+  try {
+    $workerExitCode = Invoke-QuickSetupGuiWorker
+  } catch {
+    Write-QuickSetupEvent -Type "worker-error" -Status "failed" -Message $_.Exception.Message
+    $workerExitCode = 1
+  }
+  exit [int]$workerExitCode
+}
 
 if ($List) {
   Write-Host "Profile: $($profileData.id) - $($profileData.name)"

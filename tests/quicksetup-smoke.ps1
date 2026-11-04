@@ -10,6 +10,36 @@ function Assert-True {
   if (!$Condition) { throw $Message }
 }
 
+function Invoke-GuiWorkerTestRequest {
+  param([Parameter(Mandatory = $true)]$Request)
+
+  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $startInfo.FileName = "powershell.exe"
+  $startInfo.Arguments = '-NoLogo -NoProfile -NonInteractive -File "' + (Join-Path $packageRoot "bootstrap.ps1") + '" -GuiWorker'
+  $startInfo.UseShellExecute = $false
+  $startInfo.CreateNoWindow = $true
+  $startInfo.RedirectStandardInput = $true
+  $startInfo.RedirectStandardOutput = $true
+  $startInfo.RedirectStandardError = $true
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $startInfo
+  if (!$process.Start()) { throw "The GUI worker process could not be started." }
+  $requestJson = ConvertTo-Json -InputObject $Request -Compress -Depth 8
+  $requestBytes = [System.Text.Encoding]::UTF8.GetBytes($requestJson + [Environment]::NewLine)
+  $process.StandardInput.BaseStream.Write($requestBytes, 0, $requestBytes.Length)
+  $process.StandardInput.BaseStream.Flush()
+  $process.StandardInput.Close()
+  $output = $process.StandardOutput.ReadToEnd()
+  $errorOutput = $process.StandardError.ReadToEnd()
+  $process.WaitForExit()
+  [pscustomobject]@{
+    ExitCode = $process.ExitCode
+    Events = @($output -split "`r?`n" | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+    StandardError = $errorOutput
+    RequestJson = $requestJson
+  }
+}
+
 function New-TestPeBytes {
   param([int]$Machine)
   $bytes = New-Object byte[] 256
@@ -542,6 +572,21 @@ try {
   $listOutput = & powershell.exe -NoProfile -NonInteractive -File (Join-Path $packageRoot "bootstrap.ps1") -List 2>&1
   Assert-True ($LASTEXITCODE -eq 0) "The bootstrap list mode failed: $($listOutput -join "`n")"
   Assert-True (($listOutput -join "`n") -match "OpenSSH Client") "List mode omitted OpenSSH Client."
+  $catalog = Get-QuickSetupPackageCatalog
+  Assert-True (@($catalog | Where-Object { $_.id -eq "github-copilot-desktop" -and $_.windowsMode -eq "manual" }).Count -eq 1) "The canonical catalog did not identify Copilot Desktop as manual."
+  Assert-True (@($catalog | Where-Object { $_.id -eq "docker-desktop" -and $_.windowsMode -eq "detection-only" }).Count -eq 1) "The canonical catalog did not mark Docker Desktop as detection-only."
+  $guiList = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "list" }
+  $guiListEvents = $guiList.Events | ConvertTo-Json -Compress -Depth 12
+  Assert-True ($guiList.ExitCode -eq 0 -and $guiList.Events.Count -eq 1 -and $guiList.Events[0].type -eq "catalog") "The GUI worker list action did not return one structured catalog event (exit $($guiList.ExitCode); request: $($guiList.RequestJson); stderr: $($guiList.StandardError); events: $guiListEvents)"
+  Assert-True (@($guiList.Events[0].data | Where-Object { $_.id -eq "github-copilot-desktop" }).Count -eq 1) "The GUI worker catalog omitted Copilot Desktop."
+  $guiPlan = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "plan"; packageIds = @("github-cli") }
+  Assert-True ($guiPlan.ExitCode -eq 0 -and @($guiPlan.Events | Where-Object { $_.type -eq "install-plan" }).Count -eq 1) "The GUI worker did not return a structured install plan: $($guiPlan.StandardError)"
+  $installPlanEvent = @($guiPlan.Events | Where-Object { $_.type -eq "install-plan" })[0]
+  Assert-True (($installPlanEvent.data.id -join ",") -eq "git,github-cli") "The GUI worker did not expand GitHub CLI's Git dependency in order."
+  $untrustedPlan = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "plan"; packageIds = @("untrusted-command") }
+  Assert-True ($untrustedPlan.ExitCode -ne 0 -and @($untrustedPlan.Events | Where-Object { $_.type -eq "worker-error" }).Count -eq 1) "An untrusted GUI package ID was accepted."
+  $unconfirmedInstall = Invoke-GuiWorkerTestRequest -Request @{ schemaVersion = 1; action = "install"; packageIds = @("git"); confirmed = $false }
+  Assert-True ($unconfirmedInstall.ExitCode -ne 0 -and @($unconfirmedInstall.Events | Where-Object { $_.type -eq "worker-error" }).Count -eq 1) "The GUI worker accepted an install request without confirmation."
 
   $reportPath = Join-Path $temporaryDirectory "dry-run-report.json"
   $dryRunOutput = & powershell.exe -NoProfile -NonInteractive -File (Join-Path $packageRoot "bootstrap.ps1") -DryRun -ReportPath $reportPath 2>&1
@@ -595,12 +640,14 @@ try {
     $entryNames = @($zip.Entries | ForEach-Object { $_.FullName })
     Assert-True ($entryNames -contains "configureMe-QuickSetup/bootstrap.ps1") "The ZIP omitted its entry point."
     Assert-True ($entryNames -contains "configureMe-QuickSetup/modules/Downloads.psm1") "The ZIP omitted a required module."
+    Assert-True ($entryNames -contains "configureMe-QuickSetup/modules/GuiWorker.psm1") "The ZIP omitted the GUI worker module."
+    Assert-True ($entryNames -contains "configureMe-QuickSetup/config/catalog.json") "The ZIP omitted the canonical package catalog."
     Assert-True ($entryNames -contains "configureMe-QuickSetup/assets/firefox-bookmarks.html") "The ZIP omitted Firefox bookmarks."
     Assert-True ($entryNames -contains "configureMe-QuickSetup/manifest.json") "The ZIP omitted its provenance manifest."
     $manifestEntry = $zip.GetEntry("configureMe-QuickSetup/manifest.json")
     $manifestReader = New-Object System.IO.StreamReader($manifestEntry.Open())
     try { $packageManifest = $manifestReader.ReadToEnd() | ConvertFrom-Json } finally { $manifestReader.Dispose() }
-    Assert-True ($packageManifest.bootstrapVersion -eq "0.2.0") "The ZIP manifest does not record the bootstrap version."
+    Assert-True ($packageManifest.bootstrapVersion -eq "0.3.0") "The ZIP manifest does not record the bootstrap version."
     Assert-True ($packageManifest.sourceCommitSha -match "^[a-f0-9]{40,64}$" -and $packageManifest.files.Count -ge 10) "The ZIP manifest does not record source provenance and file hashes."
     $headCommit = (& git -C $repositoryRoot rev-parse --verify HEAD).Trim()
     Assert-True ($packageManifest.sourceCommitSha -eq $headCommit.ToLowerInvariant()) "The ZIP manifest source SHA does not match the checked-out commit."

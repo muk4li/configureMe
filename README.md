@@ -2,7 +2,7 @@
 
 configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup-Pläne für neue Computer zusammenstellen lassen. Die Anwendung installiert nicht aus dem Browser und betreibt keinen Geräte-Agenten: Ein Benutzer lädt ein lokales Paket herunter, prüft es und bestätigt die Installation auf dem Zielgerät.
 
-> **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` erzeugt zusätzlich ein eigenständiges Windows Server 2022 Paket ohne WinGet- oder Webserver-Abhängigkeit. Ein Windows-2022-CI-Workflow validiert den Bootstrap und stellt ein kurzlebiges, unsigniertes Build-Artefakt bereit; es wird kein öffentliches Release erstellt. Git bleibt wegen fehlender verifizierter Silent-Installationsparameter manuell. Das Paket ist nicht für öffentliches Vertrauens-Onboarding freigegeben; ein frischer Zielserver-Installationslauf fand nicht statt.
+> **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` ist zusätzlich als natives Windows Forms Setup für Windows Server 2022 x64 vorgesehen. Das selbstständige Setup benötigt beim Start weder eine .NET-Runtime noch Git, WinGet, Node.js oder den configureMe-Webserver; Windows PowerShell 5.1 bleibt der lokale Worker für die vorhandene Installationsengine. CI erzeugt ein kurzlebiges, unsigniertes Entwicklungsartefakt; es wird kein öffentliches Release erstellt. Das Artefakt ist nicht für öffentliches Vertrauens-Onboarding freigegeben. Ein echter interaktiver GUI-/E2E-Lauf auf einem frischen Windows Server 2022 ist noch erforderlich.
 
 ## Funktionsumfang
 
@@ -12,6 +12,7 @@ configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup
 - Katalog mit stabilen Paket-IDs; feste WinGet-ID-Zuordnung statt frei konfigurierbarer Befehle
 - Windows-x64-Planer und ZIP-Bundle mit `install.ps1`, Plan, Prüfsumme und README
 - Standalone Windows Server 2022 Quick Setup mit PowerShell-5.1-Modulen, offiziellen signaturgeprüften Installerpfaden, manuellen Fallbacks und JSON-/Textreport
+- Native deutsche Windows Forms GUI mit Katalogauswahl, Dry-Run, strukturierter PowerShell-Worker-Kommunikation, parallelen Downloads (maximal zwei) und serieller Installationswarteschlange
 - Lokaler Dry-Run, Bestätigungsabfrage, Erkennung vorhandener Software und kontrolliertes Fehlerreporting
 - Dockerfile, Compose, Healthcheck und deutschsprachige Deployment-/Sicherheitsdokumentation
 
@@ -23,7 +24,7 @@ GitHub-Konfigurationsprovider, Profil-Editor, Linux/macOS-Adapter, authenticode-
 - Ein GitHub OAuth App Client für die Anmeldung
 - Ein öffentlich erreichbarer configureMe-Host mit HTTPS, wenn der Dienst extern bereitgestellt wird
 - Für bestehende Windows-Profile: Windows PowerShell 5.1, Windows x64 und WinGet
-- Für das Windows Server 2022 Quick Setup: Windows Server 2022 x64 Desktop Experience, Windows PowerShell 5.1 und Internetzugang für offizielle Vendorfeeds/-installer (kein WinGet)
+- Für das Windows Server 2022 Setup: Windows Server 2022 x64 Desktop Experience, Windows PowerShell 5.1 und Internetzugang für offizielle Vendorfeeds/-installer (kein WinGet und keine vorinstallierte .NET-Runtime)
 
 ## Lokal starten
 
@@ -64,11 +65,11 @@ Compose bindet den Dienst standardmäßig nur an `127.0.0.1:3000` (mit `HOST_POR
 
 ## Konfiguration und Bootstrap
 
-Profile liegen in `profiles/*.json`; der Schema-Vertrag steht in `schemas/profile.schema.json`. Der Installationsplan ist zusätzlich in `schemas/install-plan.schema.json` beschrieben. Paketdefinitionen und Installationsstrategien befinden sich in `src/lib/catalog.ts`.
+Profile liegen in `profiles/*.json`; der Schema-Vertrag steht in `schemas/profile.schema.json`. Der Installationsplan ist zusätzlich in `schemas/install-plan.schema.json` beschrieben. Die gemeinsame Paketdefinition für Portal, Windows-GUI und PowerShell-Worker liegt in `bootstrap\windows-server-2022-developer\config\catalog.json`; `src/lib/catalog.ts` importiert diese Datei.
 
 Der Bootstrap enthält keine benutzergesteuerten URLs oder Shell-Befehle. Er prüft Betriebssystem, Architektur, Katalog-IDs und SHA-256, bietet `-DryRun` und verlangt vor der Installation die Eingabe `YES`. Die Prüfsumme ist keine Signatur. Vor dem Ausführen müssen Quelle und Bundle manuell geprüft werden.
 
-Das neue Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quickstart-windows-server-2022.md](docs/quickstart-windows-server-2022.md) beschrieben.
+Das Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quickstart-windows-server-2022.md](docs/quickstart-windows-server-2022.md) beschrieben. Die GUI, der self-contained `win-x64`-Build und dessen Sicherheitsgrenzen stehen in [windows/ConfigureMe.Setup/README.md](windows/ConfigureMe.Setup/README.md) und [SECURITY.md](windows/ConfigureMe.Setup/SECURITY.md).
 
 ## Dokumentation
 

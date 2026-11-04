@@ -1,3 +1,28 @@
+function Set-QuickSetupGuiWorkerMode {
+  $script:GuiWorkerMode = $true
+  [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+}
+
+function Write-QuickSetupEvent {
+  param(
+    [Parameter(Mandatory = $true)][string]$Type,
+    [string]$PackageId,
+    [string]$Status,
+    [string]$Message,
+    $Data
+  )
+
+  $event = [ordered]@{
+    type = $Type
+    packageId = $PackageId
+    status = $Status
+    message = $Message
+    data = $Data
+  }
+  $line = ConvertTo-Json -InputObject $event -Depth 12 -Compress
+  [Console]::Out.WriteLine($line)
+}
+
 function Write-QuickSetupLog {
   param(
     [Parameter(Mandatory = $true)][string]$Message,
@@ -9,7 +34,12 @@ function Write-QuickSetupLog {
     "ERROR" { "Red" }
     default { "Gray" }
   }
-  Write-Host "[$Level] $Message" -ForegroundColor $color
+  if ($script:GuiWorkerMode) {
+    $status = if ($Level -eq "ERROR") { "error" } elseif ($Level -eq "WARN") { "warning" } else { "info" }
+    Write-QuickSetupEvent -Type "log" -Status $status -Message $Message
+  } else {
+    Write-Host "[$Level] $Message" -ForegroundColor $color
+  }
 }
 
 function New-QuickSetupPackageResult {
@@ -82,4 +112,4 @@ function Write-QuickSetupReport {
   Write-QuickSetupLog "Reports written to '$Path' and '$textPath'."
 }
 
-Export-ModuleMember -Function Write-QuickSetupLog, New-QuickSetupPackageResult, Write-QuickSetupReport
+Export-ModuleMember -Function Set-QuickSetupGuiWorkerMode, Write-QuickSetupEvent, Write-QuickSetupLog, New-QuickSetupPackageResult, Write-QuickSetupReport

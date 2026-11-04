@@ -18,9 +18,11 @@ if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch "^[A-Fa-f0-9]{40,64}$") {
 $workingTreeDirty = [bool](& git -C $repositoryRoot status --porcelain --untracked-files=all)
 $files = @(
   "bootstrap.ps1",
+  "config\catalog.json",
   "config\windows-server-2022-developer.json",
   "modules\Detection.psm1",
   "modules\Downloads.psm1",
+  "modules\GuiWorker.psm1",
   "modules\Installation.psm1",
   "modules\Logging.psm1",
   "modules\Verification.psm1",

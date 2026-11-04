@@ -14,7 +14,7 @@ permissions:
 jobs:
   validate-and-package:
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -22,6 +22,40 @@ jobs:
       - name: Run PowerShell smoke tests
         shell: powershell
         run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\quicksetup-smoke.ps1
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore GUI and controller tests
+        shell: powershell
+        run: dotnet restore windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj
+
+      - name: Run GUI controller and embedded-engine tests
+        shell: powershell
+        run: dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore
+
+      - name: Publish self-contained Windows x64 GUI
+        shell: powershell
+        run: |
+          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-publish"
+          dotnet publish windows\ConfigureMe.Setup\ConfigureMe.Setup.csproj --configuration Release -p:PublishProfile=win-x64 --output $publishPath
+          if ($LASTEXITCODE -ne 0) { throw "Self-contained WinForms publish failed." }
+          $executable = Join-Path $publishPath "configureMe-Setup.exe"
+          if (!(Test-Path -LiteralPath $executable -PathType Leaf)) { throw "The published setup EXE is missing." }
+          if (Get-ChildItem -LiteralPath $publishPath -Filter "*.dll" -File) { throw "The self-contained single-file publish has external DLL dependencies." }
+          $env:PATH = "$env:WINDIR\System32;$env:WINDIR"
+          & $executable --self-test
+          if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its embedded engine/worker startup self-test." }
+
+      - name: Package unsigned setup development artifact
+        shell: powershell
+        run: |
+          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-publish"
+          $packagePath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-win-x64.zip"
+          powershell.exe -NoProfile -NonInteractive -File scripts\New-SetupReleasePackage.ps1 -PublishDirectory $publishPath -OutputPath $packagePath
+          if ($LASTEXITCODE -ne 0) { throw "Setup package generation failed." }
 
       - name: Build release candidate ZIP
         shell: powershell
@@ -48,6 +82,8 @@ jobs:
         with:
           name: windows-server-2022-quicksetup-${{ github.sha }}
           path: |
+            ${{ runner.temp }}\configureMe-Setup-win-x64.zip
+            ${{ runner.temp }}\configureMe-Setup-win-x64.zip.sha256
             ${{ runner.temp }}\configureMe-WindowsServer2022-Developer-QuickSetup.zip
             ${{ runner.temp }}\configureMe-WindowsServer2022-Developer-QuickSetup.zip.sha256
           if-no-files-found: error

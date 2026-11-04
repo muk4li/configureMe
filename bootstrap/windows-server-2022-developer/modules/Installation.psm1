@@ -12,6 +12,29 @@ function Invoke-QuickSetupInstallerProcess {
   return [int]$process.ExitCode
 }
 
+function Get-QuickSetupInstallerCachePath {
+  param(
+    [Parameter(Mandatory = $true)][string]$Id,
+    [Parameter(Mandatory = $true)]$Definition
+  )
+
+  if ($Id -notmatch "^[a-z0-9]+(?:-[a-z0-9]+)*$" -or !$Definition.Uri -or $Definition.Uri.Scheme -ne "https") {
+    throw "The installer cache request is invalid."
+  }
+  $extension = switch ($Definition.InstallerType) { "msi" { ".msi" } "msix" { ".msix" } "exe" { ".exe" } default { throw "The installer type cannot be cached." } }
+  $keyText = "$Id|$($Definition.Version)|$($Definition.Uri.AbsoluteUri)"
+  $sha256 = [Security.Cryptography.SHA256]::Create()
+  try {
+    $key = [BitConverter]::ToString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($keyText))).Replace("-", "").ToLowerInvariant()
+  } finally { $sha256.Dispose() }
+  $cacheDirectory = Join-Path $env:LOCALAPPDATA "configureMe\cache"
+  if (!(Test-Path -LiteralPath $cacheDirectory)) { New-Item -ItemType Directory -Path $cacheDirectory -Force | Out-Null }
+  if ((Get-Item -LiteralPath $cacheDirectory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    throw "The installer cache directory is a reparse point; refusing to use it."
+  }
+  return Join-Path $cacheDirectory "$Id-$key$extension"
+}
+
 function Get-QuickSetupGithubReleaseInstaller {
   param(
     [Parameter(Mandatory = $true)][string]$Repository,
@@ -337,12 +360,16 @@ function Invoke-QuickSetupPackageInstall {
     [scriptblock]$DownloadProvider,
     [scriptblock]$SignatureProvider,
     [scriptblock]$MsiPlatformReader,
-    [scriptblock]$AppxPackageProvider
+    [scriptblock]$AppxPackageProvider,
+    [scriptblock]$ProgressCallback,
+    [string]$CachedInstallerPath
   )
 
   if ($Id -eq "openssh-client") {
     if ($Definition.InstallerType -ne "windows-capability") { throw "OpenSSH Client has an invalid installer type." }
+    if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
     $result = Add-WindowsCapability -Online -Name "OpenSSH.Client~~~~0.0.1.0" -ErrorAction Stop
+    if ($ProgressCallback) { $null = & $ProgressCallback "installation-completed" }
     if ($result.RestartNeeded) { return [pscustomobject]@{ ExitCode = 3010; RestartRequired = $true } }
     return [pscustomobject]@{ ExitCode = 0; RestartRequired = $false }
   }
@@ -354,10 +381,29 @@ function Invoke-QuickSetupPackageInstall {
   New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
   try {
     $extension = switch ($Definition.InstallerType) { "msi" { ".msi" } "msix" { ".msix" } default { ".exe" } }
-    $installerPath = Join-Path $temporaryDirectory ("installer" + $extension)
-    Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider | Out-Null
+    $installerPath = if ($CachedInstallerPath) { $CachedInstallerPath } else { Join-Path $temporaryDirectory ("installer" + $extension) }
+    if ($CachedInstallerPath) {
+      if (!(Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw "The verified installer cache file is missing." }
+      if ($Definition.Sha256) {
+        if ($Definition.Sha256 -notmatch "^[A-Fa-f0-9]{64}$" -or (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash -ine $Definition.Sha256) {
+          throw "The cached installer SHA-256 does not match the official metadata."
+        }
+      }
+      if ($Definition.Sha512) {
+        if ($Definition.Sha512 -notmatch "^[A-Fa-f0-9]{128}$" -or (Get-FileHash -LiteralPath $installerPath -Algorithm SHA512).Hash -ine $Definition.Sha512) {
+          throw "The cached installer SHA-512 does not match the official metadata."
+        }
+      }
+    } else {
+      if ($ProgressCallback) { $null = & $ProgressCallback "download-started" }
+      Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider | Out-Null
+      if ($ProgressCallback) { $null = & $ProgressCallback "download-completed" }
+    }
+    if ($ProgressCallback) { $null = & $ProgressCallback "verification-started" }
     if ($Definition.InstallerType -eq "msix") {
       Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "msix" -ExpectedArchitecture $Definition.ExpectedArchitecture -ExpectedPackageName $Definition.PackageName -ExpectedPackagePublisher $Definition.PackagePublisher | Out-Null
+      if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
+      if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       if ($AppxPackageProvider) {
         & $AppxPackageProvider $installerPath
       } else {
@@ -368,18 +414,23 @@ function Invoke-QuickSetupPackageInstall {
       Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "msi" -ExpectedArchitecture $Definition.ExpectedArchitecture -MsiPlatformReader $MsiPlatformReader | Out-Null
       $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
       if (!$signature.IsValid) { throw $signature.Message }
+      if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
+      if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       $arguments = @("/i", ('"' + $installerPath + '"')) + @($Definition.Arguments)
       $exitCode = Invoke-QuickSetupInstallerProcess -Path "msiexec.exe" -Arguments $arguments -ProcessRunner $ProcessRunner
     } else {
       Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "exe" -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$Definition.AllowX86BootstrapForX64) | Out-Null
       $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
       if (!$signature.IsValid) { throw $signature.Message }
+      if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
+      if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       $exitCode = Invoke-QuickSetupInstallerProcess -Path $installerPath -Arguments @($Definition.Arguments) -ProcessRunner $ProcessRunner
     }
+    if ($ProgressCallback) { $null = & $ProgressCallback "installation-completed" }
     [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -eq 3010) }
   } finally {
     Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
   }
 }
 
-Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupGithubReleaseInstaller, Get-QuickSetupLibreOfficeInstaller, Get-QuickSetupPythonManagerInstaller, Invoke-QuickSetupPackageInstall, Invoke-QuickSetupInstallerProcess
+Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupInstallerCachePath, Get-QuickSetupGithubReleaseInstaller, Get-QuickSetupLibreOfficeInstaller, Get-QuickSetupPythonManagerInstaller, Invoke-QuickSetupPackageInstall, Invoke-QuickSetupInstallerProcess
