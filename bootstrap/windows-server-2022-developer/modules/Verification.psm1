@@ -32,4 +32,13 @@ function Test-QuickSetupSha256Text {
   return $match.Groups[1].Value
 }
 
-Export-ModuleMember -Function Test-QuickSetupProfile, Test-QuickSetupSha256Text
+function Test-QuickSetupAdministratorRequirement {
+  param(
+    [Parameter(Mandatory = $true)][bool]$RequiresAdministrator,
+    [Parameter(Mandatory = $true)][bool]$IsAdministrator
+  )
+
+  return (!$RequiresAdministrator -or $IsAdministrator)
+}
+
+Export-ModuleMember -Function Test-QuickSetupProfile, Test-QuickSetupSha256Text, Test-QuickSetupAdministratorRequirement

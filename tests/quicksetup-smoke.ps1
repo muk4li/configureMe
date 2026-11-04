@@ -10,6 +10,45 @@ function Assert-True {
   if (!$Condition) { throw $Message }
 }
 
+function New-TestPeBytes {
+  param([int]$Machine)
+  $bytes = New-Object byte[] 256
+  $bytes[0] = 0x4D
+  $bytes[1] = 0x5A
+  [Array]::Copy([BitConverter]::GetBytes([int]0x80), 0, $bytes, 0x3C, 4)
+  $bytes[0x80] = 0x50
+  $bytes[0x81] = 0x45
+  [Array]::Copy([BitConverter]::GetBytes([int]0), 0, $bytes, 0x82, 2)
+  [Array]::Copy([BitConverter]::GetBytes([int]$Machine), 0, $bytes, 0x84, 2)
+  return ,$bytes
+}
+
+function New-TestMsixPackage {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [string]$Publisher = "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US",
+    [string]$Architecture = "x64"
+  )
+
+  Add-Type -AssemblyName System.IO.Compression
+  $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Create)
+  $archive = New-Object System.IO.Compression.ZipArchive($stream, [System.IO.Compression.ZipArchiveMode]::Create, $false)
+  try {
+    $manifest = '<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"><Identity Name="PythonSoftwareFoundation.PythonManager" Publisher="' + $Publisher + '" Version="26.4.240.0" ProcessorArchitecture="' + $Architecture + '" /></Package>'
+    foreach ($entryName in @("AppxManifest.xml", "AppxSignature.p7x")) {
+      $entry = $archive.CreateEntry($entryName)
+      $entryStream = $entry.Open()
+      try {
+        $bytes = if ($entryName -eq "AppxManifest.xml") { [System.Text.Encoding]::UTF8.GetBytes($manifest) } else { [byte[]](1, 2, 3) }
+        $entryStream.Write($bytes, 0, $bytes.Length)
+      } finally { $entryStream.Dispose() }
+    }
+  } finally {
+    $archive.Dispose()
+    $stream.Dispose()
+  }
+}
+
 try {
   $filesToParse = @(
     (Join-Path $packageRoot "bootstrap.ps1"),
@@ -31,6 +70,15 @@ try {
   $expectedIds = @("git", "github-cli", "vscode", "nodejs-lts", "python", "dotnet-10-sdk", "powershell-7", "seven-zip", "firefox", "openssh-client")
   Assert-True (@($profile.packages | Where-Object { $_ -in $expectedIds }).Count -eq $expectedIds.Count) "The profile is missing a required P0 package."
   Test-QuickSetupProfile -Profile $profile -AllowedPackageIds @($profile.packages)
+  $expectedInstallerTypes = @{
+    "git" = "manual"; "github-cli" = "msi"; "vscode" = "exe"; "nodejs-lts" = "msi"
+    "python" = "msix"; "dotnet-10-sdk" = "exe"; "powershell-7" = "msi"; "seven-zip" = "exe"
+    "firefox" = "msi"; "openssh-client" = "windows-capability"
+  }
+  foreach ($id in $expectedInstallerTypes.Keys) {
+    $definition = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview
+    Assert-True ($definition.InstallerType -eq $expectedInstallerTypes[$id]) "The $id package did not declare its installer type."
+  }
   $supportedTarget = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server" -ProcessorArchitecture 9 -Is64Bit $true
   $coreTarget = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server Core" -ProcessorArchitecture 9 -Is64Bit $true
   $x86Target = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server" -ProcessorArchitecture 0 -Is64Bit $false
@@ -45,11 +93,205 @@ try {
   Set-Content -LiteralPath $fakeInstaller -Value "not an installer" -Encoding ASCII
   $signatureCheck = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "Microsoft Corporation"
   Assert-True (!$signatureCheck.IsValid) "An unsigned mock installer passed Authenticode verification."
+  $wrongPublisher = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "Microsoft Corporation" -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Unrelated Publisher" }
+    }
+  }
+  Assert-True (!$wrongPublisher.IsValid) "A valid signature from the wrong publisher was accepted."
+  Assert-True (!(Test-QuickSetupAdministratorRequirement -RequiresAdministrator $true -IsAdministrator $false)) "A system installer was allowed without administrator rights."
+  Assert-True (Test-QuickSetupAdministratorRequirement -RequiresAdministrator $false -IsAdministrator $false) "A per-user installer incorrectly required administrator rights."
+  $originalProcessPath = $env:Path
+  try {
+    $env:Path = "C:\quicksetup-current"
+    Sync-QuickSetupProcessPath -MachinePath "C:\quicksetup-machine;C:\quicksetup-current" -UserPath "C:\quicksetup-user"
+    Assert-True (($env:Path -split ";") -contains "C:\quicksetup-machine" -and ($env:Path -split ";") -contains "C:\quicksetup-user") "Persisted installer PATH changes were not applied to the current process."
+    Assert-True (@($env:Path -split ";" | Where-Object { $_ -eq "C:\quicksetup-current" }).Count -eq 1) "PATH refresh duplicated an existing entry."
+  } finally { $env:Path = $originalProcessPath }
+
+  $msiPath = Join-Path $temporaryDirectory "mock-installer.msi"
+  [IO.File]::WriteAllBytes($msiPath, [byte[]](0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))
+  $msiCheck = Test-QuickSetupInstallerFile -Path $msiPath -InstallerType "msi" -ExpectedArchitecture "x64" -MsiPlatformReader { param($path) "x64;1033" }
+  Assert-True ($msiCheck.InstallerType -eq "msi" -and $msiCheck.Architecture -eq "x64") "The MSI signature and mocked x64 template were not validated."
+  $wrongMsiArchitecture = $false
+  try { Test-QuickSetupInstallerFile -Path $msiPath -InstallerType "msi" -ExpectedArchitecture "x64" -MsiPlatformReader { param($path) "Intel;1033" } | Out-Null } catch { $wrongMsiArchitecture = $true }
+  Assert-True $wrongMsiArchitecture "An x86 MSI was accepted as x64."
+
+  $exePath = Join-Path $temporaryDirectory "mock-installer.exe"
+  [IO.File]::WriteAllBytes($exePath, (New-TestPeBytes -Machine 0x8664))
+  $exeCheck = Test-QuickSetupInstallerFile -Path $exePath -InstallerType "exe" -ExpectedArchitecture "x64"
+  Assert-True ($exeCheck.InstallerType -eq "exe" -and $exeCheck.Architecture -eq "x64") "A valid x64 PE installer was rejected."
+  [IO.File]::WriteAllBytes($exePath, (New-TestPeBytes -Machine 0x014c))
+  $wrongExeArchitecture = $false
+  try { Test-QuickSetupInstallerFile -Path $exePath -InstallerType "exe" -ExpectedArchitecture "x64" | Out-Null } catch { $wrongExeArchitecture = $true }
+  Assert-True $wrongExeArchitecture "An x86 EXE was accepted as x64."
+  $pythonBootstrapCheck = Test-QuickSetupInstallerFile -Path $exePath -InstallerType "exe" -ExpectedArchitecture "x64" -AllowX86BootstrapForX64
+  Assert-True ($pythonBootstrapCheck.Architecture -eq "x64 payload (x86 bootstrap)") "The explicit x86-bootstrap/x64-payload exception was not recorded."
+  Set-Content -LiteralPath $exePath -Value "<html>download error</html>" -Encoding ASCII
+  $htmlRefused = $false
+  try { Test-QuickSetupInstallerFile -Path $exePath -InstallerType "exe" -ExpectedArchitecture "x64" | Out-Null } catch { $htmlRefused = $true }
+  Assert-True $htmlRefused "An HTML response was accepted as an installer."
+
+  $msixPath = Join-Path $temporaryDirectory "python-manager.msix"
+  New-TestMsixPackage -Path $msixPath
+  $msixCheck = Test-QuickSetupInstallerFile -Path $msixPath -InstallerType "msix" -ExpectedArchitecture "x64" -ExpectedPackageName "PythonSoftwareFoundation.PythonManager" -ExpectedPackagePublisher "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+  Assert-True ($msixCheck.InstallerType -eq "msix" -and $msixCheck.PackageName -eq "PythonSoftwareFoundation.PythonManager") "A valid Python manager MSIX identity was rejected."
+  $wrongMsixPublisher = $false
+  try {
+    Test-QuickSetupInstallerFile -Path $msixPath -InstallerType "msix" -ExpectedArchitecture "x64" -ExpectedPackageName "PythonSoftwareFoundation.PythonManager" -ExpectedPackagePublisher "CN=Unrelated Publisher" | Out-Null
+  } catch { $wrongMsixPublisher = $true }
+  Assert-True $wrongMsixPublisher "An MSIX package from the wrong publisher was accepted."
+  $wrongMsixArchitecturePath = Join-Path $temporaryDirectory "python-manager-x86.msix"
+  New-TestMsixPackage -Path $wrongMsixArchitecturePath -Architecture "x86"
+  $wrongMsixArchitecture = $false
+  try {
+    Test-QuickSetupInstallerFile -Path $wrongMsixArchitecturePath -InstallerType "msix" -ExpectedArchitecture "x64" -ExpectedPackageName "PythonSoftwareFoundation.PythonManager" -ExpectedPackagePublisher "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US" | Out-Null
+  } catch { $wrongMsixArchitecture = $true }
+  Assert-True $wrongMsixArchitecture "An x86 Python manager MSIX was accepted as x64."
+
+  $installTemp = Join-Path $temporaryDirectory "installer path with spaces"
+  New-Item -ItemType Directory -Path $installTemp -Force | Out-Null
+  $originalTemp = $env:TEMP
+  $env:TEMP = $installTemp
+  $script:mockInstallerCalls = 0
+  $script:mockExitCode = 0
+  $signatureProvider = {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Mozilla Corporation" }
+    }
+  }
+  $msiDefinition = [pscustomobject]@{
+    Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"
+    Uri = [uri]"https://download.mozilla.org/?product=firefox-msi-latest-ssl&os=win64"
+    AllowedHosts = @("mozilla.org"); Sha256 = $null; Sha512 = $null
+    Publisher = "Mozilla Corporation"; Arguments = @("/qn", "/norestart")
+  }
+  $msiDownloadProvider = {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, [byte[]](0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))
+    return [uri]"https://download.mozilla.org/"
+  }
+  $msiProcessRunner = {
+    param($path, $arguments)
+    $script:mockInstallerCalls++
+    if ($path -ne "msiexec.exe") { throw "MSI was not launched through msiexec.exe." }
+    if ($arguments.Count -ne 4 -or $arguments[0] -ne "/i" -or $arguments[1] -notmatch '^".*installer\.msi"$') {
+      throw "MSI arguments did not safely quote the installer path: $($arguments -join '|')"
+    }
+    if ($arguments[1] -notmatch "installer path with spaces") { throw "The MSI path with spaces was not preserved." }
+    return $script:mockExitCode
+  }
+  foreach ($expectedExitCode in @(0, 3010, 1603)) {
+    $script:mockExitCode = $expectedExitCode
+    $installResult = Invoke-QuickSetupPackageInstall -Id "firefox" -Definition $msiDefinition -DownloadProvider $msiDownloadProvider -MsiPlatformReader { param($path) "x64;1033" } -SignatureProvider $signatureProvider -ProcessRunner $msiProcessRunner
+    Assert-True ($installResult.ExitCode -eq $expectedExitCode -and $installResult.RestartRequired -eq ($expectedExitCode -eq 3010)) "MSI exit code $expectedExitCode was not interpreted correctly."
+  }
+  Assert-True ($script:mockInstallerCalls -eq 3) "The MSI process runner was not called once per installation attempt."
+
+  $script:mockInstallerCalls = 0
+  $script:mockExitCode = 0
+  $exeDefinition = [pscustomobject]@{
+    Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"
+    Uri = [uri]"https://download.microsoft.com/installer?channel=stable"
+    AllowedHosts = @("microsoft.com"); Sha256 = $null; Sha512 = $null
+    Publisher = "Microsoft Corporation"; Arguments = @("/quiet", "/norestart")
+  }
+  $exeDownloadProvider = {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, (New-TestPeBytes -Machine 0x8664))
+    return [uri]"https://download.microsoft.com/"
+  }
+  $exeProcessRunner = {
+    param($path, $arguments)
+    $script:mockInstallerCalls++
+    if ($path -notmatch "\\installer\.exe$" -or $path -eq "msiexec.exe") { throw "EXE installer was not launched directly." }
+    if ($arguments -join " " -ne "/quiet /norestart") { throw "The EXE installer arguments changed." }
+    return $script:mockExitCode
+  }
+  $exeInstallResult = Invoke-QuickSetupPackageInstall -Id "vscode" -Definition $exeDefinition -DownloadProvider $exeDownloadProvider -SignatureProvider {
+    param($path)
+    [pscustomobject]@{ Status = [System.Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = "CN=Microsoft Corporation" } }
+  } -ProcessRunner $exeProcessRunner
+  Assert-True ($exeInstallResult.ExitCode -eq 0 -and $script:mockInstallerCalls -eq 1) "EXE installation was not executed directly."
+
+  $script:mockInstallerCalls = 0
+  $script:mockAppxDeployments = 0
+  $pythonManagerDefinition = [pscustomobject]@{
+    Automatic = $true; InstallerType = "msix"; ExpectedArchitecture = "x64"
+    Uri = [uri]"https://python.org/ftp/python/pymanager/python-manager-26.4.msix"
+    AllowedHosts = @("python.org"); PackageName = "PythonSoftwareFoundation.PythonManager"
+    PackagePublisher = "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+    RuntimeArguments = @("install", "default")
+  }
+  $pythonManagerResult = Invoke-QuickSetupPackageInstall -Id "python" -Definition $pythonManagerDefinition -DownloadProvider {
+    param($uri, $destination, $allowedHosts)
+    New-TestMsixPackage -Path $destination
+    return [uri]"https://python.org/ftp/python/pymanager/python-manager-26.4.msix"
+  } -AppxPackageProvider {
+    param($path)
+    $script:mockAppxDeployments++
+    if (!(Test-Path -LiteralPath $path)) { throw "The MSIX package was not downloaded before deployment." }
+  } -ProcessRunner {
+    param($path, $arguments)
+    $script:mockInstallerCalls++
+    if ($path -ne "pymanager.exe" -or ($arguments -join " ") -ne "install default") { throw "The documented Python runtime installation command was not used." }
+    return 0
+  }
+  Assert-True ($pythonManagerResult.ExitCode -eq 0 -and $script:mockAppxDeployments -eq 1 -and $script:mockInstallerCalls -eq 1) "Python manager deployment or its documented per-user runtime command failed."
+
+  $script:mockInstallerCalls = 0
+  $mismatchedDefinition = $msiDefinition.PSObject.Copy()
+  $mismatchedDefinition.Uri = [uri]"https://download.mozilla.org/?file=installer.exe"
+  $mismatchedDownloadProvider = {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, (New-TestPeBytes -Machine 0x8664))
+    return [uri]"https://download.mozilla.org/"
+  }
+  $mismatchedTypeRefused = $false
+  try {
+    Invoke-QuickSetupPackageInstall -Id "firefox" -Definition $mismatchedDefinition -DownloadProvider $mismatchedDownloadProvider -MsiPlatformReader { param($path) "x64;1033" } -SignatureProvider $signatureProvider -ProcessRunner $msiProcessRunner | Out-Null
+  } catch { $mismatchedTypeRefused = $true }
+  Assert-True ($mismatchedTypeRefused -and $script:mockInstallerCalls -eq 0) "Installer type was inferred from the URL or a mismatched file was executed (refused=$mismatchedTypeRefused; calls=$script:mockInstallerCalls)."
+  $env:TEMP = $originalTemp
+
   $downloadRefused = $false
   try {
     Get-QuickSetupOfficialDownload -Uri ([uri]"http://example.invalid/installer.msi") -Destination (Join-Path $temporaryDirectory "refused.msi") -AllowedHosts @("example.invalid")
   } catch { $downloadRefused = $true }
   Assert-True ($downloadRefused) "An insecure HTTP installer source was not rejected."
+  Assert-True (!(Test-QuickSetupAllowedHost -HostName "github.com.attacker.test" -AllowedHosts @("github.com")) ) "A suffix-spoofed download host was accepted."
+  $redirectRefused = $false
+  try {
+    Get-QuickSetupOfficialDownload -Uri ([uri]"https://download.mozilla.org/?product=firefox-msi-latest-ssl") -Destination (Join-Path $temporaryDirectory "redirect.msi") -AllowedHosts @("mozilla.org") -DownloadProvider {
+      param($uri, $destination, $allowedHosts)
+      [IO.File]::WriteAllBytes($destination, [byte[]](0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))
+      return [uri]"https://evil.example/installer.msi"
+    }
+  } catch { $redirectRefused = $true }
+  Assert-True $redirectRefused "An HTTPS redirect to a non-allowlisted host was accepted."
+  $badHashRefused = $false
+  try {
+    Get-QuickSetupOfficialDownload -Uri ([uri]"https://python.org/installer.exe") -Destination (Join-Path $temporaryDirectory "bad-hash.exe") -AllowedHosts @("python.org") -ExpectedSha256 ("0" * 64) -DownloadProvider {
+      param($uri, $destination, $allowedHosts)
+      [IO.File]::WriteAllBytes($destination, (New-TestPeBytes -Machine 0x8664))
+      return [uri]"https://python.org/installer.exe"
+    }
+  } catch { $badHashRefused = $true }
+  Assert-True $badHashRefused "An installer with a mismatched trusted SHA-256 was accepted."
+  $script:timeoutAttempts = 0
+  $timeoutRefused = $false
+  try {
+    Get-QuickSetupOfficialDownload -Uri ([uri]"https://python.org/installer.exe") -Destination (Join-Path $temporaryDirectory "timeout.exe") -AllowedHosts @("python.org") -DownloadProvider {
+      param($uri, $destination, $allowedHosts)
+      $script:timeoutAttempts++
+      throw (New-Object System.Net.WebException("mock timeout"))
+    }
+  } catch { $timeoutRefused = $true }
+  Assert-True ($timeoutRefused -and $script:timeoutAttempts -eq 3) "A download timeout did not fail after the bounded retry limit."
 
   $originalAppData = $env:APPDATA
   $env:APPDATA = Join-Path $temporaryDirectory "appdata"
@@ -122,6 +364,27 @@ try {
     Assert-True ($entryNames -contains "configureMe-QuickSetup/bootstrap.ps1") "The ZIP omitted its entry point."
     Assert-True ($entryNames -contains "configureMe-QuickSetup/modules/Downloads.psm1") "The ZIP omitted a required module."
     Assert-True ($entryNames -contains "configureMe-QuickSetup/assets/firefox-bookmarks.html") "The ZIP omitted Firefox bookmarks."
+    Assert-True ($entryNames -contains "configureMe-QuickSetup/manifest.json") "The ZIP omitted its provenance manifest."
+    $manifestEntry = $zip.GetEntry("configureMe-QuickSetup/manifest.json")
+    $manifestReader = New-Object System.IO.StreamReader($manifestEntry.Open())
+    try { $packageManifest = $manifestReader.ReadToEnd() | ConvertFrom-Json } finally { $manifestReader.Dispose() }
+    Assert-True ($packageManifest.bootstrapVersion -eq "0.2.0") "The ZIP manifest does not record the bootstrap version."
+    Assert-True ($packageManifest.sourceCommitSha -match "^[a-f0-9]{40,64}$" -and $packageManifest.files.Count -ge 10) "The ZIP manifest does not record source provenance and file hashes."
+    $headCommit = (& git -C $repositoryRoot rev-parse --verify HEAD).Trim()
+    Assert-True ($packageManifest.sourceCommitSha -eq $headCommit.ToLowerInvariant()) "The ZIP manifest source SHA does not match the checked-out commit."
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+      foreach ($manifestFile in $packageManifest.files) {
+        $entry = $zip.GetEntry("configureMe-QuickSetup/$($manifestFile.path)")
+        Assert-True ($null -ne $entry) "The ZIP omitted manifest file '$($manifestFile.path)'."
+        $entryStream = $entry.Open()
+        try {
+          $entryHash = [BitConverter]::ToString($sha256.ComputeHash($entryStream)).Replace("-", "").ToLowerInvariant()
+        } finally { $entryStream.Dispose() }
+        Assert-True ($entryHash -eq $manifestFile.sha256) "The ZIP manifest hash does not match '$($manifestFile.path)'."
+      }
+    } finally { $sha256.Dispose() }
+    Assert-True ((Get-Content -LiteralPath "$zipPath.sha256" -Raw) -match $secondHash.ToLowerInvariant()) "The ZIP sidecar checksum does not match the archive."
   } finally { $zip.Dispose() }
 
   Write-Host "Quick Setup smoke tests passed."

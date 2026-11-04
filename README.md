@@ -2,7 +2,7 @@
 
 configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup-Pläne für neue Computer zusammenstellen lassen. Die Anwendung installiert nicht aus dem Browser und betreibt keinen Geräte-Agenten: Ein Benutzer lädt ein lokales Paket herunter, prüft es und bestätigt die Installation auf dem Zielgerät.
 
-> **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` erzeugt zusätzlich ein eigenständiges Windows Server 2022 Paket ohne WinGet- oder Webserver-Abhängigkeit. Das Paket ist unsigniert und nicht für öffentliches Vertrauens-Onboarding freigegeben; es wurde kein frischer Zielserver-Installationslauf durchgeführt.
+> **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` erzeugt zusätzlich ein eigenständiges Windows Server 2022 Paket ohne WinGet- oder Webserver-Abhängigkeit. Ein Windows-2022-CI-Workflow validiert den Bootstrap und stellt ein kurzlebiges, unsigniertes Build-Artefakt bereit; es wird kein öffentliches Release erstellt. Git bleibt wegen fehlender verifizierter Silent-Installationsparameter manuell. Das Paket ist nicht für öffentliches Vertrauens-Onboarding freigegeben; ein frischer Zielserver-Installationslauf fand nicht statt.
 
 ## Funktionsumfang
 

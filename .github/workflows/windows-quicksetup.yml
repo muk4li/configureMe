@@ -1,0 +1,54 @@
+name: Windows Quick Setup validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ["quicksetup-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Run PowerShell smoke tests
+        shell: powershell
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\quicksetup-smoke.ps1
+
+      - name: Build release candidate ZIP
+        shell: powershell
+        run: |
+          $zipPath = Join-Path $env:RUNNER_TEMP "configureMe-WindowsServer2022-Developer-QuickSetup.zip"
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\New-WindowsServer2022QuickSetup.ps1 -OutputPath $zipPath
+          if ($LASTEXITCODE -ne 0) { throw "Quick Setup packaging failed." }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+          try {
+            $manifestEntry = $archive.GetEntry("configureMe-QuickSetup/manifest.json")
+            if (!$manifestEntry) { throw "The ZIP has no package manifest." }
+            $reader = New-Object System.IO.StreamReader($manifestEntry.Open())
+            try { $manifest = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+          } finally {
+            $archive.Dispose()
+          }
+          $head = (& git rev-parse --verify HEAD).Trim()
+          if ($manifest.sourceCommitSha -ne $head -or $manifest.workingTreeDirty) { throw "The package provenance does not match the clean checked-out commit." }
+
+      - name: Upload unsigned CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-server-2022-quicksetup-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}\configureMe-WindowsServer2022-Developer-QuickSetup.zip
+            ${{ runner.temp }}\configureMe-WindowsServer2022-Developer-QuickSetup.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
