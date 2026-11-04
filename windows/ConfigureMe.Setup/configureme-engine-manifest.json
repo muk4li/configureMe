@@ -1,0 +1,65 @@
+{
+    "schemaVersion":  1,
+    "files":  [
+                  {
+                      "path":  "bootstrap.ps1",
+                      "resourceName":  "ConfigureMe.Engine.bootstrap.ps1",
+                      "sha256":  "16dd5b5b87719f6f7229c0eaaa3581e6c57296f3bcf8fd0857d277bba5a1c3a8",
+                      "sizeBytes":  19778
+                  },
+                  {
+                      "path":  "config/catalog.json",
+                      "resourceName":  "ConfigureMe.Engine.config.catalog.json",
+                      "sha256":  "a1b1ff70464c5b038902097f60e81c9ffaf36c40b1a3eff15f5b241d3300330d",
+                      "sizeBytes":  8279
+                  },
+                  {
+                      "path":  "config/windows-server-2022-developer.json",
+                      "resourceName":  "ConfigureMe.Engine.config.windows-server-2022-developer.json",
+                      "sha256":  "03ca1ec9e33fb538c9fc1d68d796f1926ecb51b6f9172fd3767f56e67ce3d395",
+                      "sizeBytes":  591
+                  },
+                  {
+                      "path":  "modules/Detection.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.Detection.psm1",
+                      "sha256":  "5b1519bc7fbe7024bb5c3b893479ea2c3768cc9169e6ce6d65d6a470fe6e540e",
+                      "sizeBytes":  21273
+                  },
+                  {
+                      "path":  "modules/Downloads.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.Downloads.psm1",
+                      "sha256":  "1cd8f211885aeccd11f6696ab022380c8465c1eebb4227f49160992ac4fade98",
+                      "sizeBytes":  11582
+                  },
+                  {
+                      "path":  "modules/GuiWorker.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.GuiWorker.psm1",
+                      "sha256":  "769ee981896499909ff9b909d1fae45c6fd52b4dde2532ce74227df1f6449eeb",
+                      "sizeBytes":  16077
+                  },
+                  {
+                      "path":  "modules/Installation.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.Installation.psm1",
+                      "sha256":  "ea5396e35a29e44ba1f8398950128915adf728ea74b622251df3e93eae84d408",
+                      "sizeBytes":  30075
+                  },
+                  {
+                      "path":  "modules/Logging.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.Logging.psm1",
+                      "sha256":  "4ba5fe8e5e0e00ba812c5ad0d626963e32bd2ed2366b16efbc42f058b8b36ca5",
+                      "sizeBytes":  4009
+                  },
+                  {
+                      "path":  "modules/Verification.psm1",
+                      "resourceName":  "ConfigureMe.Engine.modules.Verification.psm1",
+                      "sha256":  "400c05d0a050c588eafeddf7c543d128172d3df5f8ee07b955919317395cc627",
+                      "sizeBytes":  1633
+                  },
+                  {
+                      "path":  "assets/firefox-bookmarks.html",
+                      "resourceName":  "ConfigureMe.Engine.assets.firefox-bookmarks.html",
+                      "sha256":  "7e5f426768a3ca8dadef56b547b97e2fd4d47d04cc8923dbe39c4b99dcd97b97",
+                      "sizeBytes":  770
+                  }
+              ]
+}

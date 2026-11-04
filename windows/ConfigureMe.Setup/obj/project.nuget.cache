@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "0G4J6S0NhWk=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ITA3-TN14\\.copilot\\copilot-worktrees\\configureMe\\muk4li-reimagined-fortnight\\windows\\ConfigureMe.Setup\\ConfigureMe.Setup.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ITA3-TN14\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.14\\microsoft.net.illink.tasks.10.0.14.nupkg.sha512",
+    "C:\\Users\\ITA3-TN14\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.14\\microsoft.netcore.app.runtime.win-x64.10.0.14.nupkg.sha512",
+    "C:\\Users\\ITA3-TN14\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.14\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.14.nupkg.sha512",
+    "C:\\Users\\ITA3-TN14\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.14\\microsoft.aspnetcore.app.runtime.win-x64.10.0.14.nupkg.sha512"
+  ],
+  "logs": []
+}

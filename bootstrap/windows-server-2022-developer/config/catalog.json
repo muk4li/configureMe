@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "version": "1",
+  "packages": [
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "Distributed version control for source code.",
+      "category": "Developer tools",
+      "website": "https://git-scm.com/",
+      "windowsPackageId": "Git.Git",
+      "elevated": false,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "Git.Git", "supported": true, "label": "Official signed installer" } }
+    },
+    {
+      "id": "github-cli",
+      "name": "GitHub CLI",
+      "description": "Work with GitHub from your terminal.",
+      "category": "Developer tools",
+      "website": "https://cli.github.com/",
+      "windowsPackageId": "GitHub.cli",
+      "elevated": true,
+      "dependencies": ["git"],
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "GitHub.cli", "supported": true, "label": "Official signed MSI" } }
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "description": "A lightweight, extensible code editor.",
+      "category": "Developer tools",
+      "website": "https://code.visualstudio.com/",
+      "windowsPackageId": "Microsoft.VisualStudioCode",
+      "elevated": false,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "Microsoft.VisualStudioCode", "supported": true, "label": "Current-user installer" } }
+    },
+    {
+      "id": "nodejs-lts",
+      "name": "Node.js LTS",
+      "description": "JavaScript runtime for local development.",
+      "category": "Languages",
+      "website": "https://nodejs.org/",
+      "windowsPackageId": "OpenJS.NodeJS.LTS",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "OpenJS.NodeJS.LTS", "supported": true, "label": "Official signed MSI" } }
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "description": "Python programming language and runtime.",
+      "category": "Languages",
+      "website": "https://www.python.org/",
+      "windowsPackageId": "Python.Python.3.12",
+      "elevated": false,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "Python.Python.3.12", "supported": true, "label": "Python install manager" } }
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "description": "AI coding assistance for supported development tools.",
+      "category": "AI development",
+      "website": "https://github.com/features/copilot",
+      "elevated": false,
+      "windowsMode": "catalog-only",
+      "platforms": {}
+    },
+    {
+      "id": "dotnet-10-sdk",
+      "name": ".NET 10 SDK",
+      "description": "Microsoft .NET 10 SDK for Windows x64.",
+      "category": "Languages",
+      "website": "https://dotnet.microsoft.com/download/dotnet/10.0",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "quicksetup-dotnet-sdk", "supported": true, "label": "Official signed installer" } }
+    },
+    {
+      "id": "powershell-7",
+      "name": "PowerShell 7",
+      "description": "Current stable PowerShell 7 release; runs beside Windows PowerShell 5.1.",
+      "category": "Developer tools",
+      "website": "https://learn.microsoft.com/powershell/",
+      "windowsPackageId": "Microsoft.PowerShell",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "Microsoft.PowerShell", "supported": true, "label": "Official signed MSI" } }
+    },
+    {
+      "id": "powershell",
+      "name": "PowerShell 7",
+      "description": "Legacy profile ID retained for existing configureMe profiles.",
+      "category": "Legacy compatibility",
+      "website": "https://learn.microsoft.com/powershell/",
+      "windowsPackageId": "Microsoft.PowerShell",
+      "elevated": true,
+      "windowsMode": "catalog-only",
+      "platforms": { "windows": { "id": "Microsoft.PowerShell", "supported": true, "label": "Legacy profile alias" } }
+    },
+    {
+      "id": "seven-zip",
+      "name": "7-Zip",
+      "description": "File archiver with an official x64 installer and documented silent mode.",
+      "category": "Utilities",
+      "website": "https://www.7-zip.org/",
+      "windowsPackageId": "7zip.7zip",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "7zip.7zip", "supported": true, "label": "Official signed installer" } }
+    },
+    {
+      "id": "7zip",
+      "name": "7-Zip",
+      "description": "Legacy profile ID retained for existing configureMe profiles.",
+      "category": "Legacy compatibility",
+      "website": "https://www.7-zip.org/",
+      "windowsPackageId": "7zip.7zip",
+      "elevated": true,
+      "windowsMode": "catalog-only",
+      "platforms": { "windows": { "id": "7zip.7zip", "supported": true, "label": "Legacy profile alias" } }
+    },
+    {
+      "id": "firefox",
+      "name": "Mozilla Firefox",
+      "description": "Stable Mozilla Firefox x64 enterprise MSI.",
+      "category": "Browsers",
+      "website": "https://www.mozilla.org/firefox/enterprise/",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "quicksetup-firefox", "supported": true, "label": "Official signed MSI" } }
+    },
+    {
+      "id": "openssh-client",
+      "name": "OpenSSH Client",
+      "description": "Windows-serviced OpenSSH Client capability for Windows Server.",
+      "category": "Developer tools",
+      "website": "https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "quicksetup-openssh-client", "supported": true, "label": "Windows optional capability" } }
+    },
+    {
+      "id": "github-copilot-desktop",
+      "name": "GitHub Copilot Desktop",
+      "description": "Separate desktop app; detection and manual guidance only on Windows Server.",
+      "category": "AI development",
+      "website": "https://github.com/github/app",
+      "elevated": false,
+      "windowsMode": "manual",
+      "platforms": { "windows": { "id": "quicksetup-copilot-desktop", "supported": true, "label": "Manual / support warning" } }
+    },
+    {
+      "id": "libreoffice",
+      "name": "LibreOffice",
+      "description": "Office productivity suite from The Document Foundation.",
+      "category": "Productivity",
+      "website": "https://www.libreoffice.org/download/download-libreoffice/",
+      "elevated": true,
+      "windowsMode": "automatic",
+      "platforms": { "windows": { "id": "quicksetup-libreoffice", "supported": true, "label": "Optional official signed MSI" } }
+    },
+    {
+      "id": "teams",
+      "name": "Microsoft Teams",
+      "description": "Windows Server desktop support is not asserted; web app fallback is provided.",
+      "category": "Communication",
+      "website": "https://teams.microsoft.com/v2",
+      "elevated": false,
+      "windowsMode": "web-fallback",
+      "platforms": { "windows": { "id": "quicksetup-teams", "supported": true, "label": "Web fallback; no desktop install" } }
+    },
+    {
+      "id": "docker-desktop",
+      "name": "Docker Desktop",
+      "description": "Existing install diagnostics only; not officially supported on Windows Server.",
+      "category": "Developer tools",
+      "website": "https://docs.docker.com/desktop/setup/install/windows-install/",
+      "elevated": false,
+      "windowsMode": "detection-only",
+      "platforms": { "windows": { "id": "quicksetup-docker-desktop", "supported": true, "label": "Detection only / unsupported" } }
+    },
+    {
+      "id": "github-copilot-cli",
+      "name": "GitHub Copilot CLI",
+      "description": "Optional CLI; manual installation and interactive authentication only.",
+      "category": "AI development",
+      "website": "https://docs.github.com/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli",
+      "elevated": false,
+      "windowsMode": "manual",
+      "platforms": { "windows": { "id": "quicksetup-copilot-cli", "supported": true, "label": "Optional / manual" } }
+    }
+  ]
+}

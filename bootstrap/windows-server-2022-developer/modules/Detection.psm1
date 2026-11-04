@@ -1,19 +1,31 @@
-$script:PackageNames = @{
-  "git" = "Git"
-  "github-cli" = "GitHub CLI"
-  "vscode" = "Microsoft Visual Studio Code"
-  "nodejs-lts" = "Node.js"
-  "python" = "Python"
-  "dotnet-10-sdk" = ".NET SDK 10"
-  "powershell-7" = "PowerShell 7"
-  "seven-zip" = "7-Zip"
-  "firefox" = "Mozilla Firefox"
-  "openssh-client" = "OpenSSH Client"
-  "github-copilot-desktop" = "GitHub Copilot"
-  "libreoffice" = "LibreOffice"
-  "teams" = "Microsoft Teams"
-  "docker-desktop" = "Docker Desktop"
-  "github-copilot-cli" = "GitHub Copilot CLI"
+$script:PackageCatalogPath = Join-Path (Split-Path -Parent $PSScriptRoot) "config\catalog.json"
+$script:PackageCatalog = $null
+
+function Get-QuickSetupPackageCatalog {
+  if (!$script:PackageCatalog) {
+    $catalog = Get-Content -LiteralPath $script:PackageCatalogPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    if ($catalog.schemaVersion -ne 1 -or !$catalog.packages -or $catalog.packages.Count -gt 100) {
+      throw "The local configureMe package catalog is invalid."
+    }
+    $ids = @($catalog.packages | ForEach-Object { [string]$_.id })
+    if (@($ids | Select-Object -Unique).Count -ne $ids.Count) {
+      throw "The local configureMe package catalog contains duplicate IDs."
+    }
+    foreach ($package in $catalog.packages) {
+      if ([string]$package.id -notmatch "^[a-z0-9]+(?:-[a-z0-9]+)*$" -or
+        !$package.name -or
+        $package.windowsMode -notin @("automatic", "manual", "detection-only", "web-fallback", "catalog-only")) {
+        throw "The local configureMe package catalog contains invalid package metadata."
+      }
+    }
+    $script:PackageCatalog = $catalog
+  }
+  return @($script:PackageCatalog.packages | Where-Object { $_.platforms.windows -and $_.windowsMode -ne "catalog-only" })
+}
+
+function Get-QuickSetupPackageDefinition {
+  param([Parameter(Mandatory = $true)][string]$Id)
+  return (Get-QuickSetupPackageCatalog | Where-Object { $_.id -ceq $Id } | Select-Object -First 1)
 }
 
 function Get-QuickSetupOperatingSystem {
@@ -61,7 +73,8 @@ function Test-QuickSetupTargetContext {
 
 function Get-QuickSetupPackageName {
   param([Parameter(Mandatory = $true)][string]$Id)
-  if ($script:PackageNames.ContainsKey($Id)) { return $script:PackageNames[$Id] }
+  $definition = Get-QuickSetupPackageDefinition -Id $Id
+  if ($definition) { return [string]$definition.name }
   return $Id
 }
 
@@ -480,4 +493,4 @@ function Get-QuickSetupGitVersion {
   return $null
 }
 
-Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme
+Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageCatalog, Get-QuickSetupPackageDefinition, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme

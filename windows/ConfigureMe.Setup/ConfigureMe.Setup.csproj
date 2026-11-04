@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>configureMe-Setup</AssemblyName>
+    <RootNamespace>ConfigureMe.Setup</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.3.0</Version>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EngineManifestPath>$(IntermediateOutputPath)configureme-engine-manifest.json</EngineManifestPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\bootstrap.ps1" LogicalName="ConfigureMe.Engine.bootstrap.ps1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\config\catalog.json" LogicalName="ConfigureMe.Engine.config.catalog.json" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\config\windows-server-2022-developer.json" LogicalName="ConfigureMe.Engine.config.windows-server-2022-developer.json" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Detection.psm1" LogicalName="ConfigureMe.Engine.modules.Detection.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Downloads.psm1" LogicalName="ConfigureMe.Engine.modules.Downloads.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\GuiWorker.psm1" LogicalName="ConfigureMe.Engine.modules.GuiWorker.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Installation.psm1" LogicalName="ConfigureMe.Engine.modules.Installation.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Logging.psm1" LogicalName="ConfigureMe.Engine.modules.Logging.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\modules\Verification.psm1" LogicalName="ConfigureMe.Engine.modules.Verification.psm1" />
+    <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\assets\firefox-bookmarks.html" LogicalName="ConfigureMe.Engine.assets.firefox-bookmarks.html" />
+  </ItemGroup>
+
+  <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(EngineManifestPath)&quot;" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(MSBuildProjectDirectory)\$(EngineManifestPath)" LogicalName="ConfigureMe.Engine.manifest.json" />
+    </ItemGroup>
+  </Target>
+</Project>
