@@ -25,7 +25,9 @@ function Invoke-GuiWorkerTestRequest {
   $process.StartInfo = $startInfo
   if (!$process.Start()) { throw "The GUI worker process could not be started." }
   $requestJson = ConvertTo-Json -InputObject $Request -Compress -Depth 8
-  $process.StandardInput.WriteLine($requestJson)
+  $requestBytes = [System.Text.Encoding]::UTF8.GetBytes($requestJson + [Environment]::NewLine)
+  $process.StandardInput.BaseStream.Write($requestBytes, 0, $requestBytes.Length)
+  $process.StandardInput.BaseStream.Flush()
   $process.StandardInput.Close()
   $output = $process.StandardOutput.ReadToEnd()
   $errorOutput = $process.StandardError.ReadToEnd()
