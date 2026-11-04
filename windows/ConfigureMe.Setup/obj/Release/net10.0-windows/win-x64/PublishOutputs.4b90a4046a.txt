@@ -1,2 +1,0 @@
-C:\Users\ITA3-TN14\.copilot\copilot-worktrees\configureMe\muk4li-reimagined-fortnight\windows\ConfigureMe.Setup\bin\Release\net10.0-windows\win-x64\publish\configureMe-Setup.pdb
-C:\Users\ITA3-TN14\.copilot\copilot-worktrees\configureMe\muk4li-reimagined-fortnight\windows\ConfigureMe.Setup\bin\Release\net10.0-windows\win-x64\publish\configureMe-Setup.exe
