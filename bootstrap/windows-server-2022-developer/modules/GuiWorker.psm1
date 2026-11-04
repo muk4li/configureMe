@@ -42,7 +42,8 @@ function Write-QuickSetupGuiPackageEvent {
 
 function Invoke-QuickSetupGuiWorker {
   Set-QuickSetupGuiWorkerMode
-  $requestLine = [Console]::In.ReadLine()
+  $inputReader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $false)
+  $requestLine = $inputReader.ReadLine()
   if (!$requestLine -or $requestLine.Length -gt 65536) {
     throw "The GUI worker request is missing or exceeds the size limit."
   }
