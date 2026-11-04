@@ -32,6 +32,7 @@ function New-QuickSetupPackageResult {
     ErrorCode = $null
     Notes = $null
     RestartRequired = $false
+    CompatibilityConfirmed = $null
   }
 }
 

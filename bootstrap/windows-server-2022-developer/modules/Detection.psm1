@@ -10,6 +10,7 @@ $script:PackageNames = @{
   "firefox" = "Mozilla Firefox"
   "openssh-client" = "OpenSSH Client"
   "github-copilot-desktop" = "GitHub Copilot"
+  "libreoffice" = "LibreOffice"
   "teams" = "Microsoft Teams"
   "docker-desktop" = "Docker Desktop"
   "github-copilot-cli" = "GitHub Copilot CLI"
@@ -65,7 +66,101 @@ function Get-QuickSetupPackageName {
 }
 
 function Get-QuickSetupDetectedVersion {
-  param([Parameter(Mandatory = $true)][string]$Id)
+  param(
+    [Parameter(Mandatory = $true)][string]$Id,
+    [scriptblock]$RegistryProvider,
+    [scriptblock]$PathExistsProvider,
+    [scriptblock]$ExecutableVersionProvider,
+    [scriptblock]$GitVersionProvider
+  )
+
+  if ($Id -eq "git" -and $GitVersionProvider) {
+    $gitCommandResult = & $GitVersionProvider
+    return Get-QuickSetupGitVersion -Output ([string]$gitCommandResult.Output) -ExitCode ([int]$gitCommandResult.ExitCode)
+  }
+
+  if ($Id -eq "github-copilot-desktop") {
+    $registryPaths = @(
+      "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+      "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+      "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($registryPath in $registryPaths) {
+      $entries = if ($RegistryProvider) {
+        & $RegistryProvider $registryPath
+      } else {
+        Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+      }
+      $entry = $entries |
+        Where-Object { $_.DisplayName -and $_.DisplayName -match "^GitHub Copilot(?: Desktop)?$" } |
+        Select-Object -First 1
+      if ($entry) {
+        if ($entry.DisplayVersion) { return [string]$entry.DisplayVersion }
+        return "detected (version unavailable)"
+      }
+    }
+
+    $executablePath = Join-Path $env:LOCALAPPDATA "Programs\GitHub Copilot\GitHub Copilot.exe"
+    $executableExists = if ($PathExistsProvider) {
+      [bool](& $PathExistsProvider $executablePath)
+    } else {
+      Test-Path -LiteralPath $executablePath
+    }
+    if ($executableExists) {
+      $version = if ($ExecutableVersionProvider) {
+        [string](& $ExecutableVersionProvider $executablePath)
+      } else {
+        [string](Get-Item -LiteralPath $executablePath).VersionInfo.ProductVersion
+      }
+      if ($version) { return $version }
+      return "detected (version unavailable)"
+    }
+    return $null
+  }
+
+  if ($Id -eq "libreoffice") {
+    $registryPaths = @(
+      "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+      "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+      "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($registryPath in $registryPaths) {
+      $entries = if ($RegistryProvider) {
+        & $RegistryProvider $registryPath
+      } else {
+        Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+      }
+      $entry = $entries |
+        Where-Object { $_.DisplayName -and $_.DisplayName -match "^LibreOffice(?:\s+\d+(?:\.\d+){1,3})?$" } |
+        Select-Object -First 1
+      if ($entry) {
+        if ($entry.DisplayVersion) { return [string]$entry.DisplayVersion }
+        return "detected (version unavailable)"
+      }
+    }
+
+    $executablePaths = @(
+      (Join-Path $env:ProgramFiles "LibreOffice\program\soffice.exe"),
+      (Join-Path ${env:ProgramFiles(x86)} "LibreOffice\program\soffice.exe")
+    )
+    foreach ($executablePath in $executablePaths) {
+      $executableExists = if ($PathExistsProvider) {
+        [bool](& $PathExistsProvider $executablePath)
+      } else {
+        Test-Path -LiteralPath $executablePath
+      }
+      if ($executableExists) {
+        $version = if ($ExecutableVersionProvider) {
+          [string](& $ExecutableVersionProvider $executablePath)
+        } else {
+          [string](Get-Item -LiteralPath $executablePath).VersionInfo.ProductVersion
+        }
+        if ($version) { return $version }
+        return "detected (version unavailable)"
+      }
+    }
+    return $null
+  }
 
   if ($Id -eq "docker-desktop") {
     $registryPaths = @(
@@ -134,7 +229,8 @@ function Get-QuickSetupDetectedVersion {
         switch ($Id) {
           "git" {
             $output = & $command.Source --version 2>$null | Out-String
-            if ($output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
+            $version = Get-QuickSetupGitVersion -Output $output -ExitCode $LASTEXITCODE
+            if ($version) { return $version }
           }
           "github-cli" {
             $output = & $command.Source --version 2>$null | Out-String
@@ -204,7 +300,11 @@ function Get-QuickSetupDetectedVersion {
   )
   foreach ($registryPath in $registryPaths) {
     $entry = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue |
-      Where-Object { $_.DisplayName -and $_.DisplayName -like "$name*" } |
+      Where-Object {
+        if (!$_.DisplayName) { $false }
+        elseif ($Id -eq "git") { $_.DisplayName -match "^Git(?:$| for Windows(?:\s+[\w.-]+)?$| version\s+[\w.-]+$|\s+[\d][\w.-]*$)" }
+        else { $_.DisplayName -like "$name*" }
+      } |
       Select-Object -First 1
     if ($entry) {
       if ($entry.DisplayVersion) { return [string]$entry.DisplayVersion }
@@ -367,4 +467,17 @@ function Set-QuickSetupVsCodeDarkTheme {
   [pscustomobject]@{ Success = $true; Notes = "Dark theme set for the current Windows user only." }
 }
 
-Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme
+function Get-QuickSetupGitVersion {
+  param(
+    [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Output,
+    [int]$ExitCode = 0
+  )
+
+  if ($ExitCode -ne 0) { return $null }
+  if ($Output -match "(?m)^\s*git version (\d+\.\d+(?:\.\d+)?(?:\.windows\.\d+)?)\s*$") {
+    return $Matches[1]
+  }
+  return $null
+}
+
+Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme

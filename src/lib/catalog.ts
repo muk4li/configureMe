@@ -155,6 +155,15 @@ export const catalog: PackageDefinition[] = [
     elevated: false,
   },
   {
+    id: "libreoffice",
+    name: "LibreOffice",
+    description: "Office productivity suite from The Document Foundation.",
+    category: "Productivity",
+    website: "https://www.libreoffice.org/download/download-libreoffice/",
+    platforms: { windows: { id: "quicksetup-libreoffice", supported: true, label: "Optional official signed MSI" } },
+    elevated: true,
+  },
+  {
     id: "teams",
     name: "Microsoft Teams",
     description: "Windows Server desktop support is not asserted; web app fallback is provided.",

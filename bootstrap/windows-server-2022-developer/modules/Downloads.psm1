@@ -204,6 +204,7 @@ function Test-QuickSetupAuthenticodePublisher {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
     [Parameter(Mandatory = $true)][string]$ExpectedPublisher,
+    [string]$ExpectedCommonName,
     [scriptblock]$SignatureProvider
   )
 
@@ -216,6 +217,18 @@ function Test-QuickSetupAuthenticodePublisher {
     }
   }
   $subject = [string]$signature.SignerCertificate.Subject
+  if ($ExpectedCommonName) {
+    $commonNameMatch = [regex]::Match($subject, '(?:^|,\s*)CN=(?:"([^"]+)"|([^,]+))')
+    $commonName = if ($commonNameMatch.Groups[1].Success) { $commonNameMatch.Groups[1].Value } else { $commonNameMatch.Groups[2].Value }
+    $commonName = $commonName.Trim().Trim('"')
+    if (!$commonName -or $commonName -cne $ExpectedCommonName) {
+      return [pscustomobject]@{
+        IsValid = $false
+        Signer = $subject
+        Message = "The trusted signer common name '$commonName' does not exactly match approved common name '$ExpectedCommonName'."
+      }
+    }
+  }
   if ($subject -notmatch [regex]::Escape($ExpectedPublisher)) {
     return [pscustomobject]@{
       IsValid = $false

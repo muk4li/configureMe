@@ -15,23 +15,94 @@ function Invoke-QuickSetupInstallerProcess {
 function Get-QuickSetupGithubReleaseInstaller {
   param(
     [Parameter(Mandatory = $true)][string]$Repository,
-    [Parameter(Mandatory = $true)][string]$AssetPattern
+    [Parameter(Mandatory = $true)][string]$AssetPattern,
+    [scriptblock]$ReleaseProvider
   )
 
-  $headers = @{ "User-Agent" = "configureMe-Windows-QuickSetup"; "Accept" = "application/vnd.github+json" }
-  $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers -TimeoutSec 60 -ErrorAction Stop
+  if ($Repository -notmatch "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") {
+    throw "The GitHub release repository name is invalid."
+  }
+  $release = if ($ReleaseProvider) {
+    & $ReleaseProvider $Repository
+  } else {
+    $headers = @{ "User-Agent" = "configureMe-Windows-QuickSetup"; "Accept" = "application/vnd.github+json" }
+    Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers -TimeoutSec 60 -ErrorAction Stop
+  }
   $asset = @($release.assets | Where-Object { $_.name -match $AssetPattern }) | Select-Object -First 1
   if (!$asset -or $asset.browser_download_url -notmatch "^https://github\.com/$([regex]::Escape($Repository))/releases/download/") {
     throw "No matching official Windows x64 release asset was found for $Repository."
   }
   $digest = $null
   if ($asset.digest -match "^sha256:([a-fA-F0-9]{64})$") { $digest = $Matches[1] }
+  if (!$digest -and $release.body) {
+    $escapedName = [regex]::Escape([string]$asset.name)
+    $hashMatch = [regex]::Match([string]$release.body, "(?im)^\|\s*$escapedName\s*\|\s*([a-fA-F0-9]{64})\s*\|")
+    if ($hashMatch.Success) { $digest = $hashMatch.Groups[1].Value }
+  }
   [pscustomobject]@{
     Version = [string]$release.tag_name
     Uri = [uri]$asset.browser_download_url
     Sha256 = $digest
     Source = [string]$asset.browser_download_url
     AllowedHosts = @("github.com", "githubusercontent.com")
+  }
+}
+
+function Get-QuickSetupLibreOfficeInstaller {
+  param([scriptblock]$WebRequestProvider)
+
+  $indexUri = [uri]"https://download.documentfoundation.org/libreoffice/stable/"
+  $index = if ($WebRequestProvider) {
+    & $WebRequestProvider $indexUri
+  } else {
+    Invoke-WebRequest -Uri $indexUri.AbsoluteUri -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
+  }
+  $versions = @(
+    [regex]::Matches([string]$index.Content, 'href="(?<version>\d+\.\d+\.\d+)/"') |
+      ForEach-Object {
+        $version = [version]$_.Groups["version"].Value
+        [pscustomobject]@{ Version = $version; Text = $version.ToString() }
+      } |
+      Sort-Object Version -Descending
+  )
+  if ($versions.Count -eq 0) { throw "The official LibreOffice stable directory did not list a release version." }
+
+  $version = $versions[0].Text
+  $fileName = "LibreOffice_${version}_Win_x86-64.msi"
+  $directory = "https://download.documentfoundation.org/libreoffice/stable/$version/win/x86_64/"
+  $installerUri = [uri]($directory + $fileName)
+  $mirrorListUri = [uri]($installerUri.AbsoluteUri + ".mirrorlist")
+  $mirrorList = if ($WebRequestProvider) {
+    & $WebRequestProvider $mirrorListUri
+  } else {
+    Invoke-WebRequest -Uri $mirrorListUri.AbsoluteUri -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
+  }
+  $escapedName = [regex]::Escape($fileName)
+  $pathMatch = [regex]::Match([string]$mirrorList.Content, "(?is)<li><span class=""mirrorbrain-label"">Path:</span>\s*(?<path>/[^<]+)</li>")
+  $expectedPath = "/libreoffice/stable/$version/win/x86_64/$fileName"
+  if (!$pathMatch.Success -or $pathMatch.Groups["path"].Value.Trim() -cne $expectedPath) {
+    throw "The official LibreOffice mirror metadata did not match the selected x64 MSI path."
+  }
+  $hashMatch = [regex]::Match([string]$mirrorList.Content, "(?is)SHA-256 Hash</a>:</span>\s*<tt>(?<hash>[a-fA-F0-9]{64})</tt>")
+  if (!$hashMatch.Success) { throw "The official LibreOffice mirror metadata did not publish the MSI SHA-256." }
+
+  $allowedHosts = New-Object System.Collections.Generic.List[string]
+  $allowedHosts.Add($installerUri.DnsSafeHost)
+  $mirrorPattern = "(?is)<a\s+href=""(?<url>https://[^""]+/$escapedName)"">"
+  foreach ($match in [regex]::Matches([string]$mirrorList.Content, $mirrorPattern)) {
+    $mirrorUri = [uri]$match.Groups["url"].Value
+    if (!$mirrorUri.AbsolutePath.EndsWith($expectedPath, [System.StringComparison]::Ordinal)) { continue }
+    if (!$allowedHosts.Contains($mirrorUri.DnsSafeHost)) { $allowedHosts.Add($mirrorUri.DnsSafeHost) }
+  }
+  if ($allowedHosts.Count -eq 1) { throw "The official LibreOffice mirror metadata did not list any HTTPS MSI mirrors." }
+
+  [pscustomobject]@{
+    Version = $version
+    FileName = $fileName
+    Uri = $installerUri
+    Sha256 = $hashMatch.Groups["hash"].Value
+    AllowedHosts = $allowedHosts.ToArray()
+    Source = "https://www.libreoffice.org/download/download-libreoffice/"
   }
 }
 
@@ -78,7 +149,13 @@ function Get-QuickSetupInstallerDefinition {
   if ($OfflinePreview) {
     switch ($Id) {
       "git" {
-        return [pscustomobject]@{ Automatic = $false; InstallerType = "manual"; Version = "latest stable"; Source = "https://github.com/git-for-windows/git/releases/latest"; Method = "Manual"; Notes = "The official x64 EXE publishes SHA-256 metadata, but this bootstrap has not verified an authoritative supported silent command line or pinned signer identity. Installation remains manual." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = "latest stable Git for Windows x64"; Source = "https://github.com/git-for-windows/git/releases/latest"; Publisher = "Johannes Schindelin"; ExpectedCommonName = "Johannes Schindelin"; Method = "Official release x64 EXE; exact Johannes Schindelin signer; Inno Setup documented silent switches"; Arguments = @("/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-"); Notes = "The release digest is checked when official metadata provides it. Authenticode must be valid and the signer common name must exactly equal Johannes Schindelin. Existing Git is detected first and is never updated." }
+      }
+      "github-copilot-desktop" {
+        return [pscustomobject]@{ Automatic = $false; InstallerType = "exe"; Version = "latest official release; manual only"; Source = "https://github.com/github/app/releases"; Method = "Interactive manual install only"; Notes = "The official release publishes GitHub-Copilot-windows-x64-setup.exe, but no verified silent switches or installer scope/per-user behavior are documented. Do not automate its execution on Windows Server 2022. Confirm compatibility explicitly and verify GitHub, Inc. Authenticode signature before launching it interactively." }
+      }
+      "libreoffice" {
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = "latest stable x64"; Source = "https://www.libreoffice.org/download/download-libreoffice/"; Method = "Official Document Foundation x64 MSI via msiexec /qn"; Arguments = @("/qn", "/norestart"); Publisher = "The Document Foundation"; ExpectedCommonName = "The Document Foundation"; Notes = "Optional package; resolves the current stable x64 MSI from the official Document Foundation directory, validates its official SHA-256 and exact Authenticode signer common name, and installs only when selected in the local profile." }
       }
       "github-cli" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://github.com/cli/cli/releases"; Method = "Official x64 MSI via msiexec /qn"; Notes = "Version is resolved from the official GitHub release feed only after confirmation." }
@@ -114,13 +191,26 @@ function Get-QuickSetupInstallerDefinition {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   switch ($Id) {
     "git" {
+      $release = Get-QuickSetupGithubReleaseInstaller -Repository "git-for-windows/git" -AssetPattern "^Git-[0-9.]+-64-bit\.exe$"
       return [pscustomobject]@{
-        Automatic = $false
-        InstallerType = "manual"
-        Version = "latest stable"
+        Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true
+        Version = $release.Version; Uri = $release.Uri; Sha256 = $release.Sha256; AllowedHosts = $release.AllowedHosts
+        Publisher = "Johannes Schindelin"; ExpectedCommonName = "Johannes Schindelin"
+        Method = "Official Git for Windows x64 EXE (Inno Setup)"
+        Arguments = @("/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-")
         Source = "https://github.com/git-for-windows/git/releases/latest"
-        Method = "Manual"
-        Notes = "The official x64 EXE publishes SHA-256 metadata, but this bootstrap has not verified an authoritative supported silent command line or pinned signer identity. Installation remains manual."
+        Notes = "The official GitHub release's asset digest or exact-asset SHA-256 table is used when available. Authenticode must be valid and its signer common name must exactly equal Johannes Schindelin. The Inno Setup switches are documented; no restart is requested."
+      }
+    }
+    "libreoffice" {
+      $release = Get-QuickSetupLibreOfficeInstaller
+      return [pscustomobject]@{
+        Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true
+        Version = $release.Version; Uri = $release.Uri; Sha256 = $release.Sha256; AllowedHosts = $release.AllowedHosts
+        Publisher = "The Document Foundation"; ExpectedCommonName = "The Document Foundation"; Method = "Official x64 MSI /qn /norestart"
+        Arguments = @("/qn", "/norestart")
+        Source = $release.Source
+        Notes = "Optional selected package; official Document Foundation MSI SHA-256 and Authenticode signer are checked before execution."
       }
     }
     "github-cli" {
@@ -276,13 +366,13 @@ function Invoke-QuickSetupPackageInstall {
       $exitCode = Invoke-QuickSetupInstallerProcess -Path "pymanager.exe" -Arguments @($Definition.RuntimeArguments) -ProcessRunner $ProcessRunner
     } elseif ($Definition.InstallerType -eq "msi") {
       Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "msi" -ExpectedArchitecture $Definition.ExpectedArchitecture -MsiPlatformReader $MsiPlatformReader | Out-Null
-      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -SignatureProvider $SignatureProvider
+      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
       if (!$signature.IsValid) { throw $signature.Message }
       $arguments = @("/i", ('"' + $installerPath + '"')) + @($Definition.Arguments)
       $exitCode = Invoke-QuickSetupInstallerProcess -Path "msiexec.exe" -Arguments $arguments -ProcessRunner $ProcessRunner
     } else {
       Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "exe" -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$Definition.AllowX86BootstrapForX64) | Out-Null
-      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -SignatureProvider $SignatureProvider
+      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
       if (!$signature.IsValid) { throw $signature.Message }
       $exitCode = Invoke-QuickSetupInstallerProcess -Path $installerPath -Arguments @($Definition.Arguments) -ProcessRunner $ProcessRunner
     }
@@ -292,4 +382,4 @@ function Invoke-QuickSetupPackageInstall {
   }
 }
 
-Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupPythonManagerInstaller, Invoke-QuickSetupInstallerProcess, Invoke-QuickSetupPackageInstall
+Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupGithubReleaseInstaller, Get-QuickSetupLibreOfficeInstaller, Get-QuickSetupPythonManagerInstaller, Invoke-QuickSetupPackageInstall, Invoke-QuickSetupInstallerProcess

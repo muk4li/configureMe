@@ -71,7 +71,7 @@ try {
   Assert-True (@($profile.packages | Where-Object { $_ -in $expectedIds }).Count -eq $expectedIds.Count) "The profile is missing a required P0 package."
   Test-QuickSetupProfile -Profile $profile -AllowedPackageIds @($profile.packages)
   $expectedInstallerTypes = @{
-    "git" = "manual"; "github-cli" = "msi"; "vscode" = "exe"; "nodejs-lts" = "msi"
+    "git" = "exe"; "github-cli" = "msi"; "vscode" = "exe"; "nodejs-lts" = "msi"
     "python" = "msix"; "dotnet-10-sdk" = "exe"; "powershell-7" = "msi"; "seven-zip" = "exe"
     "firefox" = "msi"; "openssh-client" = "windows-capability"
   }
@@ -79,6 +79,25 @@ try {
     $definition = Get-QuickSetupInstallerDefinition -Id $id -OfflinePreview
     Assert-True ($definition.InstallerType -eq $expectedInstallerTypes[$id]) "The $id package did not declare its installer type."
   }
+  $gitPreview = Get-QuickSetupInstallerDefinition -Id "git" -OfflinePreview
+  Assert-True ($gitPreview.Automatic -and (($gitPreview.Arguments -join " ") -ceq "/VERYSILENT /NORESTART /NOCANCEL /SP-")) "Git did not use only the approved documented Inno Setup switches."
+  Assert-True ($gitPreview.Publisher -ceq "Johannes Schindelin" -and $gitPreview.ExpectedCommonName -ceq "Johannes Schindelin") "Git did not pin the exact approved signer identity."
+  $copilotPreview = Get-QuickSetupInstallerDefinition -Id "github-copilot-desktop" -OfflinePreview
+  Assert-True (!$copilotPreview.Automatic -and $copilotPreview.InstallerType -eq "exe" -and !$copilotPreview.Arguments) "Copilot Desktop was given an unverified automatic or silent install route."
+  Assert-True ($copilotPreview.Notes -match "no verified silent switches" -and $copilotPreview.Notes -match "per-user") "Copilot Desktop does not explain its unverified silent and per-user behavior."
+  $libreOfficePreview = Get-QuickSetupInstallerDefinition -Id "libreoffice" -OfflinePreview
+  Assert-True ($libreOfficePreview.Automatic -and $libreOfficePreview.InstallerType -eq "msi" -and $libreOfficePreview.Publisher -eq "The Document Foundation" -and $libreOfficePreview.ExpectedCommonName -eq "The Document Foundation") "LibreOffice did not declare its optional MSI and exact signer."
+  Assert-True (@($profile.packages | Where-Object { $_ -eq "libreoffice" }).Count -eq 0) "LibreOffice was selected in the default profile."
+  Assert-True ((Get-QuickSetupGitVersion -Output "git version 2.56.0.windows.4" -ExitCode 0) -eq "2.56.0.windows.4") "The Git version parser did not read the exact git --version output."
+  Assert-True ($null -eq (Get-QuickSetupGitVersion -Output "git version 2.56.0.windows.4" -ExitCode 1)) "A failing git --version command was treated as successful."
+  Assert-True ($null -eq (Get-QuickSetupGitVersion -Output "not git output" -ExitCode 0)) "Malformed git --version output was accepted."
+  $mockGitInstalledVersion = Get-QuickSetupDetectedVersion -Id "git" -GitVersionProvider {
+    [pscustomobject]@{ Output = "git version 2.56.0.windows.4"; ExitCode = 0 }
+  }
+  $mockGitMissingVersion = Get-QuickSetupDetectedVersion -Id "git" -GitVersionProvider {
+    [pscustomobject]@{ Output = ""; ExitCode = 1 }
+  }
+  Assert-True ($mockGitInstalledVersion -eq "2.56.0.windows.4" -and $null -eq $mockGitMissingVersion) "Git installed/missing detection did not use git --version success and failure correctly."
   $supportedTarget = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server" -ProcessorArchitecture 9 -Is64Bit $true
   $coreTarget = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server Core" -ProcessorArchitecture 9 -Is64Bit $true
   $x86Target = Test-QuickSetupTargetContext -Caption "Microsoft Windows Server 2022" -Build 20348 -InstallationType "Server" -ProcessorArchitecture 0 -Is64Bit $false
@@ -101,6 +120,124 @@ try {
     }
   }
   Assert-True (!$wrongPublisher.IsValid) "A valid signature from the wrong publisher was accepted."
+  $approvedGitSigner = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "Johannes Schindelin" -ExpectedCommonName "Johannes Schindelin" -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Johannes Schindelin, O=Git for Windows" }
+    }
+  }
+  Assert-True $approvedGitSigner.IsValid "The exact approved Git signer identity was rejected."
+  $quotedLibreOfficeSigner = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "The Document Foundation" -ExpectedCommonName "The Document Foundation" -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = 'CN="The Document Foundation", O="The Document Foundation", L=Berlin, C=DE' }
+    }
+  }
+  Assert-True $quotedLibreOfficeSigner.IsValid "The exact quoted LibreOffice signer common name was rejected."
+  $wrongGitSigner = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "Johannes Schindelin" -ExpectedCommonName "Johannes Schindelin" -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Johannes Schindelin Backup, O=Git for Windows" }
+    }
+  }
+  Assert-True (!$wrongGitSigner.IsValid) "A similarly named Git signer passed the exact common-name check."
+  $trustedCopilotSigner = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "GitHub, Inc." -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = 'CN="GitHub, Inc.", O="GitHub, Inc.", L=San Francisco, S=California, C=US' }
+    }
+  }
+  Assert-True $trustedCopilotSigner.IsValid "The official GitHub, Inc. Copilot signer was rejected."
+  $untrustedCopilotSigner = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "GitHub, Inc." -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Unrelated Publisher" }
+    }
+  }
+  Assert-True (!$untrustedCopilotSigner.IsValid) "A Copilot installer from an unrelated signer was accepted."
+  $invalidSignature = Test-QuickSetupAuthenticodePublisher -Path $fakeInstaller -ExpectedPublisher "Johannes Schindelin" -ExpectedCommonName "Johannes Schindelin" -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::NotSigned
+      SignerCertificate = $null
+    }
+  }
+  Assert-True (!$invalidSignature.IsValid) "An installer with no Authenticode signature was accepted."
+  $copilotInstallMarker = Join-Path $temporaryDirectory "copilot-user-data.json"
+  Set-Content -LiteralPath $copilotInstallMarker -Value '{"userData":"keep"}' -Encoding UTF8
+  $copilotDataHash = (Get-FileHash -LiteralPath $copilotInstallMarker -Algorithm SHA256).Hash
+  $copilotDetectedVersion = Get-QuickSetupDetectedVersion -Id "github-copilot-desktop" -RegistryProvider {
+    param($registryPath)
+    if ($registryPath -like "HKCU:*") {
+      return [pscustomobject]@{ DisplayName = "GitHub Copilot"; DisplayVersion = "1.1.34" }
+    }
+    return @()
+  } -PathExistsProvider { param($path) $false }
+  Assert-True ($copilotDetectedVersion -eq "1.1.34") "The existing GitHub Copilot Desktop 1.1.34 install was not detected."
+  Assert-True ((Get-FileHash -LiteralPath $copilotInstallMarker -Algorithm SHA256).Hash -eq $copilotDataHash) "Copilot detection modified user data."
+  $copilotCliOnly = Get-QuickSetupDetectedVersion -Id "github-copilot-desktop" -RegistryProvider {
+    param($registryPath)
+    if ($registryPath -like "HKCU:*") {
+      return [pscustomobject]@{ DisplayName = "GitHub Copilot CLI"; DisplayVersion = "0.1.0" }
+    }
+    return @()
+  } -PathExistsProvider { param($path) $false }
+  Assert-True ($null -eq $copilotCliOnly) "Copilot CLI was incorrectly detected as the Desktop app."
+  $libreOfficeDetectedVersion = Get-QuickSetupDetectedVersion -Id "libreoffice" -RegistryProvider {
+    param($registryPath)
+    if ($registryPath -like "HKLM:*") {
+      return [pscustomobject]@{ DisplayName = "LibreOffice 26.8"; DisplayVersion = "26.8.2.1" }
+    }
+    return @()
+  }
+  Assert-True ($libreOfficeDetectedVersion -eq "26.8.2.1") "The existing LibreOffice installation was not detected."
+  $script:releaseRepository = $null
+  $gitDigest = "A" * 64
+  $gitRelease = Get-QuickSetupGithubReleaseInstaller -Repository "git-for-windows/git" -AssetPattern "^Git-[0-9.]+-64-bit\.exe$" -ReleaseProvider {
+    param($repository)
+    $script:releaseRepository = $repository
+    [pscustomobject]@{
+      tag_name = "v2.56.0.windows.4"
+      body = "| Git-2.56.0.4-64-bit.exe | $gitDigest |"
+      assets = @(
+        [pscustomobject]@{
+          name = "Git-2.56.0.4-64-bit.exe"
+          browser_download_url = "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/Git-2.56.0.4-64-bit.exe"
+          digest = "sha256:$gitDigest"
+        }
+      )
+    }
+  }
+  Assert-True ($script:releaseRepository -eq "git-for-windows/git" -and $gitRelease.Version -eq "v2.56.0.windows.4" -and $gitRelease.Sha256 -eq $gitDigest) "Git did not resolve its official release asset digest."
+  $gitReleaseFallback = Get-QuickSetupGithubReleaseInstaller -Repository "git-for-windows/git" -AssetPattern "^Git-[0-9.]+-64-bit\.exe$" -ReleaseProvider {
+    param($repository)
+    [pscustomobject]@{
+      tag_name = "v2.56.0.windows.4"
+      body = "| Git-2.56.0.4-64-bit.exe | $gitDigest |"
+      assets = @(
+        [pscustomobject]@{
+          name = "Git-2.56.0.4-64-bit.exe"
+          browser_download_url = "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/Git-2.56.0.4-64-bit.exe"
+          digest = $null
+        }
+      )
+    }
+  }
+  Assert-True ($gitReleaseFallback.Sha256 -eq $gitDigest) "Git's official release-body SHA-256 fallback was not read."
+  $libreOfficeMirrorlist = '<li><span class="mirrorbrain-label">Path:</span> /libreoffice/stable/26.8.2/win/x86_64/LibreOffice_26.8.2_Win_x86-64.msi</li><li><span class="mirrorbrain-label"><a href="/libreoffice/stable/26.8.2/win/x86_64/LibreOffice_26.8.2_Win_x86-64.msi.sha256">SHA-256 Hash</a>:</span> <tt>' + ("B" * 64) + '</tt></li><li><a href="https://mirror.example.org/tdf/libreoffice/stable/26.8.2/win/x86_64/LibreOffice_26.8.2_Win_x86-64.msi">mirror</a></li>'
+  $libreOfficeMetadata = Get-QuickSetupLibreOfficeInstaller -WebRequestProvider {
+    param($uri)
+    if ($uri.AbsoluteUri -eq "https://download.documentfoundation.org/libreoffice/stable/") {
+      return [pscustomobject]@{ Content = '<a href="25.8.7/"></a><a href="26.8.2/"></a>' }
+    }
+    return [pscustomobject]@{ Content = $libreOfficeMirrorlist }
+  }
+  Assert-True ($libreOfficeMetadata.Version -eq "26.8.2" -and $libreOfficeMetadata.Sha256 -eq ("B" * 64) -and $libreOfficeMetadata.AllowedHosts -contains "mirror.example.org") "LibreOffice did not verify the official MSI metadata and mirror list."
   Assert-True (!(Test-QuickSetupAdministratorRequirement -RequiresAdministrator $true -IsAdministrator $false)) "A system installer was allowed without administrator rights."
   Assert-True (Test-QuickSetupAdministratorRequirement -RequiresAdministrator $false -IsAdministrator $false) "A per-user installer incorrectly required administrator rights."
   $originalProcessPath = $env:Path
@@ -217,6 +354,86 @@ try {
     [pscustomobject]@{ Status = [System.Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = "CN=Microsoft Corporation" } }
   } -ProcessRunner $exeProcessRunner
   Assert-True ($exeInstallResult.ExitCode -eq 0 -and $script:mockInstallerCalls -eq 1) "EXE installation was not executed directly."
+
+  $gitInstallDefinition = $gitPreview.PSObject.Copy()
+  $gitInstallDefinition | Add-Member -NotePropertyName Uri -NotePropertyValue ([uri]"https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/Git-2.56.0.4-64-bit.exe")
+  $gitInstallDefinition | Add-Member -NotePropertyName AllowedHosts -NotePropertyValue @("github.com", "githubusercontent.com")
+  $gitInstallDefinition | Add-Member -NotePropertyName Sha256 -NotePropertyValue $null
+  $script:gitInstallCalls = 0
+  $gitProcessRunner = {
+    param($path, $arguments)
+    $script:gitInstallCalls++
+    if ($path -notmatch "\\installer\.exe$") { throw "Git did not start its downloaded x64 EXE." }
+    if (($arguments -join " ") -cne "/VERYSILENT /NORESTART /NOCANCEL /SP-") { throw "Git was launched with unapproved installer switches." }
+    return 0
+  }
+  $gitSignatureProvider = {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=Johannes Schindelin, O=Git for Windows" }
+    }
+  }
+  $gitDownloadProvider = {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, (New-TestPeBytes -Machine 0x8664))
+    return [uri]"https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/Git-2.56.0.4-64-bit.exe"
+  }
+  $gitInstallResult = Invoke-QuickSetupPackageInstall -Id "git" -Definition $gitInstallDefinition -DownloadProvider $gitDownloadProvider -SignatureProvider $gitSignatureProvider -ProcessRunner $gitProcessRunner
+  Assert-True ($gitInstallResult.ExitCode -eq 0 -and !$gitInstallResult.RestartRequired -and $script:gitInstallCalls -eq 1) "Git installation did not complete without a restart."
+  $script:gitInstallCalls = 0
+  $gitWrongSignerRefused = $false
+  try {
+    Invoke-QuickSetupPackageInstall -Id "git" -Definition $gitInstallDefinition -DownloadProvider $gitDownloadProvider -ProcessRunner $gitProcessRunner -SignatureProvider {
+      param($path)
+      [pscustomobject]@{
+        Status = [System.Management.Automation.SignatureStatus]::Valid
+        SignerCertificate = [pscustomobject]@{ Subject = "CN=Other Publisher, O=Git for Windows" }
+      }
+    } | Out-Null
+  } catch { $gitWrongSignerRefused = $true }
+  Assert-True ($gitWrongSignerRefused -and $script:gitInstallCalls -eq 0) "Git executed an installer signed by an unapproved identity."
+  $gitBadDigestRefused = $false
+  $gitBadDigestDefinition = $gitInstallDefinition.PSObject.Copy()
+  $gitBadDigestDefinition.Sha256 = "0" * 64
+  try {
+    Invoke-QuickSetupPackageInstall -Id "git" -Definition $gitBadDigestDefinition -DownloadProvider $gitDownloadProvider -ProcessRunner $gitProcessRunner -SignatureProvider $gitSignatureProvider | Out-Null
+  } catch { $gitBadDigestRefused = $true }
+  Assert-True ($gitBadDigestRefused -and $script:gitInstallCalls -eq 0) "Git executed an installer whose official release digest did not match."
+  $script:mockExitCode = 1603
+  $gitInstallerError = Invoke-QuickSetupPackageInstall -Id "git" -Definition $gitInstallDefinition -DownloadProvider $gitDownloadProvider -SignatureProvider $gitSignatureProvider -ProcessRunner {
+    param($path, $arguments)
+    return $script:mockExitCode
+  }
+  Assert-True ($gitInstallerError.ExitCode -eq 1603 -and !$gitInstallerError.RestartRequired) "A Git installer error was not propagated."
+
+  $libreOfficeInstallDefinition = $msiDefinition.PSObject.Copy()
+  $libreOfficeInstallDefinition.Uri = [uri]"https://download.documentfoundation.org/libreoffice/stable/26.8.2/win/x86_64/LibreOffice_26.8.2_Win_x86-64.msi"
+  $libreOfficeInstallDefinition.AllowedHosts = @("download.documentfoundation.org", "mirror.example.org")
+  $libreOfficeInstallDefinition.Sha256 = $null
+  $libreOfficeInstallDefinition.Publisher = "The Document Foundation"
+  $libreOfficeInstallDefinition | Add-Member -NotePropertyName ExpectedCommonName -NotePropertyValue "The Document Foundation"
+  $libreOfficeInstallDefinition.Arguments = @("/qn", "/norestart")
+  $script:libreOfficeInstallCalls = 0
+  $libreOfficeInstallResult = Invoke-QuickSetupPackageInstall -Id "libreoffice" -Definition $libreOfficeInstallDefinition -DownloadProvider {
+    param($uri, $destination, $allowedHosts)
+    [IO.File]::WriteAllBytes($destination, [byte[]](0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))
+    return [uri]"https://download.documentfoundation.org/libreoffice/stable/26.8.2/win/x86_64/LibreOffice_26.8.2_Win_x86-64.msi"
+  } -MsiPlatformReader { param($path) "x64;1033" } -SignatureProvider {
+    param($path)
+    [pscustomobject]@{
+      Status = [System.Management.Automation.SignatureStatus]::Valid
+      SignerCertificate = [pscustomobject]@{ Subject = "CN=The Document Foundation, O=The Document Foundation, L=Berlin, C=DE" }
+    }
+  } -ProcessRunner {
+    param($path, $arguments)
+    $script:libreOfficeInstallCalls++
+    if ($path -ne "msiexec.exe" -or $arguments[-2] -ne "/qn" -or $arguments[-1] -ne "/norestart") {
+      throw "LibreOffice did not use the approved MSI switches."
+    }
+    return 0
+  }
+  Assert-True ($libreOfficeInstallResult.ExitCode -eq 0 -and $script:libreOfficeInstallCalls -eq 1) "Selected LibreOffice did not install through its validated MSI route."
 
   $script:mockInstallerCalls = 0
   $script:mockAppxDeployments = 0
@@ -337,6 +554,13 @@ try {
   Assert-True ($report.Summary -eq "Dry run complete") "Dry-run report summary was unexpected."
   Assert-True (@($report.Packages | Where-Object { $_.Status -eq "Failed" }).Count -eq 0) "Dry-run reported installation failures."
   Assert-True (@($report.Packages | Where-Object { $_.Id -eq "docker-desktop" }).Count -eq 1) "Docker Desktop was not explicitly reported."
+  $copilotReport = @($report.Packages | Where-Object { $_.Id -eq "github-copilot-desktop" }) | Select-Object -First 1
+  if ($copilotReport.Status -eq "Already installed") {
+    Assert-True ($copilotReport.DetectedVersion -eq "1.1.34" -and $copilotReport.Notes -match "user data were not modified") "An existing Copilot Desktop install or its user data was not preserved."
+  } else {
+    Assert-True ($copilotReport.Status -eq "Requires user action" -and $copilotReport.InstallerType -eq "exe" -and !$copilotReport.CompatibilityConfirmed) "Copilot Desktop dry-run did not report manual-only installation and unconfirmed Server compatibility."
+    Assert-True ($copilotReport.Notes -match "no verified silent switches" -and $copilotReport.Notes -match "per-user") "Copilot Desktop report implied unsupported installer behavior."
+  }
   if (Get-Command git -ErrorAction SilentlyContinue) {
     Assert-True (@($report.Packages | Where-Object { $_.Id -eq "git" -and $_.Status -eq "Already installed" }).Count -eq 1) "The existing Git installation was not detected."
   }
@@ -347,6 +571,14 @@ try {
   Assert-True ($LASTEXITCODE -eq 0) "Dry-run with -SkipOptional failed: $($optionalOutput -join "`n")"
   $optionalReport = Get-Content -LiteralPath $optionalReportPath -Raw | ConvertFrom-Json
   Assert-True (@($optionalReport.Packages | Where-Object { $_.Id -eq "github-copilot-cli" -and $_.Status -eq "Skipped by user" }).Count -eq 1) "-SkipOptional did not report the Copilot CLI as skipped."
+  if ($copilotReport.Status -ne "Already installed") {
+    $confirmedReportPath = Join-Path $temporaryDirectory "copilot-confirmed-report.json"
+    $confirmedOutput = & powershell.exe -NoProfile -NonInteractive -File (Join-Path $packageRoot "bootstrap.ps1") -DryRun -ConfirmCopilotDesktopServerCompatibility -ReportPath $confirmedReportPath 2>&1
+    Assert-True ($LASTEXITCODE -eq 0) "Dry-run with explicit Copilot compatibility confirmation failed: $($confirmedOutput -join "`n")"
+    $confirmedReport = Get-Content -LiteralPath $confirmedReportPath -Raw | ConvertFrom-Json
+    $confirmedCopilotReport = @($confirmedReport.Packages | Where-Object { $_.Id -eq "github-copilot-desktop" }) | Select-Object -First 1
+    Assert-True ($confirmedCopilotReport.CompatibilityConfirmed -and $confirmedCopilotReport.Status -eq "Requires user action") "Explicit Copilot compatibility confirmation triggered automatic installation or was not recorded."
+  }
 
   $zipPath = Join-Path $temporaryDirectory "configureMe-WindowsServer2022-Developer-QuickSetup.zip"
   $packagingScript = Join-Path $repositoryRoot "scripts\New-WindowsServer2022QuickSetup.ps1"
