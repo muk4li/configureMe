@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "configureMe install plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogVersion", "profileId", "platform", "architecture", "packages"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "catalogVersion": { "const": "1" },
+    "profileId": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "platform": { "const": "windows" },
+    "architecture": { "const": "x64" },
+    "packages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+    }
+  }
+}

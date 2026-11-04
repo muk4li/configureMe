@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "developer",
+  "name": "Developer Setup",
+  "description": "A practical Windows developer workstation.",
+  "platform": "windows",
+  "packages": ["git", "github-cli", "vscode", "nodejs-lts", "python", "powershell"],
+  "options": {
+    "configureGit": true,
+    "interactiveAuthentication": true
+  }
+}
