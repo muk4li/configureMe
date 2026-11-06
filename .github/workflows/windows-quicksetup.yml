@@ -42,7 +42,31 @@ jobs:
 
       - name: Run GUI controller and embedded-engine tests
         shell: powershell
-        run: dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore
+        run: |
+          $resultsPath = Join-Path $env:RUNNER_TEMP "configureMe-gui-test-results"
+          dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=gui-tests.trx" --results-directory $resultsPath
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $resultFile = Join-Path $resultsPath "gui-tests.trx"
+            if (Test-Path -LiteralPath $resultFile) {
+              [xml]$results = Get-Content -LiteralPath $resultFile -Raw
+              foreach ($test in @($results.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq "Failed" })) {
+                $message = "$($test.testName): $($test.Output.ErrorInfo.Message)`n$($test.Output.ErrorInfo.StackTrace)"
+                $escaped = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+                Write-Host "::error title=Windows GUI test failure::$escaped"
+              }
+            }
+            exit $testExit
+          }
+
+      - name: Retain failed GUI test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-test-results-${{ github.sha }}
+          path: ${{ runner.temp }}/configureMe-gui-test-results/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run portable engine and aggregate-report tests
         shell: powershell
