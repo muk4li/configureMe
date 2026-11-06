@@ -7,6 +7,65 @@ namespace ConfigureMe.Setup.Tests;
 
 public sealed class SetupFormLayoutTests
 {
+    [Theory]
+    [InlineData(1159, 709)]
+    [InlineData(900, 700)]
+    [InlineData(1280, 720)]
+    [InlineData(1920, 1080)]
+    public async Task InitialMessageLoopAndWorkerUpdatesKeepMainRegionsUsable(int width, int height)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            using var form = new SetupForm(runStartupDetection: false) { Size = new Size(width, height) };
+            using var timer = new System.Windows.Forms.Timer { Interval = 100 };
+            var stage = 0;
+            timer.Tick += (_, _) =>
+            {
+                try
+                {
+                    // No Scale(), font replacement or assertion-driven PerformLayout():
+                    // observe the same initial message loop as a normal Explorer launch.
+                    form.AssertMainLayout();
+                    form.AssertPackageLayout();
+                    form.AssertButtonLayout();
+                    switch (stage++)
+                    {
+                        case 0:
+                            form.ApplyWorkerEvent(new WorkerEvent("system-detected", null, null, null,
+                                JsonSerializer.SerializeToElement(new { operatingSystem = new { Caption = "Microsoft Windows Server 2022 Datacenter Evaluation", Architecture = "x64", IsSupported = true }, isAdministrator = true })));
+                            form.ApplyWorkerEvent(new WorkerEvent("package-detected", "vscode", "installed", null,
+                                JsonSerializer.SerializeToElement(new { detectedVersion = "1.100.0" })));
+                            break;
+                        case 1: form.WindowState = FormWindowState.Maximized; break;
+                        case 2: form.WindowState = FormWindowState.Normal; break;
+                        case 3: form.Size = new Size(900, 700); break;
+                        default:
+                            var list = form.Controls.Find("PackageList", true).Single();
+                            list.Dock = DockStyle.None;
+                            list.Height = 0;
+                            Assert.Throws<InvalidOperationException>(form.AssertMainLayout);
+                            timer.Stop();
+                            form.Close();
+                            completion.TrySetResult();
+                            break;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    timer.Stop();
+                    form.Close();
+                    completion.TrySetException(exception);
+                }
+            };
+            form.Shown += (_, _) => timer.Start();
+            Application.Run(form);
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(20));
+    }
+
     [Fact]
     public async Task ShowsEveryCategoryAndPackageAcrossResizeAndScale()
     {
@@ -19,6 +78,10 @@ public sealed class SetupFormLayoutTests
                 {
                     using var scaled = new SetupForm(runStartupDetection: false);
                     scaled.Show();
+                    Application.DoEvents();
+                    scaled.AssertMainLayout();
+                    scaled.AssertPackageLayout();
+                    scaled.AssertButtonLayout();
                     scaled.Scale(new SizeF(scale, scale));
                     scaled.Font = new Font("Segoe UI", 9F * scale);
                     foreach (var size in new[] { new Size(1180, 900), new Size(900, 700), new Size(1024, 768) })
@@ -27,6 +90,7 @@ public sealed class SetupFormLayoutTests
                         scaled.MinimumSize = Size.Empty;
                         scaled.Size = size;
                         Application.DoEvents();
+                        scaled.AssertMainLayout();
                         scaled.AssertPackageLayout();
                         scaled.AssertButtonLayout();
                     }

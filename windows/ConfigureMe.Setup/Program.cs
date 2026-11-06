@@ -18,6 +18,10 @@ internal static class Program
                 {
                     using var form = new SetupForm(runStartupDetection: false);
                     form.Show();
+                    Application.DoEvents();
+                    form.AssertMainLayout();
+                    form.AssertPackageLayout();
+                    form.AssertButtonLayout();
                     form.Scale(new System.Drawing.SizeF(scale, scale));
                     form.Font = new System.Drawing.Font("Segoe UI", 9F * scale);
                     foreach (var size in new[] { new System.Drawing.Size(1180, 900), new System.Drawing.Size(900, 700), new System.Drawing.Size(1024, 768) })
@@ -25,6 +29,7 @@ internal static class Program
                         form.MinimumSize = System.Drawing.Size.Empty;
                         form.Size = size;
                         Application.DoEvents();
+                        form.AssertMainLayout();
                         form.AssertPackageLayout();
                         form.AssertButtonLayout();
                     }
@@ -36,6 +41,34 @@ internal static class Program
                 Console.Error.WriteLine(exception);
                 Environment.ExitCode = 1;
             }
+            return;
+        }
+
+        if (args.Length == 1 && args[0] == "--startup-layout-self-test")
+        {
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            using var form = new SetupForm(runStartupDetection: false);
+            using var timer = new System.Windows.Forms.Timer { Interval = 300 };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                try
+                {
+                    form.AssertMainLayout();
+                    form.AssertPackageLayout();
+                    form.AssertButtonLayout();
+                }
+                catch (Exception exception)
+                {
+                    Console.Error.WriteLine(exception);
+                    Environment.ExitCode = 1;
+                }
+                finally { form.Close(); }
+            };
+            form.Shown += (_, _) => timer.Start();
+            Application.Run(form);
             return;
         }
 

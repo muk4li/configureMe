@@ -41,6 +41,11 @@ internal sealed class SetupForm : Form
     private SetupRunReport? _runReport;
     private WorkerEvent? _lastSystemEvent;
     private bool _reflowingPackages;
+    private bool _reflowingWindow;
+    private TableLayoutPanel? _layoutRoot;
+    private TableLayoutPanel? _actionPanel;
+    private FlowLayoutPanel? _selectionActions;
+    private FlowLayoutPanel? _mainActions;
     private bool _isAdministrator;
     private string? _lastFailureText;
 
@@ -81,6 +86,7 @@ internal sealed class SetupForm : Form
         BuildLayout();
         BuildPackageList();
         LoadDeveloperProfileSelection();
+        ReflowWindowLayout();
         if (runStartupDetection) Shown += async (_, _) =>
         {
             await CheckSystemAsync();
@@ -97,11 +103,13 @@ internal sealed class SetupForm : Form
         BackColor = WindowColor;
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 9F);
+        AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScaleMode = AutoScaleMode.Dpi;
         DoubleBuffered = true;
         AutoScroll = true;
-        Shown += (_, _) => FitWorkingArea();
-        DpiChanged += (_, _) => BeginInvoke(() => { FitWorkingArea(); ReflowPackageList(); });
+        Load += (_, _) => { FitWorkingArea(); ReflowWindowLayout(); };
+        Shown += (_, _) => ReflowWindowLayout();
+        DpiChanged += (_, _) => BeginInvoke(() => { FitWorkingArea(); ReflowWindowLayout(); });
         FormClosing += (_, args) =>
         {
             if (!_operationInProgress && !_installQueue.IsBusy) return;
@@ -115,8 +123,7 @@ internal sealed class SetupForm : Form
         var root = new TableLayoutPanel
         {
             Name = "RootLayout",
-            Dock = DockStyle.Fill,
-            MinimumSize = new Size(840, 640),
+            Dock = DockStyle.Top,
             ColumnCount = 1,
             RowCount = 6,
             Padding = new Padding(20),
@@ -126,9 +133,10 @@ internal sealed class SetupForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 145));
+        _layoutRoot = root;
         Controls.Add(root);
 
         var header = new Panel { Dock = DockStyle.Fill };
@@ -167,7 +175,7 @@ internal sealed class SetupForm : Form
         _systemLabel.TextAlign = ContentAlignment.MiddleLeft;
         root.Controls.Add(_systemLabel, 0, 1);
 
-        var listPanel = new Panel { Dock = DockStyle.Fill, BackColor = WindowColor };
+        var listPanel = new Panel { Name = "PackageViewport", Dock = DockStyle.Fill, BackColor = WindowColor };
         var packageList = new FlowLayoutPanel
         {
             Name = "PackageList",
@@ -185,25 +193,24 @@ internal sealed class SetupForm : Form
         var actionPanel = new TableLayoutPanel
         {
             Name = "ActionPanel",
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Top,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
             Padding = new Padding(0, 8, 0, 0),
             BackColor = WindowColor
         };
         actionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        actionPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        actionPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0) };
+        actionPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        actionPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, WrapContents = true, Margin = new Padding(0) };
         selectionActions.Controls.Add(CreateButton("Alle auswählen", (_, _) => SelectAll(true)));
         selectionActions.Controls.Add(CreateButton("Auswahl aufheben", (_, _) => SelectAll(false)));
         selectionActions.Controls.Add(CreateButton("Nur fehlende", (_, _) => SelectMissing()));
         selectionActions.Controls.Add(CreateButton("Developer-Profil", (_, _) => LoadDeveloperProfileSelection()));
         actionPanel.Controls.Add(selectionActions, 0, 0);
 
-        var mainActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0) };
+        var mainActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, WrapContents = true, Margin = new Padding(0) };
         mainActions.Controls.Add(CreateButton("System prüfen", async (_, _) => await CheckSystemAsync()));
         mainActions.Controls.Add(CreateButton("Dry-Run", async (_, _) => await ShowDryRunAsync()));
         _installSelectedButton.Text = "Ausgewählte installieren";
@@ -217,16 +224,16 @@ internal sealed class SetupForm : Form
         mainActions.Controls.Add(_cancelButton);
         mainActions.Controls.Add(CreateButton("Report exportieren", (_, _) => ExportReport()));
         actionPanel.Controls.Add(mainActions, 0, 1);
-        actionPanel.SizeChanged += (_, _) =>
-        {
-            var available = Math.Max(1, actionPanel.ClientSize.Width - actionPanel.Padding.Horizontal);
-            selectionActions.MaximumSize = new Size(available, 0);
-            mainActions.MaximumSize = new Size(available, 0);
-        };
+        _actionPanel = actionPanel;
+        _selectionActions = selectionActions;
+        _mainActions = mainActions;
+        foreach (var button in selectionActions.Controls.OfType<Button>().Concat(mainActions.Controls.OfType<Button>()))
+            button.TextChanged += (_, _) => ReflowWindowLayout();
         root.Controls.Add(actionPanel, 0, 3);
 
         var progressPanel = new TableLayoutPanel
         {
+            Name = "ProgressPanel",
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
@@ -245,6 +252,7 @@ internal sealed class SetupForm : Form
         progressPanel.Controls.Add(_progressBar, 0, 1);
         root.Controls.Add(progressPanel, 0, 4);
 
+        _log.Name = "InstallationLog";
         _log.ReadOnly = true;
         _log.BackColor = PanelColor;
         _log.ForeColor = Color.FromArgb(225, 231, 238);
@@ -329,12 +337,9 @@ internal sealed class SetupForm : Form
 
     internal void AssertPackageLayout()
     {
-        ReflowPackageList();
-        _packageList.PerformLayout();
         var visibleRows = 0;
         foreach (var (group, count) in _categoryGroups)
         {
-            group.PerformLayout();
             if (group.Width <= 0 || group.Height <= 0 || group.RowStyles.Count != count + 1)
                 throw new InvalidDataException($"Kategorie '{group.Name}' hat keine vollständige Größe.");
             var previousBottom = -1;
@@ -466,6 +471,100 @@ internal sealed class SetupForm : Form
         return row;
     }
 
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+        ReflowWindowLayout();
+    }
+
+    private float LayoutScale => Math.Max(DeviceDpi / 96F, Font.SizeInPoints / 9F);
+
+    private void ReflowWindowLayout()
+    {
+        if (_reflowingWindow || _layoutRoot is null || _actionPanel is null ||
+            _selectionActions is null || _mainActions is null) return;
+        _reflowingWindow = true;
+        try
+        {
+            int Pixels(int value) => (int)Math.Ceiling(value * LayoutScale);
+            var root = _layoutRoot;
+            // Avoid nested AutoSize/Percent feedback: reserve measured action heights
+            // first, then give the package viewport the remaining space. DockStyle.Top
+            // allows the form to scroll the whole content on short/high-DPI desktops.
+            root.Padding = new Padding(Pixels(20));
+            root.PerformLayout();
+            var actionWidth = Math.Max(Pixels(200), root.ClientSize.Width - root.Padding.Horizontal - _actionPanel.Margin.Horizontal);
+            _actionPanel.Padding = new Padding(0, Pixels(8), 0, 0);
+            var selectionHeight = MeasureActionHeight(_selectionActions, actionWidth);
+            var mainHeight = MeasureActionHeight(_mainActions, actionWidth);
+            _actionPanel.RowStyles[0].Height = selectionHeight;
+            _actionPanel.RowStyles[1].Height = mainHeight;
+            root.RowStyles[0].Height = Pixels(90);
+            root.RowStyles[1].Height = Pixels(48);
+            root.RowStyles[3].Height = selectionHeight + mainHeight + _actionPanel.Padding.Vertical + _actionPanel.Margin.Vertical;
+            root.RowStyles[4].Height = Pixels(62);
+            root.RowStyles[5].Height = Pixels(Math.Clamp((int)(ClientSize.Height / LayoutScale * .17F), 80, 145));
+            var fixedHeight = root.RowStyles.Cast<RowStyle>().Where(row => row.SizeType == SizeType.Absolute).Sum(row => row.Height);
+            var minimumHeight = (int)Math.Ceiling(fixedHeight) + root.Padding.Vertical + Pixels(150);
+            root.Height = Math.Max(ClientSize.Height, minimumHeight);
+            root.PerformLayout();
+            ReflowPackageList();
+        }
+        finally { _reflowingWindow = false; }
+    }
+
+    private int MeasureActionHeight(FlowLayoutPanel panel, int availableWidth)
+    {
+        int Pixels(int value) => (int)Math.Ceiling(value * LayoutScale);
+        var lineWidth = 0;
+        var lineHeight = 0;
+        var height = 0;
+        foreach (var button in panel.Controls.OfType<Button>())
+        {
+            button.Padding = new Padding(Pixels(8), Pixels(2), Pixels(8), Pixels(2));
+            button.Margin = new Padding(0, 0, Pixels(8), Pixels(6));
+            button.MinimumSize = new Size(0, Pixels(34));
+            button.Size = button.GetPreferredSize(Size.Empty);
+            var width = button.Width + button.Margin.Horizontal;
+            if (lineWidth > 0 && lineWidth + width > availableWidth)
+            {
+                height += lineHeight;
+                lineWidth = 0;
+                lineHeight = 0;
+            }
+            lineWidth += width;
+            lineHeight = Math.Max(lineHeight, button.Height + button.Margin.Vertical);
+        }
+        return height + lineHeight;
+    }
+
+    internal void AssertMainLayout()
+    {
+        var root = _layoutRoot ?? throw new InvalidOperationException("Missing root layout.");
+        var viewport = root.GetControlFromPosition(0, 2)!;
+        if (!_packageList.Visible || _packageList.ClientSize.Height < 100 * LayoutScale || _packageList.ClientSize.Width < 400)
+            throw new InvalidOperationException($"Package viewport collapsed: {_packageList.ClientSize}, scale={LayoutScale}.");
+        var sections = root.Controls.Cast<Control>().ToArray();
+        foreach (var section in sections)
+        {
+            if (!section.Visible || section.Height <= 0 || !root.ClientRectangle.Contains(section.Bounds))
+                throw new InvalidOperationException($"Root section is clipped: {section.Name}, bounds={section.Bounds}, root={root.ClientSize}.");
+            foreach (var sibling in sections)
+                if (sibling != section && section.Bounds.IntersectsWith(sibling.Bounds))
+                    throw new InvalidOperationException($"Root sections overlap: {section.Name}, {sibling.Name}.");
+        }
+        foreach (var panel in new[] { _selectionActions!, _mainActions! })
+        {
+            if (!_actionPanel!.ClientRectangle.Contains(panel.Bounds))
+                throw new InvalidOperationException($"Action strip is clipped by its container: {panel.Bounds}, parent={_actionPanel.ClientSize}.");
+        }
+        if (!viewport.ClientRectangle.Contains(_packageList.Bounds))
+            throw new InvalidOperationException("Package list is clipped by its viewport.");
+        var firstGroup = _categoryGroups[0].Group;
+        if (firstGroup.Height <= 0 || firstGroup.Width <= 0)
+            throw new InvalidOperationException("Package categories have no usable area.");
+    }
+
     private void FitWorkingArea()
     {
         var area = Screen.FromControl(this).WorkingArea;
@@ -475,7 +574,6 @@ internal sealed class SetupForm : Form
 
     internal void AssertButtonLayout()
     {
-        PerformLayout();
         foreach (var button in Descendants(this).OfType<Button>())
         {
             var text = TextRenderer.MeasureText(button.Text, button.Font, Size.Empty, TextFormatFlags.SingleLine);

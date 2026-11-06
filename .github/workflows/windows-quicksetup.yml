@@ -93,6 +93,9 @@ jobs:
           $env:DOTNET_MULTILEVEL_LOOKUP = "0"
           & $executable --self-test
           if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its embedded engine/worker startup self-test." }
+          # Exercise ShellExecute/startup without a terminal or repository working directory.
+          $startup = Start-Process -FilePath $executable -ArgumentList "--startup-layout-self-test" -WorkingDirectory $env:RUNNER_TEMP -Wait -PassThru
+          if ($startup.ExitCode -ne 0) { throw "The published EXE failed its shell-launched initial message-loop layout test." }
           & $executable --layout-self-test
           if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its category/row layout self-test." }
 
