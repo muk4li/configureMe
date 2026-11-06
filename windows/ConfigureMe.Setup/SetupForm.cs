@@ -371,6 +371,10 @@ internal sealed class SetupForm : Form
             Margin = new Padding(0, 2, 0, 2),
             Padding = new Padding(10, 6, 8, 6)
         };
+        // An implicit AutoSize row can grow to wrapped description text even though
+        // the outer category assigns a fixed row height. Keep its children inside
+        // that assigned viewport; long descriptions already use AutoEllipsis.
+        row.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Math.Max(34, Font.Height * 2)));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
@@ -396,6 +400,7 @@ internal sealed class SetupForm : Form
             Margin = new Padding(0),
             BackColor = PanelColor
         };
+        descriptionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 48));
         descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 52));
         descriptionPanel.Controls.Add(new Label
@@ -479,7 +484,7 @@ internal sealed class SetupForm : Form
                 throw new InvalidOperationException($"Button text is clipped: {button.Text} ({button.Size}).");
             var parent = button.Parent!;
             if (!parent.ClientRectangle.Contains(button.Bounds))
-                throw new InvalidOperationException($"Button is outside its layout container: {button.Text}.");
+                throw new InvalidOperationException($"Button is outside its layout container: {button.Name} '{button.Text}', bounds={button.Bounds}, parent={parent.Name} client={parent.ClientRectangle}, font={button.Font.SizeInPoints}pt.");
             foreach (Control sibling in parent.Controls)
                 if (sibling != button && sibling.Visible && button.Bounds.IntersectsWith(sibling.Bounds))
                     throw new InvalidOperationException($"Button overlaps another control: {button.Text}.");
