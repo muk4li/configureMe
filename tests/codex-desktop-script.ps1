@@ -4,6 +4,13 @@ $script:opens = 0
 $server = { 'Microsoft Windows Server 2022 Datacenter Evaluation' }
 $missing = Invoke-CodexDesktopSetup -OsProvider $server -PackageProvider { @() } -OpenInstaller { $script:opens++ }
 if ($missing.Installed -or $missing.ErrorCode -ne 'codex-store-unavailable' -or $script:opens -ne 0) { throw 'Server without Store was incorrectly installed or launched.' }
+$attempt = Invoke-CodexDesktopSetup -OpenOfficialInstaller -OsProvider $server -PackageProvider { @() } -OpenInstaller {
+  param($uri)
+  if ($uri.Host -cne 'get.microsoft.com') { throw 'Not the official web installer' }
+  $script:opens++
+}
+if ($attempt.Installed -or $attempt.ErrorCode -ne 'codex-registration-pending' -or $script:opens -ne 1) { throw 'An explicit official installer attempt was blocked or claimed success.' }
+$script:opens = 0
 $store = [pscustomobject]@{ Name = 'Microsoft.WindowsStore'; Status = 'Ok'; SignatureKind = 'Store' }
 $packages = { param($name) if ($name -eq 'Microsoft.WindowsStore') { $store } }
 $dry = Invoke-CodexDesktopSetup -DryRun -OsProvider $server -PackageProvider $packages -OpenInstaller { $script:opens++ }
@@ -24,4 +31,4 @@ foreach ($field in @('SignatureKind', 'Architecture', 'Status', 'Name')) {
   $result = Invoke-CodexDesktopSetup -OsProvider $server -PackageProvider { param($name) if ($name -eq 'OpenAI.Codex') { $wrong } } -OpenInstaller { throw 'No installer is authorized' }
   if ($result.Installed) { throw "Invalid Desktop identity accepted: $field" }
 }
-'Codex Desktop helper: 9 scenarios passed (no network, no installer processes).'
+'Codex Desktop helper: 10 scenarios passed (no network, no installer processes).'

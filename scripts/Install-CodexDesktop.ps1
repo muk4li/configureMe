@@ -1,5 +1,5 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
-param([switch]$DryRun, [switch]$VerifyOnly)
+param([switch]$DryRun, [switch]$VerifyOnly, [switch]$OpenOfficialInstaller)
 
 # The Windows route published by OpenAI's Codex CLI is the Microsoft Store web
 # installer, not the Codex CLI binary and not an undocumented standalone EXE.
@@ -29,16 +29,16 @@ function Get-CodexDesktopInstallState {
     Status = if ($app) { 'Already installed' } else { 'Requires user action' }
     ErrorCode = if ($app) { $null } elseif (!$store) { 'codex-store-unavailable' } else { 'codex-installation-required' }
     Notes = if ($app) { 'Registered x64 Codex Desktop Store package verified for the current user; no reinstall.' }
-      elseif (!$store) { 'OpenAI publishes a Microsoft Store installer for Codex Desktop. The Store is unavailable for this user; Windows Server 2022 does not include it. No supported unattended Server 2022 route was verified. No Store components, OS requirements or security checks were bypassed. Codex CLI is not a substitute installation.' }
+      elseif (!$store) { 'OpenAI publishes a Microsoft Store web installer for Codex Desktop. The Store app is unavailable for this user; this alone does not establish whether the web installer can work. Server 2022 compatibility is unverified. Use -OpenOfficialInstaller to try the official interactive route, then -VerifyOnly. No Store components or OS requirements are bypassed; Codex CLI is not substituted.' }
       else { 'Finish the official interactive Windows installer, then rerun this script with -VerifyOnly. The Store enforces package signatures, OS requirements and dependencies.' }
   }
 }
 
 function Invoke-CodexDesktopSetup {
   [CmdletBinding(SupportsShouldProcess = $true)]
-  param([switch]$DryRun, [switch]$VerifyOnly, [scriptblock]$PackageProvider, [scriptblock]$OsProvider, [scriptblock]$OpenInstaller)
+  param([switch]$DryRun, [switch]$VerifyOnly, [switch]$OpenOfficialInstaller, [scriptblock]$PackageProvider, [scriptblock]$OsProvider, [scriptblock]$OpenInstaller)
   $state = Get-CodexDesktopInstallState -PackageProvider $PackageProvider -OsProvider $OsProvider
-  if ($state.Installed -or $VerifyOnly -or !$state.StoreAvailable) { return $state }
+  if ($state.Installed -or $VerifyOnly -or (!$state.StoreAvailable -and !$OpenOfficialInstaller)) { return $state }
   if ($DryRun -or !$PSCmdlet.ShouldProcess('Codex Desktop', 'Open the official Microsoft Store Windows installer')) {
     $state.Status = 'Dry run'
     return $state
@@ -47,13 +47,14 @@ function Invoke-CodexDesktopSetup {
   else { Start-Process -FilePath $state.InstallerUrl -ErrorAction Stop }
   # Opening an installer is not proof of installation. Never return Installed here.
   $state.ErrorCode = 'codex-registration-pending'
+  $state.Notes = 'Official interactive installer opened; installation and Server 2022 support are not yet verified. Complete the vendor installer and rerun -VerifyOnly. Its OS, dependency and signature checks must pass.'
   return $state
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
   $ErrorActionPreference = 'Stop'
   try {
-    $result = Invoke-CodexDesktopSetup -DryRun:$DryRun -VerifyOnly:$VerifyOnly -WhatIf:$WhatIfPreference
+    $result = Invoke-CodexDesktopSetup -DryRun:$DryRun -VerifyOnly:$VerifyOnly -OpenOfficialInstaller:$OpenOfficialInstaller -WhatIf:$WhatIfPreference
     $result | ConvertTo-Json -Depth 4
     if ($result.Installed -or $DryRun -or $WhatIfPreference) { exit 0 }
     exit 2
