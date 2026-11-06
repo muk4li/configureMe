@@ -232,7 +232,7 @@ function Assert-QuickSetupInstallerSignature {
     }
     if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned -and !$signature.SignerCertificate) { return }
   }
-  $result = Test-QuickSetupAuthenticodePublisher -Path $Path -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider { param($ignored) $signature }
+  $result = Test-QuickSetupAuthenticodePublisher -Path $Path -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -ExpectedOrganization $Definition.ExpectedOrganization -SignatureProvider { param($ignored) $signature }
   if (!$result.IsValid) { throw $result.Message }
 }
 
@@ -365,10 +365,10 @@ function Get-QuickSetupInstallerDefinition {
         Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = [string]$release.sdk.version; Uri = [uri]$file.url
         Sha256 = $null; Sha512 = if ($file.hash -match "^[A-Fa-f0-9]{128}$") { [string]$file.hash } else { $null }
         AllowedHosts = @("microsoft.com", "dotnetcli.azureedge.net", "blob.core.windows.net")
-        Publisher = "Microsoft Corporation"; BootstrapperKind = "dotnet-burn-x86-for-x64"; Method = ".NET SDK installer /quiet"
+        Publisher = "Microsoft Corporation"; ExpectedCommonName = ".NET"; ExpectedOrganization = "Microsoft Corporation"; BootstrapperKind = "dotnet-burn-x86-for-x64"; Method = ".NET SDK installer /quiet"
         Arguments = @("/install", "/quiet", "/norestart")
         Source = "https://learn.microsoft.com/dotnet/core/install/windows"
-        Notes = "Installs the SDK, not only a runtime. The feed is constrained to the .NET 10 release channel."
+        Notes = "Installs the SDK, not only a runtime. The official SHA-512 and trusted signer CN=.NET, O=Microsoft Corporation are required. Exit codes 3010/1641 retain restart status; the installed x64 SDK is verified at its actual path."
       }
     }
     "powershell-7" {

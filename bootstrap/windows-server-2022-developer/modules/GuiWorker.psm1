@@ -284,7 +284,7 @@ function Invoke-QuickSetupGuiWorker {
           } else {
             $result.RestartRequired = [bool]$installResult.RestartRequired
             Sync-QuickSetupProcessPath
-            $result.DetectedVersion = Get-QuickSetupDetectedVersion -Id $id
+            $result.DetectedVersion = Wait-QuickSetupInstalledVersion -Id $id -VersionProvider { param($packageId) Get-QuickSetupDetectedVersion -Id $packageId }
             if ($result.DetectedVersion) {
               $result.Status = "Installed"
             } else {

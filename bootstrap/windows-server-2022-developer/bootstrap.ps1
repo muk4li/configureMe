@@ -275,7 +275,7 @@ if ($DryRun) {
         } else {
           $result.RestartRequired = [bool]$installResult.RestartRequired
           Sync-QuickSetupProcessPath
-          $result.DetectedVersion = Get-QuickSetupDetectedVersion -Id $id
+          $result.DetectedVersion = Wait-QuickSetupInstalledVersion -Id $id -VersionProvider { param($packageId) Get-QuickSetupDetectedVersion -Id $packageId }
           $verifiedVersion = $result.DetectedVersion
           $versionVerified = $verifiedVersion -and (
             $id -ne "git" -or $verifiedVersion -match "^\d+\.\d+(?:\.\d+)?(?:\.windows\.\d+)?$"

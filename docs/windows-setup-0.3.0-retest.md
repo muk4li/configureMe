@@ -64,3 +64,11 @@ Das Publishprofil enthält weiterhin `SelfContained=true`, `PublishSingleFile=tr
 8. Für Sicherheits-Negativtests nur isolierte Fixtures/Mock-Tests verwenden: manipulierte Hashes, falsche Architektur, falscher Publisher und ungültige Signaturen müssen vor Prozessstart scheitern. Keine echten manipulierten Installer ausführen.
 
 Die CI führt Regressionstests sowohl unter Windows PowerShell 5.1 als auch PowerShell 7 aus und veröffentlicht unter geerbter restriktiver Prozesspolicy in einen Pfad mit Leerzeichen. Sie startet das gebündelte Artefakt mit aus PATH/DOTNET_ROOT entfernten globalen .NET-Pfaden. Das bleibt eine CI-Prüfung mit vorhandenen Runner-Komponenten und ersetzt keine saubere VM ohne .NET.
+
+## Folgekorrektur: .NET-Signer und vorhandenes VS Code
+
+Ein realer Serverlauf meldete den vertrauenswürdigen .NET-Signer `.NET` statt des bisher erwarteten CN `Microsoft Corporation`. Der offizielle SDK-10.0.403-Download wurde erneut gegen Microsofts SHA-512 geprüft; dessen Signerzertifikat hat `CN=.NET, O=Microsoft Corporation`. Die Paketdefinition verlangt jetzt diese beiden exakten Felder und weiterhin eine gültige Windows-Authenticode-Prüfung. Falsche Organisationen, gleichnamige Publisher in anderen DN-Feldern und ungültige Signaturen bleiben gesperrt.
+
+VS Code war trotz negativem Worker-Ergebnis tatsächlich unter LocalAppData installiert. Die CLI-basierte Nachprüfung wird deshalb nicht mehr als Installationsvoraussetzung verwendet: x64-PE, `Code.exe`-Produktname/-version und stabile `resources\app\package.json`-Version müssen zusammenpassen. Fehlende oder widersprüchliche Dateien bleiben Fehler. Die Nachprüfung versucht bis zu zehnmal im Zwei-Sekunden-Abstand zu lesen, ohne erneut zu installieren. Auf der VM zusätzlich erneut **System prüfen** ausführen: das bereits vorhandene VS Code muss erkannt und erhalten werden. Das .NET SDK erneut auswählen und nach Installation den absoluten x64-`dotnet.exe --list-sdks`-Aufruf prüfen.
+
+Der zusätzliche Codex-Desktop-Helfer ist im EXE-ZIP enthalten; seine Store-Voraussetzungen und Exitcodes stehen in `windows/ConfigureMe.Setup/README.md`. Auf Server 2022 ohne Store ist `codex-store-unavailable`/Exit 2 ein expliziter externer Blocker, kein erfolgreicher Desktop-Installationsnachweis.

@@ -39,3 +39,23 @@ The manifest build target now quotes the PowerShell executable and script/output
 Package corrections: VS Code uses its official stable `win32-x64-user` metadata and mandatory SHA-256; the .NET 10 SDK uses `win-x64` SDK metadata and mandatory SHA-512. Both retain trusted Microsoft Authenticode verification while explicitly allowing their x86 installer bootstrappers. Python uses the official signed stable CPython 3.14 amd64 full installer rather than MSIX, installing pip per-user without the optional launcher. 7-Zip uses a reviewed pinned x64 MSI; see SECURITY.md for the exact narrowly scoped unsigned-artifact policy. Success requires installed executable architecture and version checks, plus pip for Python and `--list-sdks` for .NET; PATH is not the source of truth.
 
 Run `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\installer-regressions.ps1` for mocked package security regressions. Layout tests and `--layout-self-test` check button text dimensions/overlaps at simulated 100/125/150/200% and multiple viewport sizes; real DPI/desktop tests remain necessary. See [target VM acceptance steps](../../docs/windows-setup-0.3.0-retest.md).
+
+## .NET signer and VS Code post-install verification
+
+The official .NET SDK 10.0.403 Windows x64 installer is signed with **CN=.NET, O=Microsoft Corporation** (verified against the downloaded official release SHA-512). This exact CN and organization are required for the .NET package, in addition to Windows' valid Authenticode trust result and the official SHA-512. This does not permit `.NET` certificates from other organizations or change signers for other packages.
+
+VS Code detection reads the installed x64 `Code.exe` product name/version and requires an identical stable version in `resources\app\package.json`. It does not launch Electron or `code.cmd` in the hidden worker. Default user/system paths and Microsoft VS Code uninstall registrations are supported. Post-install detection retries up to ten times at two-second intervals to allow final file/registration writes; failed verification remains a failure, and no installer is re-run by these retries.
+
+## Optional Codex Desktop helper
+
+The release ZIP also includes `Install-CodexDesktop.ps1`. From that extracted directory:
+
+```powershell
+powershell.exe -NoProfile -File .\Install-CodexDesktop.ps1 -DryRun
+powershell.exe -NoProfile -File .\Install-CodexDesktop.ps1
+powershell.exe -NoProfile -File .\Install-CodexDesktop.ps1 -VerifyOnly
+```
+
+From a repository checkout use `scripts\Install-CodexDesktop.ps1` instead. The helper emits JSON and uses the same official [Windows Store installer/product](https://github.com/openai/codex/blob/main/codex-rs/cli/src/desktop_app/windows.rs) as OpenAI's `codex app`: product `9PLM9XGG6VKS`, package `OpenAI.Codex`. It never installs Codex CLI as a substitute.
+
+**Windows Server 2022 does not include Microsoft Store. A supported unattended Codex Desktop installation on that target has not been established.** When the Store is absent, the helper returns `codex-store-unavailable`, exit code **2**, and runs no installer. It does not add Store components, fetch unofficial MSIX packages or bypass OS requirements. If a working Store is already present, it can open the official interactive installation route; complete that installation and rerun `-VerifyOnly`. Opening the installer is still exit code 2, not success. Only a registered, healthy, Store-signed x64 `OpenAI.Codex` package counts as already installed (exit 0). Actual script errors return 1; dry runs/WhatIf return 0 without an installation claim. Existing installs are preserved. This helper is optional and independent of the self-contained EXE.

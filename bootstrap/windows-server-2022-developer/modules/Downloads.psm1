@@ -266,6 +266,7 @@ function Test-QuickSetupAuthenticodePublisher {
     [Parameter(Mandatory = $true)][string]$Path,
     [Parameter(Mandatory = $true)][string]$ExpectedPublisher,
     [string]$ExpectedCommonName,
+    [string]$ExpectedOrganization,
     [scriptblock]$SignatureProvider
   )
 
@@ -289,6 +290,25 @@ function Test-QuickSetupAuthenticodePublisher {
         Signer = $subject
         Message = "The trusted signer common name '$commonName' does not exactly match approved common name '$ExpectedCommonName'."
       }
+    }
+  }
+  if ($ExpectedOrganization) {
+    # Consume complete DN fields so an O= substring inside a quoted OU/CN
+    # cannot masquerade as the certificate's organization. Fail closed on
+    # malformed or duplicate organization fields.
+    $fieldPattern = [regex]'\G\s*(?<name>[A-Za-z][A-Za-z0-9.]*)\s*=\s*(?:"(?<quoted>(?:[^"]|"")*)"|(?<plain>[^,"]*))(?:,\s*|$)'
+    $offset = 0; $organizations = @(); $validSubject = $true
+    while ($offset -lt $subject.Length) {
+      $field = $fieldPattern.Match($subject, $offset)
+      if (!$field.Success -or $field.Length -eq 0) { $validSubject = $false; break }
+      if ($field.Groups['name'].Value -ieq 'O') {
+        $value = if ($field.Groups['quoted'].Success) { $field.Groups['quoted'].Value.Replace('""', '"') } else { $field.Groups['plain'].Value.Trim() }
+        $organizations += $value
+      }
+      $offset += $field.Length
+    }
+    if (!$validSubject -or $organizations.Count -ne 1 -or $organizations[0] -cne $ExpectedOrganization) {
+      return [pscustomobject]@{ IsValid = $false; Signer = $subject; Message = "The trusted signer organization does not exactly match '$ExpectedOrganization'." }
     }
   }
   if ($subject -notmatch [regex]::Escape($ExpectedPublisher)) {

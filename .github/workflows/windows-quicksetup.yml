@@ -25,11 +25,17 @@ jobs:
 
       - name: Run package security regression fixtures (Windows PowerShell 5.1)
         shell: powershell
-        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\installer-regressions.ps1
+        run: |
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\installer-regressions.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\codex-desktop-script.ps1
 
       - name: Run package security regression fixtures (PowerShell 7)
         shell: pwsh
-        run: pwsh -NoProfile -NonInteractive -File tests/installer-regressions.ps1
+        run: |
+          pwsh -NoProfile -NonInteractive -File tests/installer-regressions.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -NonInteractive -File tests/codex-desktop-script.ps1
 
       - name: Set up .NET 10 SDK
         uses: actions/setup-dotnet@v4

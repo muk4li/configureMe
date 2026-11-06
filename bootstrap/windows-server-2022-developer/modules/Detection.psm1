@@ -83,7 +83,8 @@ function Get-QuickSetupVerifiedApplicationVersion {
     [Parameter(Mandatory = $true)][ValidateSet("vscode", "dotnet-10-sdk", "python", "seven-zip")][string]$Id,
     [string[]]$CandidatePaths,
     [scriptblock]$CommandRunner,
-    [scriptblock]$ArchitectureVerifier
+    [scriptblock]$ArchitectureVerifier,
+    [scriptblock]$VsCodeMetadataProvider
   )
   if (!$CandidatePaths) {
     $programFiles64 = if ($env:ProgramW6432) { $env:ProgramW6432 } else { $env:ProgramFiles }
@@ -91,6 +92,10 @@ function Get-QuickSetupVerifiedApplicationVersion {
       "vscode" {
         Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code\Code.exe"
         Join-Path $programFiles64 "Microsoft VS Code\Code.exe"
+        # Support a custom Inno Setup install directory without trusting PATH aliases.
+        Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue |
+          Where-Object { $_.Publisher -ceq "Microsoft Corporation" -and $_.DisplayName -match '^Microsoft Visual Studio Code(?: \(User\))?$' -and $_.InstallLocation } |
+          ForEach-Object { Join-Path $_.InstallLocation "Code.exe" }
       }
       "dotnet-10-sdk" { Join-Path $programFiles64 "dotnet\dotnet.exe" }
       "seven-zip" { Join-Path $programFiles64 "7-Zip\7z.exe" }
@@ -114,13 +119,28 @@ function Get-QuickSetupVerifiedApplicationVersion {
         # Installed software is ALWAYS x64 PE; the bootstrapper exception never applies here.
         Test-QuickSetupInstallerFile -Path $path -InstallerType exe -ExpectedArchitecture x64 | Out-Null
       }
+      if ($Id -eq "vscode") {
+        # Do not launch Electron/code.cmd from a hidden noninteractive worker. Its
+        # CLI environment and startup warnings are not an installation prerequisite.
+        $metadata = if ($VsCodeMetadataProvider) { & $VsCodeMetadataProvider $path } else {
+          $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)
+          $manifestPath = Join-Path (Split-Path -Parent $path) "resources\app\package.json"
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+          [pscustomobject]@{ ProductName = $info.ProductName; ProductVersion = $info.ProductVersion; PackageVersion = $manifest.version }
+        }
+        $versionMatch = [regex]::Match([string]$metadata.ProductVersion, '^(\d+\.\d+\.\d+)(?:\.\d+)?(?:[ +].*)?$')
+        if ($metadata.ProductName -ceq "Visual Studio Code" -and $versionMatch.Success -and
+            $metadata.PackageVersion -cmatch '^\d+\.\d+\.\d+$' -and $metadata.PackageVersion -ceq $versionMatch.Groups[1].Value) {
+          return [string]$metadata.PackageVersion
+        }
+        continue
+      }
       $arguments = switch ($Id) {
-        "vscode" { @("--version") }
         "dotnet-10-sdk" { @("--list-sdks") }
         "seven-zip" { @() }
         "python" { @("-I", "-c", "import json,platform,struct; print(json.dumps({'version':platform.python_version(),'bits':struct.calcsize('P')*8,'implementation':platform.python_implementation()}))") }
       }
-      $executable = if ($Id -eq "vscode") { Join-Path (Split-Path -Parent $path) "bin\code.cmd" } else { $path }
+      $executable = $path
       $result = if ($CommandRunner) { & $CommandRunner $executable $arguments } else {
         $output = & $executable @arguments 2>$null | Out-String
         [pscustomobject]@{ Output = $output; ExitCode = $LASTEXITCODE }
@@ -128,7 +148,6 @@ function Get-QuickSetupVerifiedApplicationVersion {
       if ($result.ExitCode -ne 0) { continue }
       $output = [string]$result.Output
       switch ($Id) {
-        "vscode" { if ($output -match '(?m)^([0-9]+\.[0-9]+\.[0-9]+)\s*$' -and $output -match '(?m)^x64\s*$') { return ([regex]::Match($output, '(?m)^([0-9]+\.[0-9]+\.[0-9]+)\s*$')).Groups[1].Value } }
         "dotnet-10-sdk" { if ($output -match '(?m)^(10\.\d+\.\d+)\s+\[') { return $Matches[1] } }
         "seven-zip" { if ($output -match '(?m)^7-Zip ([0-9]+\.[0-9]+) \(x64\)') { return $Matches[1] } }
         "python" {
@@ -143,6 +162,23 @@ function Get-QuickSetupVerifiedApplicationVersion {
         }
       }
     } catch { continue }
+  }
+  return $null
+}
+
+function Wait-QuickSetupInstalledVersion {
+  param(
+    [Parameter(Mandatory = $true)][string]$Id,
+    [Parameter(Mandatory = $true)][scriptblock]$VersionProvider,
+    [ValidateRange(1, 30)][int]$Attempts = 10,
+    [scriptblock]$DelayProvider
+  )
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    $version = & $VersionProvider $Id
+    if ($version) { return [string]$version }
+    if ($attempt -lt $Attempts) {
+      if ($DelayProvider) { & $DelayProvider | Out-Null } else { Start-Sleep -Seconds 2 }
+    }
   }
   return $null
 }
@@ -522,4 +558,4 @@ function Get-QuickSetupGitVersion {
   return $null
 }
 
-Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageCatalog, Get-QuickSetupPackageDefinition, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupVerifiedApplicationVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme
+Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageCatalog, Get-QuickSetupPackageDefinition, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupVerifiedApplicationVersion, Wait-QuickSetupInstalledVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme

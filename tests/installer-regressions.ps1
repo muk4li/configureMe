@@ -67,7 +67,7 @@ try {
     $install = Invoke-QuickSetupPackageInstall $id $definition -DownloadProvider {
       param($uri, $destination, $hosts) [IO.File]::WriteAllBytes($destination, $bytes); return $uri
     } -SignatureProvider {
-      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = "CN=$($definition.Publisher)" } }
+      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = $(if ($id -eq "dotnet-10-sdk") { "CN=.NET, O=Microsoft Corporation" } else { "CN=$($definition.Publisher)" }) } }
     } -AppxPackageProvider { throw 'AppX deployment unavailable: 0x80073CF0/0x80040154' } -ProcessRunner {
       param($path, $arguments) $script:processCalls++; return $exit
     }
@@ -79,7 +79,7 @@ try {
     $result = Invoke-QuickSetupPackageInstall dotnet-10-sdk $sdk -DownloadProvider {
       param($uri,$destination,$hosts) [IO.File]::WriteAllBytes($destination,$bytes); $uri
     } -SignatureProvider {
-      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN=Microsoft Corporation' } }
+      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN=.NET, O=Microsoft Corporation' } }
     } -ProcessRunner { return $code }
     Assert ($result.ExitCode -eq $code -and $result.RestartRequired -eq ($code -eq 1641)) "Installer exit/reboot status $code was lost."
   }
@@ -109,9 +109,44 @@ try {
   Assert-QuickSetupInstallerSignature vscode $vs $pe -SignatureProvider {
     [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN=Microsoft Corporation' } }
   }
+  # Actual official .NET SDK 10.0.403 signer: CN=.NET, O=Microsoft Corporation.
+  Assert ($sdk.ExpectedCommonName -ceq '.NET' -and $sdk.ExpectedOrganization -ceq 'Microsoft Corporation') 'Wrong SDK signer identity.'
+  Assert-QuickSetupInstallerSignature dotnet-10-sdk $sdk $pe -SignatureProvider {
+    [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN=.NET, O=Microsoft Corporation, C=US' } }
+  }
+  foreach ($subject in @('CN=.NET, O=Other Microsoft Corporation', 'CN=Other, O=Microsoft Corporation', 'CN=.NET, OU=Microsoft Corporation, O=Other', 'CN=.NET, OU="Fake, O=Microsoft Corporation, X=Fake", O=Other', 'CN=.NET, O=Microsoft Corporation, O=Other')) {
+    Reject { Assert-QuickSetupInstallerSignature dotnet-10-sdk $sdk $pe -SignatureProvider {
+      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = $subject } }
+    } } "Unapproved SDK signer accepted: $subject"
+  }
+  foreach ($status in @('NotSigned', 'HashMismatch', 'NotTrusted')) {
+    Reject { Assert-QuickSetupInstallerSignature dotnet-10-sdk $sdk $pe -SignatureProvider {
+      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::$status; SignerCertificate = [pscustomobject]@{ Subject = 'CN=.NET, O=Microsoft Corporation' } }
+    } } 'SDK accepted an invalid signature.'
+  }
+  # Installed VS Code can be verified without launching code.cmd/Electron in the worker.
+  $vsMetadata = { [pscustomobject]@{ ProductName = 'Visual Studio Code'; ProductVersion = '1.100.0'; PackageVersion = '1.100.0' } }
+  $version = Get-QuickSetupVerifiedApplicationVersion vscode -CandidatePaths @($pe) -ArchitectureVerifier { $true } -VsCodeMetadataProvider $vsMetadata -CommandRunner { throw 'Must not launch code.cmd' }
+  Assert ($version -ceq '1.100.0') 'Installed VS Code was not verified from matching binary/package versions.'
+  Assert ((Get-QuickSetupVerifiedApplicationVersion vscode -CandidatePaths @($pe) -ArchitectureVerifier { $true } -VsCodeMetadataProvider $vsMetadata) -eq $version) 'Existing VS Code was not detected again.'
+  Assert (!(Get-QuickSetupVerifiedApplicationVersion vscode -CandidatePaths @($pe) -ArchitectureVerifier { $false } -VsCodeMetadataProvider $vsMetadata)) 'Installed x86 VS Code accepted.'
+  Assert (!(Get-QuickSetupVerifiedApplicationVersion vscode -CandidatePaths @($pe) -ArchitectureVerifier { $true } -VsCodeMetadataProvider { throw 'Manifest missing' })) 'Missing VS Code manifest accepted.'
+  foreach ($metadata in @(
+    [pscustomobject]@{ ProductName = 'Other Editor'; ProductVersion = '1.100.0'; PackageVersion = '1.100.0' },
+    [pscustomobject]@{ ProductName = 'Visual Studio Code'; ProductVersion = '1.100.0'; PackageVersion = '1.99.0' },
+    [pscustomobject]@{ ProductName = 'Visual Studio Code'; ProductVersion = '1.100.0'; PackageVersion = 'invalid' }
+  )) {
+    Assert (!(Get-QuickSetupVerifiedApplicationVersion vscode -CandidatePaths @($pe) -ArchitectureVerifier { $true } -VsCodeMetadataProvider { $metadata })) 'Unverified VS Code metadata accepted.'
+  }
+  $script:probes = 0; $script:delays = 0
+  $ready = Wait-QuickSetupInstalledVersion vscode -Attempts 3 -VersionProvider { $script:probes++; if ($script:probes -eq 3) { '1.100.0' } } -DelayProvider { $script:delays++ }
+  Assert ($ready -eq '1.100.0' -and $script:probes -eq 3 -and $script:delays -eq 2) 'Post-install registration/file delay was not handled.'
+  $script:probes = 0; $script:delays = 0
+  $missing = Wait-QuickSetupInstalledVersion vscode -Attempts 3 -VersionProvider { $script:probes++; return $null } -DelayProvider { $script:delays++ }
+  Assert (!$missing -and $script:probes -eq 3 -and $script:delays -eq 2) 'Missing installation was marked successful or retries were unbounded.'
   # Installed-app detection: explicit full paths, no dependency on current PATH.
   $script:detectedCommands = @()
-  foreach ($id in @('vscode', 'dotnet-10-sdk', 'python', 'seven-zip')) {
+  foreach ($id in @('dotnet-10-sdk', 'python', 'seven-zip')) {
     $runner = {
       param($path, $arguments)
       $script:detectedCommands += $path
