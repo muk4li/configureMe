@@ -108,7 +108,7 @@ try {
   Test-QuickSetupProfile -Profile $profile -AllowedPackageIds @($profile.packages)
   $expectedInstallerTypes = @{
     "git" = "exe"; "github-cli" = "msi"; "vscode" = "exe"; "nodejs-lts" = "msi"
-    "python" = "msix"; "dotnet-10-sdk" = "exe"; "powershell-7" = "msi"; "seven-zip" = "exe"
+    "python" = "exe"; "dotnet-10-sdk" = "exe"; "powershell-7" = "msi"; "seven-zip" = "msi"
     "firefox" = "msi"; "openssh-client" = "windows-capability"
   }
   foreach ($id in $expectedInstallerTypes.Keys) {

@@ -99,7 +99,9 @@ internal sealed class SetupForm : Form
         Font = new Font("Segoe UI", 9F);
         AutoScaleMode = AutoScaleMode.Dpi;
         DoubleBuffered = true;
-        DpiChanged += (_, _) => BeginInvoke(ReflowPackageList);
+        AutoScroll = true;
+        Shown += (_, _) => FitWorkingArea();
+        DpiChanged += (_, _) => BeginInvoke(() => { FitWorkingArea(); ReflowPackageList(); });
         FormClosing += (_, args) =>
         {
             if (!_operationInProgress && !_installQueue.IsBusy) return;
@@ -112,16 +114,19 @@ internal sealed class SetupForm : Form
     {
         var root = new TableLayoutPanel
         {
+            Name = "RootLayout",
             Dock = DockStyle.Fill,
+            MinimumSize = new Size(840, 640),
             ColumnCount = 1,
             RowCount = 6,
             Padding = new Padding(20),
             BackColor = WindowColor
         };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 145));
         Controls.Add(root);
@@ -179,22 +184,26 @@ internal sealed class SetupForm : Form
 
         var actionPanel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Name = "ActionPanel",
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             ColumnCount = 1,
             RowCount = 2,
             Padding = new Padding(0, 8, 0, 0),
             BackColor = WindowColor
         };
-        actionPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-        actionPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        actionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        actionPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        actionPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0) };
         selectionActions.Controls.Add(CreateButton("Alle auswählen", (_, _) => SelectAll(true)));
         selectionActions.Controls.Add(CreateButton("Auswahl aufheben", (_, _) => SelectAll(false)));
         selectionActions.Controls.Add(CreateButton("Nur fehlende", (_, _) => SelectMissing()));
         selectionActions.Controls.Add(CreateButton("Developer-Profil", (_, _) => LoadDeveloperProfileSelection()));
         actionPanel.Controls.Add(selectionActions, 0, 0);
 
-        var mainActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        var mainActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0) };
         mainActions.Controls.Add(CreateButton("System prüfen", async (_, _) => await CheckSystemAsync()));
         mainActions.Controls.Add(CreateButton("Dry-Run", async (_, _) => await ShowDryRunAsync()));
         _installSelectedButton.Text = "Ausgewählte installieren";
@@ -208,6 +217,12 @@ internal sealed class SetupForm : Form
         mainActions.Controls.Add(_cancelButton);
         mainActions.Controls.Add(CreateButton("Report exportieren", (_, _) => ExportReport()));
         actionPanel.Controls.Add(mainActions, 0, 1);
+        actionPanel.SizeChanged += (_, _) =>
+        {
+            var available = Math.Max(1, actionPanel.ClientSize.Width - actionPanel.Padding.Horizontal);
+            selectionActions.MaximumSize = new Size(available, 0);
+            mainActions.MaximumSize = new Size(available, 0);
+        };
         root.Controls.Add(actionPanel, 0, 3);
 
         var progressPanel = new TableLayoutPanel
@@ -446,6 +461,40 @@ internal sealed class SetupForm : Form
         return row;
     }
 
+    private void FitWorkingArea()
+    {
+        var area = Screen.FromControl(this).WorkingArea;
+        MinimumSize = new Size(Math.Min(MinimumSize.Width, area.Width), Math.Min(MinimumSize.Height, area.Height));
+        Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
+    }
+
+    internal void AssertButtonLayout()
+    {
+        PerformLayout();
+        foreach (var button in Descendants(this).OfType<Button>())
+        {
+            var text = TextRenderer.MeasureText(button.Text, button.Font, Size.Empty, TextFormatFlags.SingleLine);
+            if (button.ClientSize.Width < text.Width + button.Padding.Horizontal + 4 ||
+                button.ClientSize.Height < text.Height + button.Padding.Vertical + 4)
+                throw new InvalidOperationException($"Button text is clipped: {button.Text} ({button.Size}).");
+            var parent = button.Parent!;
+            if (!parent.ClientRectangle.Contains(button.Bounds))
+                throw new InvalidOperationException($"Button is outside its layout container: {button.Text}.");
+            foreach (Control sibling in parent.Controls)
+                if (sibling != button && sibling.Visible && button.Bounds.IntersectsWith(sibling.Bounds))
+                    throw new InvalidOperationException($"Button overlaps another control: {button.Text}.");
+        }
+    }
+
+    private static IEnumerable<Control> Descendants(Control parent)
+    {
+        foreach (Control child in parent.Controls)
+        {
+            yield return child;
+            foreach (var descendant in Descendants(child)) yield return descendant;
+        }
+    }
+
     private Button CreateButton(string text, EventHandler click)
     {
         var button = new Button { Text = text, AutoSize = true, Height = 34, Margin = new Padding(0, 0, 8, 0) };
@@ -457,12 +506,16 @@ internal sealed class SetupForm : Form
 
     private static void StyleButton(Button button, bool primary)
     {
+        button.AutoSize = true;
+        button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        button.MinimumSize = new Size(0, 34);
+        button.UseCompatibleTextRendering = false;
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderColor = primary ? AccentColor : Color.FromArgb(71, 82, 96);
         button.BackColor = primary ? Color.FromArgb(37, 105, 190) : Color.FromArgb(48, 57, 68);
         button.ForeColor = Color.White;
         button.Padding = new Padding(8, 2, 8, 2);
-        button.Margin = new Padding(0, 0, 8, 0);
+        button.Margin = new Padding(0, 0, 8, 6);
         button.Height = Math.Max(button.Height, 34);
     }
 

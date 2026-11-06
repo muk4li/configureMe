@@ -46,7 +46,7 @@
   </ItemGroup>
 
   <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
-    <Exec Command="$(PowerShellExecutable) -NoProfile -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
+    <Exec Command="&quot;$(PowerShellExecutable)&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
     <ItemGroup>
       <EmbeddedResource Include="$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json" LogicalName="ConfigureMe.Engine.manifest.json" />
     </ItemGroup>

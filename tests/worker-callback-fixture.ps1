@@ -36,7 +36,7 @@ $worker = Get-Module GuiWorker
       throw "Mock official metadata endpoint failed for $Id; token=fixture-private; https://example.test/feed?sig=fixture-private"
     }
     [pscustomobject]@{
-      Automatic = $true; InstallerType = $(if ($Id -eq "python") { "msix" } elseif ($Id -eq "openssh-client") { "windows-capability" } else { "exe" })
+      Automatic = $true; InstallerType = $(if ($Id -eq "seven-zip") { "msi" } elseif ($Id -eq "openssh-client") { "windows-capability" } else { "exe" })
       RequiresAdministrator = ($Id -in @("github-cli", "openssh-client", "powershell-7")); Version = "fixture-version"
       Uri = [uri]"https://github.com/github/app/releases/download/v1.1.34/GitHub-Copilot-windows-x64-setup.exe"
       Method = "Mocked installer process"; Source = "local fixture"; Notes = "No installer launched."
@@ -53,13 +53,11 @@ $worker = Get-Module GuiWorker
     Set-Content -LiteralPath $Destination -Value "fixture" -Encoding ASCII
     return $Destination
   }
-  function Test-QuickSetupInstallerFile {
-    param([string]$Path, [string]$InstallerType, $ExpectedArchitecture, $ExpectedPackageName,
-      $ExpectedPackagePublisher, [switch]$AllowX86BootstrapForX64)
+  # Mock the shared boundary used by download preparation. Its real hash,
+  # architecture and signature behavior is covered in installer-regressions.ps1.
+  function Assert-QuickSetupDownloadedInstaller {
+    param([string]$Id, $Definition, [string]$Path)
     if ($env:CONFIGUREME_TEST_FAIL_STAGE -eq "verification") { throw "Mock SHA-256 hash mismatch." }
-  }
-  function Test-QuickSetupAuthenticodePublisher { param($Path, $ExpectedPublisher, $ExpectedCommonName)
-    [pscustomobject]@{ IsValid = $true; Message = "Mock signer valid" }
   }
   function Invoke-QuickSetupPackageInstall {
     param([string]$Id, $Definition, [scriptblock]$ProgressCallback, [string]$CachedInstallerPath)

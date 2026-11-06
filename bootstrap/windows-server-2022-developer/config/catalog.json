@@ -56,7 +56,7 @@
       "windowsPackageId": "Python.Python.3.12",
       "elevated": false,
       "windowsMode": "automatic",
-      "platforms": { "windows": { "id": "Python.Python.3.12", "supported": true, "label": "Python install manager" } }
+      "platforms": { "windows": { "id": "Python.Python.3.12", "supported": true, "label": "Official signed CPython x64 installer" } }
     },
     {
       "id": "github-copilot",

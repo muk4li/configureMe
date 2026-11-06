@@ -23,6 +23,14 @@ jobs:
         shell: powershell
         run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\quicksetup-smoke.ps1
 
+      - name: Run package security regression fixtures (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\installer-regressions.ps1
+
+      - name: Run package security regression fixtures (PowerShell 7)
+        shell: pwsh
+        run: pwsh -NoProfile -NonInteractive -File tests/installer-regressions.ps1
+
       - name: Set up .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -43,13 +51,22 @@ jobs:
       - name: Publish self-contained Windows x64 GUI
         shell: powershell
         run: |
-          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-publish"
-          dotnet publish windows\ConfigureMe.Setup\ConfigureMe.Setup.csproj --configuration Release -p:PublishProfile=win-x64 --output $publishPath
-          if ($LASTEXITCODE -ne 0) { throw "Self-contained WinForms publish failed." }
+          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe Setup publish"
+          # Child manifest generation must work despite an inherited restrictive
+          # process policy; no machine/user policy is modified. Output path tests spaces.
+          $previousPolicy = $env:PSExecutionPolicyPreference
+          try {
+            $env:PSExecutionPolicyPreference = "Restricted"
+            dotnet publish windows\ConfigureMe.Setup\ConfigureMe.Setup.csproj --configuration Release -p:PublishProfile=win-x64 --output $publishPath
+            if ($LASTEXITCODE -ne 0) { throw "Self-contained WinForms publish failed under restrictive process policy." }
+          } finally { $env:PSExecutionPolicyPreference = $previousPolicy }
           $executable = Join-Path $publishPath "configureMe-Setup.exe"
           if (!(Test-Path -LiteralPath $executable -PathType Leaf)) { throw "The published setup EXE is missing." }
           if (Get-ChildItem -LiteralPath $publishPath -Filter "*.dll" -File) { throw "The self-contained single-file publish has external DLL dependencies." }
           $env:PATH = "$env:WINDIR\System32;$env:WINDIR"
+          $env:DOTNET_ROOT = Join-Path $env:RUNNER_TEMP "no-global-dotnet"
+          $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
+          $env:DOTNET_MULTILEVEL_LOOKUP = "0"
           & $executable --self-test
           if ($LASTEXITCODE -ne 0) { throw "The published EXE failed its embedded engine/worker startup self-test." }
           & $executable --layout-self-test
@@ -58,7 +75,7 @@ jobs:
       - name: Package unsigned setup development artifact
         shell: powershell
         run: |
-          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-publish"
+          $publishPath = Join-Path $env:RUNNER_TEMP "configureMe Setup publish"
           $packagePath = Join-Path $env:RUNNER_TEMP "configureMe-Setup-win-x64.zip"
           powershell.exe -NoProfile -NonInteractive -File scripts\New-SetupReleasePackage.ps1 -PublishDirectory $publishPath -OutputPath $packagePath
           if ($LASTEXITCODE -ne 0) { throw "Setup package generation failed." }

@@ -31,6 +31,7 @@ try {
   Copy-Item -LiteralPath $executablePath -Destination (Join-Path $stagePath "configureMe-Setup.exe")
   Copy-Item -LiteralPath (Join-Path $repositoryRoot "windows\ConfigureMe.Setup\README.md") -Destination $stagePath
   Copy-Item -LiteralPath (Join-Path $repositoryRoot "windows\ConfigureMe.Setup\SECURITY.md") -Destination $stagePath
+  Copy-Item -LiteralPath (Join-Path $repositoryRoot "scripts\Start-SetupWithDiagnostics.ps1") -Destination $stagePath
   $versionInfo = [ordered]@{
     product = "configureMe Setup"
     version = "0.3.0"
@@ -45,7 +46,7 @@ try {
   $versionPath = Join-Path $stagePath "version.json"
   [System.IO.File]::WriteAllText($versionPath, ((ConvertTo-Json -InputObject $versionInfo -Depth 4) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 
-  $files = @("configureMe-Setup.exe", "README.md", "SECURITY.md", "version.json")
+  $files = @("configureMe-Setup.exe", "Start-SetupWithDiagnostics.ps1", "README.md", "SECURITY.md", "version.json")
   $manifestFiles = foreach ($file in $files) {
     $path = Join-Path $stagePath $file
     [pscustomobject]@{

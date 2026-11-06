@@ -78,6 +78,75 @@ function Get-QuickSetupPackageName {
   return $Id
 }
 
+function Get-QuickSetupVerifiedApplicationVersion {
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet("vscode", "dotnet-10-sdk", "python", "seven-zip")][string]$Id,
+    [string[]]$CandidatePaths,
+    [scriptblock]$CommandRunner,
+    [scriptblock]$ArchitectureVerifier
+  )
+  if (!$CandidatePaths) {
+    $programFiles64 = if ($env:ProgramW6432) { $env:ProgramW6432 } else { $env:ProgramFiles }
+    $CandidatePaths = @(switch ($Id) {
+      "vscode" {
+        Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code\Code.exe"
+        Join-Path $programFiles64 "Microsoft VS Code\Code.exe"
+      }
+      "dotnet-10-sdk" { Join-Path $programFiles64 "dotnet\dotnet.exe" }
+      "seven-zip" { Join-Path $programFiles64 "7-Zip\7z.exe" }
+      "python" {
+        # PEP 514 registration survives PATH changes. Do not run WindowsApps aliases.
+        Get-ChildItem "HKCU:\Software\Python\PythonCore", "HKLM:\Software\Python\PythonCore" -ErrorAction SilentlyContinue | ForEach-Object {
+          $entry = Get-ItemProperty -LiteralPath (Join-Path $_.PSPath "InstallPath") -ErrorAction SilentlyContinue
+          if ($entry.ExecutablePath) { [string]$entry.ExecutablePath }
+        }
+        $command = Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($command -and $command.Source -notlike "*\WindowsApps\*") { $command.Source }
+      }
+    })
+  }
+  foreach ($path in @($CandidatePaths | Select-Object -Unique)) {
+    if (!$path -or $path -like "*\WindowsApps\*") { continue }
+    try {
+      if ($ArchitectureVerifier) {
+        if (!(& $ArchitectureVerifier $path)) { continue }
+      } else {
+        # Installed software is ALWAYS x64 PE; the bootstrapper exception never applies here.
+        Test-QuickSetupInstallerFile -Path $path -InstallerType exe -ExpectedArchitecture x64 | Out-Null
+      }
+      $arguments = switch ($Id) {
+        "vscode" { @("--version") }
+        "dotnet-10-sdk" { @("--list-sdks") }
+        "seven-zip" { @() }
+        "python" { @("-I", "-c", "import json,platform,struct; print(json.dumps({'version':platform.python_version(),'bits':struct.calcsize('P')*8,'implementation':platform.python_implementation()}))") }
+      }
+      $executable = if ($Id -eq "vscode") { Join-Path (Split-Path -Parent $path) "bin\code.cmd" } else { $path }
+      $result = if ($CommandRunner) { & $CommandRunner $executable $arguments } else {
+        $output = & $executable @arguments 2>$null | Out-String
+        [pscustomobject]@{ Output = $output; ExitCode = $LASTEXITCODE }
+      }
+      if ($result.ExitCode -ne 0) { continue }
+      $output = [string]$result.Output
+      switch ($Id) {
+        "vscode" { if ($output -match '(?m)^([0-9]+\.[0-9]+\.[0-9]+)\s*$' -and $output -match '(?m)^x64\s*$') { return ([regex]::Match($output, '(?m)^([0-9]+\.[0-9]+\.[0-9]+)\s*$')).Groups[1].Value } }
+        "dotnet-10-sdk" { if ($output -match '(?m)^(10\.\d+\.\d+)\s+\[') { return $Matches[1] } }
+        "seven-zip" { if ($output -match '(?m)^7-Zip ([0-9]+\.[0-9]+) \(x64\)') { return $Matches[1] } }
+        "python" {
+          $info = $output | ConvertFrom-Json -ErrorAction Stop
+          if ($info.bits -ne 64 -or $info.implementation -cne "CPython" -or $info.version -notmatch '^3\.\d+\.\d+$' -or [version]$info.version -lt [version]'3.11.0') { continue }
+          $pipArguments = @("-I", "-m", "pip", "--version")
+          $pip = if ($CommandRunner) { & $CommandRunner $path $pipArguments } else {
+            $pipOutput = & $path @pipArguments 2>$null | Out-String
+            [pscustomobject]@{ Output = $pipOutput; ExitCode = $LASTEXITCODE }
+          }
+          if ($pip.ExitCode -eq 0 -and $pip.Output -match '^pip \d+\.') { return "$($info.version) (x64; pip verified)" }
+        }
+      }
+    } catch { continue }
+  }
+  return $null
+}
+
 function Get-QuickSetupDetectedVersion {
   param(
     [Parameter(Mandatory = $true)][string]$Id,
@@ -86,6 +155,10 @@ function Get-QuickSetupDetectedVersion {
     [scriptblock]$ExecutableVersionProvider,
     [scriptblock]$GitVersionProvider
   )
+
+  if ($Id -in @("vscode", "dotnet-10-sdk", "python", "seven-zip")) {
+    return Get-QuickSetupVerifiedApplicationVersion -Id $Id
+  }
 
   if ($Id -eq "git" -and $GitVersionProvider) {
     $gitCommandResult = & $GitVersionProvider
@@ -204,12 +277,8 @@ function Get-QuickSetupDetectedVersion {
   $commandName = switch ($Id) {
     "git" { "git" }
     "github-cli" { "gh" }
-    "vscode" { "code" }
     "nodejs-lts" { "node" }
-    "python" { "python" }
-    "dotnet-10-sdk" { "dotnet" }
     "powershell-7" { "pwsh" }
-    "seven-zip" { "7z" }
     "firefox" { "firefox" }
     "github-copilot-cli" { "copilot" }
     default { $null }
@@ -225,26 +294,12 @@ function Get-QuickSetupDetectedVersion {
 
   if ($commandName) {
     $command = Get-Command $commandName -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($Id -eq "python" -and $command -and $command.Source -like (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\*")) {
-      $command = $null
-    }
     if (!$command) {
       $candidatePaths = switch ($Id) {
-        "python" {
-          # Python Install Manager registers real runtimes using PEP 514. Probe those
-          # executables rather than invoking a WindowsApps alias that could install a runtime.
-          @(Get-ChildItem "HKCU:\Software\Python\PythonCore", "HKLM:\Software\Python\PythonCore" -ErrorAction SilentlyContinue | ForEach-Object {
-            $entry = Get-ItemProperty -LiteralPath (Join-Path $_.PSPath "InstallPath") -ErrorAction SilentlyContinue
-            if ($entry.ExecutablePath) { [string]$entry.ExecutablePath }
-          })
-        }
         "git" { @((Join-Path $env:ProgramFiles "Git\cmd\git.exe")) }
         "github-cli" { @((Join-Path $env:ProgramFiles "GitHub CLI\gh.exe")) }
-        "vscode" { @((Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code\bin\code.cmd")) }
         "nodejs-lts" { @((Join-Path $env:ProgramFiles "nodejs\node.exe")) }
-        "dotnet-10-sdk" { @((Join-Path $env:ProgramFiles "dotnet\dotnet.exe")) }
         "powershell-7" { @((Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe")) }
-        "seven-zip" { @((Join-Path $env:ProgramFiles "7-Zip\7z.exe")) }
         "firefox" { @((Join-Path $env:ProgramFiles "Mozilla Firefox\firefox.exe")) }
         default { @() }
       }
@@ -263,10 +318,6 @@ function Get-QuickSetupDetectedVersion {
             $output = & $command.Source --version 2>$null | Out-String
             if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+(?:\.\d+)?)") { return $Matches[1] }
           }
-          "vscode" {
-            $output = & $command.Source --version 2>$null | Out-String
-            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
-          }
           "nodejs-lts" {
             $output = & $command.Source --version 2>$null | Out-String
             if ($LASTEXITCODE -eq 0 -and $output -match "v?(\d+\.\d+\.\d+)") {
@@ -282,28 +333,9 @@ function Get-QuickSetupDetectedVersion {
               return "$nodeVersion (npm version unavailable)"
             }
           }
-          "python" {
-            $output = & $command.Source --version 2>&1 | Out-String
-            if ($LASTEXITCODE -eq 0 -and $output -match "Python\s+(\d+\.\d+\.\d+)") {
-              $pythonVersion = $Matches[1]
-              $pyCommand = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
-              $pipOutput = & $command.Source -m pip --version 2>&1 | Out-String
-              $pyState = if ($pyCommand) { "py available" } else { "py not found" }
-              $pipState = if ($pipOutput -match "pip\s+(\d+)") { "pip available" } else { "pip not verified" }
-              return "$pythonVersion ($pyState; $pipState)"
-            }
-          }
-          "dotnet-10-sdk" {
-            $output = & $command.Source --list-sdks 2>$null | Out-String
-            if ($LASTEXITCODE -eq 0 -and $output -match "(?m)^(10\.\d+\.\d+)\s+") { return $Matches[1] }
-          }
           "powershell-7" {
             $output = & $command.Source -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>$null | Out-String
             if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+\.\d+)") { return $Matches[1] }
-          }
-          "seven-zip" {
-            $output = & $command.Source 2>&1 | Out-String
-            if ($LASTEXITCODE -eq 0 -and $output -match "(\d+\.\d+)") { return $Matches[1] }
           }
           "firefox" {
             $output = & $command.Source --version 2>&1 | Out-String
@@ -400,34 +432,15 @@ function Get-QuickSetupDockerDiagnostics {
 }
 
 function Get-QuickSetupPythonDiagnostics {
-  $python = Get-Command python -ErrorAction SilentlyContinue | Select-Object -First 1
+  $version = Get-QuickSetupVerifiedApplicationVersion -Id python
   $py = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
-  $version = $null
-  $launcherVersion = $null
-  $pipAvailable = $false
-  if ($python) {
-    try {
-      $output = & $python.Source --version 2>&1 | Out-String
-      if ($output -match "Python\s+(\d+\.\d+\.\d+)") { $version = $Matches[1] }
-      $pipOutput = & $python.Source -m pip --version 2>&1 | Out-String
-      $pipAvailable = ($LASTEXITCODE -eq 0 -and $pipOutput -match "pip\s+\d+")
-    } catch { }
-  }
-  if ($py) {
-    try {
-      $output = & $py.Source --version 2>&1 | Out-String
-      if ($LASTEXITCODE -eq 0 -and $output -match "Python\s+(\d+\.\d+\.\d+)") {
-        $launcherVersion = $Matches[1]
-      }
-    } catch { }
-  }
   [pscustomobject]@{
     Version = $version
-    LauncherVersion = $launcherVersion
-    PythonCommand = [bool]$python
+    LauncherVersion = if ($py) { "available (optional)" } else { "not installed (optional)" }
+    PythonCommand = [bool](Get-Command python -ErrorAction SilentlyContinue)
     PyLauncher = [bool]$py
-    Pip = $pipAvailable
-    Complete = [bool]($python -and $version -and $py -and $launcherVersion -and $pipAvailable)
+    Pip = [bool]$version
+    Complete = [bool]$version
   }
 }
 
@@ -509,4 +522,4 @@ function Get-QuickSetupGitVersion {
   return $null
 }
 
-Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageCatalog, Get-QuickSetupPackageDefinition, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme
+Export-ModuleMember -Function Get-QuickSetupOperatingSystem, Test-QuickSetupTargetContext, Get-QuickSetupPackageCatalog, Get-QuickSetupPackageDefinition, Get-QuickSetupPackageName, Get-QuickSetupDetectedVersion, Get-QuickSetupVerifiedApplicationVersion, Get-QuickSetupGitVersion, Get-QuickSetupDockerDiagnostics, Get-QuickSetupPythonDiagnostics, Sync-QuickSetupProcessPath, Get-QuickSetupWebView2Version, Set-QuickSetupVsCodeDarkTheme

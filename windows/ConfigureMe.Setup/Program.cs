@@ -14,18 +14,21 @@ internal static class Program
                 Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                using var form = new SetupForm(runStartupDetection: false);
-                form.Show();
-                Application.DoEvents();
-                foreach (var size in new[] { new System.Drawing.Size(1180, 900), new System.Drawing.Size(900, 700) })
+                foreach (var scale in new[] { 1f, 1.25f, 1.5f, 2f })
                 {
-                    form.Size = size;
-                    Application.DoEvents();
-                    form.AssertPackageLayout();
+                    using var form = new SetupForm(runStartupDetection: false);
+                    form.Show();
+                    form.Scale(new System.Drawing.SizeF(scale, scale));
+                    form.Font = new System.Drawing.Font("Segoe UI", 9F * scale);
+                    foreach (var size in new[] { new System.Drawing.Size(1180, 900), new System.Drawing.Size(900, 700), new System.Drawing.Size(1024, 768) })
+                    {
+                        form.MinimumSize = System.Drawing.Size.Empty;
+                        form.Size = size;
+                        Application.DoEvents();
+                        form.AssertPackageLayout();
+                        form.AssertButtonLayout();
+                    }
                 }
-                form.Scale(new System.Drawing.SizeF(1.5f, 1.5f));
-                Application.DoEvents();
-                form.AssertPackageLayout();
                 Environment.ExitCode = 0;
             }
             catch (Exception exception)
@@ -61,6 +64,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
+            Environment.ExitCode = 1;
             MessageBox.Show(
                 $"configureMe Setup konnte nicht gestartet werden.\n\n{exception.Message}",
                 "configureMe Setup",

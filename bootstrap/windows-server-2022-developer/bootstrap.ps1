@@ -26,7 +26,7 @@ $requestedVersions = @{
   "github-cli" = "latest stable"
   "vscode" = "latest stable"
   "nodejs-lts" = "latest stable Active LTS"
-  "python" = "latest stable via Python install manager"
+  "python" = "latest supported stable Python 3.14 x64"
   "dotnet-10-sdk" = "latest stable .NET 10 SDK"
   "powershell-7" = "latest stable 7.x"
   "seven-zip" = "latest stable"
@@ -266,7 +266,8 @@ if ($DryRun) {
         $result.RequiresAdministrator = [bool]$definition.RequiresAdministrator
         $result.Method = $definition.Method
         $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $definition
-        if ($installResult.ExitCode -notin @(0, 3010)) {
+        $result.InstallerExitCode = [int]$installResult.ExitCode
+        if ($installResult.ExitCode -notin @(0, 3010, 1641)) {
           $result.Status = "Failed"
           $result.ErrorCode = [string]$installResult.ExitCode
           $result.Notes = "$($definition.Notes) Installer exited with code $($installResult.ExitCode)."

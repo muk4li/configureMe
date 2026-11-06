@@ -146,44 +146,101 @@ function Get-QuickSetupLibreOfficeInstaller {
   }
 }
 
-function Get-QuickSetupPythonManagerInstaller {
-  $appInstallerPath = Join-Path $env:TEMP ("configureMe-python-manager-" + [guid]::NewGuid().ToString("N") + ".appinstaller")
-  try {
-    Get-QuickSetupOfficialDownload -Uri ([uri]"https://www.python.org/ftp/python/pymanager/pymanager.appinstaller") -Destination $appInstallerPath -AllowedHosts @("python.org") | Out-Null
-    $document = New-Object System.Xml.XmlDocument
-    $document.XmlResolver = $null
-    $document.Load($appInstallerPath)
-    $namespaces = New-Object System.Xml.XmlNamespaceManager($document.NameTable)
-    $namespaces.AddNamespace("appinstaller", "http://schemas.microsoft.com/appx/appinstaller/2018")
-    $package = $document.SelectSingleNode("/appinstaller:AppInstaller/appinstaller:MainPackage", $namespaces)
-    if (!$package -or
-      $package.GetAttribute("Name") -ne "PythonSoftwareFoundation.PythonManager" -or
-      $package.GetAttribute("Publisher") -ne "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US" -or
-      $package.GetAttribute("ProcessorArchitecture") -ne "x64" -or
-      $package.GetAttribute("Version") -notmatch "^\d+\.\d+\.\d+\.\d+$") {
-      throw "The official Python install manager metadata did not match the expected x64 package identity."
-    }
-    $packageUri = [uri]$package.GetAttribute("Uri")
-    if ($packageUri.Scheme -ne "https" -or
-      !(Test-QuickSetupAllowedHost -HostName $packageUri.DnsSafeHost -AllowedHosts @("python.org")) -or
-      $packageUri.AbsolutePath -notmatch "^/ftp/python/pymanager/python-manager-\d+\.\d+\.msix$") {
-      throw "The official Python install manager metadata contained an unexpected package URL."
-    }
-    [pscustomobject]@{
-      Version = $package.GetAttribute("Version")
-      PackageName = $package.GetAttribute("Name")
-      PackagePublisher = $package.GetAttribute("Publisher")
-      Uri = $packageUri
-    }
-  } finally {
-    Remove-Item -LiteralPath $appInstallerPath -Force -ErrorAction SilentlyContinue
+function Get-QuickSetupPythonInstaller {
+  # The classic signed full installer works without AppX services, Store, aliases or
+  # deployment registration. Stay on the supported 3.14 line, not prereleases/embeddable ZIPs.
+  param([scriptblock]$MetadataProvider)
+  $index = if ($MetadataProvider) { & $MetadataProvider } else {
+    Get-QuickSetupOfficialMetadata -Uri "https://www.python.org/ftp/python/" -AllowedHosts @("www.python.org")
   }
+  $versions = @([regex]::Matches([string]$index.Content, 'href="(3\.14\.\d+)/"') |
+    ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Unique -Descending)
+  if (!$versions.Count) { throw "The official Python directory did not list a stable Python 3.14 release." }
+  $version = $versions[0].ToString()
+  return [pscustomobject]@{
+    Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $false
+    Version = $version; Uri = [uri]"https://www.python.org/ftp/python/$version/python-$version-amd64.exe"
+    AllowedHosts = @("www.python.org"); Publisher = "Python Software Foundation"; ExpectedCommonName = "Python Software Foundation"
+    BootstrapperKind = "python-burn-x86-for-x64"
+    Arguments = @("/quiet", "/norestart", "InstallAllUsers=0", "PrependPath=1", "Include_pip=1", "Include_test=0", "Include_launcher=0")
+    Source = "https://docs.python.org/3.14/using/windows.html#installing-without-ui"
+    Method = "Official signed CPython 3.14 x64 full EXE; no MSIX deployment"
+    Notes = "Server 2022 uses the classic per-user full installer, avoiding AppX deployment failures (0x80073CF0/0x80040154). Valid PSF Authenticode is required. Existing verified x64 Python 3 with pip is preserved. No Store alias or install manager is invoked."
+  }
+}
+
+function Get-QuickSetupSevenZipInstaller {
+  # Reviewed official artifact, SHA-256 independently cross-checked with Microsoft's
+  # winget-pkgs 7zip.7zip 25.01 manifest. Unsigned is NOT an invalid signature.
+  return [pscustomobject]@{
+    Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true
+    Version = "25.01"; Uri = [uri]"https://github.com/ip7z/7zip/releases/download/25.01/7z2501-x64.msi"
+    Sha256 = "e7eb0b7ed5efa4e087b7b17f191797f7af5b7f442d1290c66f3a21777005ef57"
+    AllowedHosts = @("github.com", "release-assets.githubusercontent.com")
+    Publisher = "Igor Pavlov"; ExpectedCommonName = "Igor Pavlov"
+    VerificationPolicy = "seven-zip-25.01-pinned-unsigned"
+    Arguments = @("/qn", "/norestart")
+    Source = "https://www.7-zip.org/"
+    Method = "Pinned official x64 MSI, SHA-256 and Windows Installer x64 template"
+    Notes = "Only the exact reviewed 25.01 MSI may be unsigned; invalid/untrusted signatures are rejected. Update URL, version and reviewed hash together when upgrading this pin."
+  }
+}
+
+function Test-QuickSetupBootstrapAuthorization {
+  param([string]$Id, $Definition)
+  if ($Id -eq "github-copilot-desktop") {
+    $pin = Get-QuickSetupCopilotInstallerDefinition
+    return ($Definition.Uri -eq $pin.Uri -and $Definition.Version -ceq $pin.Version -and $Definition.AllowX86BootstrapForX64 -and $Definition.Sha256 -match "^[A-Fa-f0-9]{64}$" -and $Definition.Publisher -ceq $pin.Publisher)
+  }
+  if ($Definition.ExpectedArchitecture -ne "x64" -or $Definition.InstallerType -ne "exe") { return $false }
+  switch ($Id) {
+    "vscode" {
+      return ($Definition.BootstrapperKind -ceq "vscode-inno-x86-for-x64" -and
+        $Definition.Publisher -ceq "Microsoft Corporation" -and $Definition.Version -match '^\d+\.\d+\.\d+$' -and
+        $Definition.Sha256 -match '^[a-fA-F0-9]{64}$' -and
+        $Definition.Uri.AbsoluteUri -cmatch '^https://[^/]+/.*VSCodeUserSetup-x64-[0-9.]+\.exe$' -and
+        (Test-QuickSetupAllowedHost $Definition.Uri.DnsSafeHost @("visualstudio.com", "microsoft.com")))
+    }
+    "dotnet-10-sdk" {
+      return ($Definition.BootstrapperKind -ceq "dotnet-burn-x86-for-x64" -and
+        $Definition.Publisher -ceq "Microsoft Corporation" -and $Definition.Version -match '^10\.\d+\.\d+$' -and
+        $Definition.Sha512 -match '^[a-fA-F0-9]{128}$' -and
+        $Definition.Uri.AbsolutePath -cmatch '/dotnet-sdk-10\.\d+\.\d+-win-x64\.exe$' -and
+        $Definition.Uri.Scheme -eq "https" -and
+        (Test-QuickSetupAllowedHost $Definition.Uri.DnsSafeHost @("builds.dotnet.microsoft.com", "download.visualstudio.microsoft.com")))
+    }
+    "python" {
+      return ($Definition.BootstrapperKind -ceq "python-burn-x86-for-x64" -and
+        $Definition.Publisher -ceq "Python Software Foundation" -and $Definition.Version -match '^3\.14\.\d+$' -and
+        $Definition.Uri.AbsoluteUri -ceq "https://www.python.org/ftp/python/$($Definition.Version)/python-$($Definition.Version)-amd64.exe")
+    }
+  }
+  return $false
+}
+
+function Assert-QuickSetupInstallerSignature {
+  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$FileHashProvider)
+  $signature = if ($SignatureProvider) { & $SignatureProvider $Path } else { Get-AuthenticodeSignature -LiteralPath $Path }
+  if ($Id -eq "seven-zip" -and $Definition.VerificationPolicy -ceq "seven-zip-25.01-pinned-unsigned") {
+    $pin = Get-QuickSetupSevenZipInstaller
+    $actualHash = if ($FileHashProvider) { & $FileHashProvider $Path } else { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash }
+    if ($Definition.Uri -ne $pin.Uri -or $Definition.Version -cne $pin.Version -or
+        $Definition.InstallerType -ne "msi" -or $Definition.ExpectedArchitecture -ne "x64" -or
+        $Definition.Sha256 -cne $pin.Sha256 -or
+        $actualHash -ine $pin.Sha256) {
+      throw "The unsigned 7-Zip exception requires the exact reviewed official x64 MSI and SHA-256."
+    }
+    if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned -and !$signature.SignerCertificate) { return }
+  }
+  $result = Test-QuickSetupAuthenticodePublisher -Path $Path -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider { param($ignored) $signature }
+  if (!$result.IsValid) { throw $result.Message }
 }
 
 function Get-QuickSetupInstallerDefinition {
   param(
     [Parameter(Mandatory = $true)][string]$Id,
-    [switch]$OfflinePreview
+    [switch]$OfflinePreview,
+    [scriptblock]$MetadataProvider
   )
 
   if ($OfflinePreview) {
@@ -207,7 +264,7 @@ function Get-QuickSetupInstallerDefinition {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable Active LTS"; Source = "https://nodejs.org/en/download/"; Method = "Official x64 MSI via msiexec /qn"; Notes = "The CLI resolves the official Node.js index while preparing the plan; installer bytes require confirmation." }
       }
       "python" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "msix"; RequiresAdministrator = $false; Version = "latest stable via Python install manager"; Source = "https://www.python.org/downloads/windows/"; Method = "Official Python install manager MSIX and per-user runtime"; Notes = "Uses the Python install manager and its documented runtime installation command. Windows validates the signed MSIX package during deployment." }
+        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $false; Version = "latest supported stable Python 3.14 x64"; Source = "https://www.python.org/downloads/windows/"; Method = "Official signed CPython full EXE /quiet, no AppX required"; Notes = "Per-user x64 Python with pip; does not depend on MSIX deployment or install-manager aliases." }
       }
       "dotnet-10-sdk" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable .NET 10 SDK"; Source = "https://learn.microsoft.com/dotnet/core/install/windows"; Method = "Official .NET SDK installer /quiet"; Notes = "The CLI resolves Microsoft's .NET 10 feed while preparing the plan; installer bytes require confirmation." }
@@ -215,9 +272,7 @@ function Get-QuickSetupInstallerDefinition {
       "powershell-7" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://learn.microsoft.com/powershell/scripting/install/install-powershell-on-windows"; Method = "Official x64 MSI via msiexec /qn"; Notes = "The CLI resolves official PowerShell release metadata while preparing the plan; installer bytes require confirmation." }
       }
-      "seven-zip" {
-        return [pscustomobject]@{ Automatic = $true; InstallerType = "exe"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.7-zip.org/"; Method = "Official x64 EXE /S"; Notes = "The vendor's FAQ documents /S; the CLI resolves official site metadata while preparing the plan, before installer confirmation." }
-      }
+      "seven-zip" { return Get-QuickSetupSevenZipInstaller }
       "firefox" {
         return [pscustomobject]@{ Automatic = $true; InstallerType = "msi"; RequiresAdministrator = $true; Version = "latest stable"; Source = "https://www.mozilla.org/firefox/enterprise/"; Method = "Official Firefox Enterprise MSI via msiexec /qn"; Notes = "The CLI prepares the stable MSI source before confirmation; installer bytes and publisher signature are checked after confirmation." }
       }
@@ -265,9 +320,15 @@ function Get-QuickSetupInstallerDefinition {
       }
     }
     "vscode" {
+      $metadataUri = "https://update.code.visualstudio.com/api/update/win32-x64-user/stable/latest"
+      $release = if ($MetadataProvider) { & $MetadataProvider $metadataUri } else { Get-QuickSetupOfficialMetadata -Uri $metadataUri -AllowedHosts @("update.code.visualstudio.com") -Json }
+      if ($release.productVersion -notmatch '^\d+\.\d+\.\d+$' -or $release.sha256hash -notmatch '^[A-Fa-f0-9]{64}$') {
+        throw "The official VS Code x64 user feed did not provide a stable version and SHA-256."
+      }
       return [pscustomobject]@{
-        Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $false; Version = "latest stable"; Uri = [uri]"https://update.code.visualstudio.com/latest/win32-x64-user/stable"
-        Sha256 = $null; AllowedHosts = @("microsoft.com", "visualstudio.com")
+        Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $false; Version = [string]$release.productVersion; Uri = [uri]$release.url
+        BootstrapperKind = "vscode-inno-x86-for-x64"
+        Sha256 = [string]$release.sha256hash; AllowedHosts = @("microsoft.com", "visualstudio.com")
         Publisher = "Microsoft Corporation"; Method = "VS Code user setup (Inno Setup)"
         Arguments = @("/VERYSILENT", "/NORESTART", "/MERGETASKS=!runcode", "/COPILOTCLI=none")
         Source = "https://code.visualstudio.com/docs/setup/windows"
@@ -291,30 +352,20 @@ function Get-QuickSetupInstallerDefinition {
         Notes = "Newest stable Active LTS release reported by the official Node.js distribution index."
       }
     }
-    "python" {
-      $manager = Get-QuickSetupPythonManagerInstaller
-      return [pscustomobject]@{
-        Automatic = $true; InstallerType = "msix"; ExpectedArchitecture = "x64"; RequiresAdministrator = $false
-        Version = "latest stable via Python install manager $($manager.Version)"; Uri = $manager.Uri
-        AllowedHosts = @("python.org"); PackageName = $manager.PackageName; PackagePublisher = $manager.PackagePublisher
-        RuntimeArguments = @("install", "default")
-        Source = "https://www.python.org/downloads/windows/"
-        Method = "Python install manager MSIX plus official per-user runtime"
-        Notes = "Uses the official Python install manager MSIX and its documented 'pymanager install default' command. The package identity is checked before Windows validates its signature during Add-AppxPackage deployment. Runtime installation is per-user and does not remove other Python versions or virtual environments."
-      }
-    }
+    "python" { return Get-QuickSetupPythonInstaller }
     "dotnet-10-sdk" {
-      $feed = Get-QuickSetupOfficialMetadata -Uri "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json" -AllowedHosts @("dotnetcli.blob.core.windows.net") -Json
+      $metadataUri = "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json"
+      $feed = if ($MetadataProvider) { & $MetadataProvider $metadataUri } else { Get-QuickSetupOfficialMetadata -Uri $metadataUri -AllowedHosts @("dotnetcli.blob.core.windows.net") -Json }
       $release = @($feed.releases | Where-Object { $_.sdk.version -and $_.sdk.files }) | Select-Object -First 1
       if (!$release) { throw "The official .NET 10 release feed did not report an SDK installer." }
       $file = @($release.sdk.files | Where-Object { $_.rid -eq "win-x64" -and $_.name -eq "dotnet-sdk-win-x64.exe" }) |
         Select-Object -First 1
-      if (!$file -or $file.url -notmatch "^https://") { throw "The official .NET 10 feed has no Windows x64 SDK executable." }
+      if (!$file -or $release.sdk.version -notmatch "^10\.\d+\.\d+$" -or $file.hash -notmatch "^[A-Fa-f0-9]{128}$" -or $file.url -notmatch "^https://") { throw "The official .NET 10 feed has no Windows x64 SDK executable." }
       return [pscustomobject]@{
         Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = [string]$release.sdk.version; Uri = [uri]$file.url
         Sha256 = $null; Sha512 = if ($file.hash -match "^[A-Fa-f0-9]{128}$") { [string]$file.hash } else { $null }
         AllowedHosts = @("microsoft.com", "dotnetcli.azureedge.net", "blob.core.windows.net")
-        Publisher = "Microsoft Corporation"; Method = ".NET SDK installer /quiet"
+        Publisher = "Microsoft Corporation"; BootstrapperKind = "dotnet-burn-x86-for-x64"; Method = ".NET SDK installer /quiet"
         Arguments = @("/install", "/quiet", "/norestart")
         Source = "https://learn.microsoft.com/dotnet/core/install/windows"
         Notes = "Installs the SDK, not only a runtime. The feed is constrained to the .NET 10 release channel."
@@ -330,21 +381,7 @@ function Get-QuickSetupInstallerDefinition {
         Notes = "Official stable x64 MSI; PowerShell 7 installs side-by-side with Windows PowerShell 5.1."
       }
     }
-    "seven-zip" {
-      $page = Get-QuickSetupOfficialMetadata -Uri "https://www.7-zip.org/" -AllowedHosts @("www.7-zip.org")
-      $match = [regex]::Match([string]$page.Content, 'https://github\.com/ip7z/7zip/releases/download/[^"''<> ]+/7z\d+-x64\.exe')
-      if (!$match.Success) { throw "The official 7-Zip page did not identify an x64 installer." }
-      $versionMatch = [regex]::Match($match.Value, "/download/([^/]+)/")
-      $version = if ($versionMatch.Success) { $versionMatch.Groups[1].Value } else { "latest stable from the official 7-Zip page" }
-      return [pscustomobject]@{
-        Automatic = $true; InstallerType = "exe"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = $version; Uri = [uri]$match.Value
-        Sha256 = $null; AllowedHosts = @("github.com", "githubusercontent.com")
-        Publisher = "Igor Pavlov"; Method = "7-Zip EXE /S"
-        Arguments = @("/S")
-        Source = "https://www.7-zip.org/"
-        Notes = "The vendor FAQ documents /S as the EXE installer's case-sensitive silent switch."
-      }
-    }
+    "seven-zip" { return Get-QuickSetupSevenZipInstaller }
     "firefox" {
       return [pscustomobject]@{
         Automatic = $true; InstallerType = "msi"; ExpectedArchitecture = "x64"; RequiresAdministrator = $true; Version = "latest stable"; Uri = [uri]"https://download.mozilla.org/?product=firefox-msi-latest-ssl&os=win64&lang=en-US"
@@ -367,6 +404,27 @@ function Get-QuickSetupInstallerDefinition {
       }
     }
     default { return $null }
+  }
+}
+
+function Assert-QuickSetupDownloadedInstaller {
+  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$MsiPlatformReader)
+  Assert-QuickSetupSafePath -Path $Path
+  foreach ($algorithm in @("SHA256", "SHA512")) {
+    $expected = $Definition.$algorithm
+    $length = if ($algorithm -eq "SHA256") { 64 } else { 128 }
+    if ($expected -and ($expected -notmatch "^[A-Fa-f0-9]{$length}$" -or
+        (Get-FileHash -LiteralPath $Path -Algorithm $algorithm).Hash -ine $expected)) {
+      throw "The cached/downloaded installer $algorithm does not match the official metadata."
+    }
+  }
+  $allowBootstrap = Test-QuickSetupBootstrapAuthorization -Id $Id -Definition $Definition
+  if (($Definition.BootstrapperKind -or $Definition.AllowX86BootstrapForX64) -and !$allowBootstrap) {
+    throw "The package-specific bootstrapper authorization metadata is invalid."
+  }
+  Test-QuickSetupInstallerFile -Path $Path -InstallerType $Definition.InstallerType -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:$allowBootstrap -MsiPlatformReader $MsiPlatformReader -ExpectedPackageName $Definition.PackageName -ExpectedPackagePublisher $Definition.PackagePublisher | Out-Null
+  if ($Definition.InstallerType -ne "msix") {
+    Assert-QuickSetupInstallerSignature -Id $Id -Definition $Definition -Path $Path -SignatureProvider $SignatureProvider
   }
 }
 
@@ -395,6 +453,10 @@ function Invoke-QuickSetupPackageInstall {
   if (!$Definition.Automatic -or $Definition.InstallerType -notin @("msi", "exe", "msix")) {
     throw "Package '$Id' does not have a verified automatic installer."
   }
+  $allowBootstrap = Test-QuickSetupBootstrapAuthorization -Id $Id -Definition $Definition
+  if (($Definition.BootstrapperKind -or $Definition.AllowX86BootstrapForX64) -and !$allowBootstrap) {
+    throw "The package-specific bootstrapper authorization metadata is invalid."
+  }
   $temporaryDirectory = Join-Path $env:TEMP ("configureMe-" + [guid]::NewGuid().ToString("N"))
   Assert-QuickSetupSafePath -Path $temporaryDirectory
   New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
@@ -404,24 +466,14 @@ function Invoke-QuickSetupPackageInstall {
     if ($CachedInstallerPath) {
       Assert-QuickSetupSafePath -Path $installerPath
       if (!(Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw "The verified installer cache file is missing." }
-      if ($Definition.Sha256) {
-        if ($Definition.Sha256 -notmatch "^[A-Fa-f0-9]{64}$" -or (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash -ine $Definition.Sha256) {
-          throw "The cached installer SHA-256 does not match the official metadata."
-        }
-      }
-      if ($Definition.Sha512) {
-        if ($Definition.Sha512 -notmatch "^[A-Fa-f0-9]{128}$" -or (Get-FileHash -LiteralPath $installerPath -Algorithm SHA512).Hash -ine $Definition.Sha512) {
-          throw "The cached installer SHA-512 does not match the official metadata."
-        }
-      }
     } else {
       if ($ProgressCallback) { $null = & $ProgressCallback "download-started" }
       Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider | Out-Null
       if ($ProgressCallback) { $null = & $ProgressCallback "download-completed" }
     }
     if ($ProgressCallback) { $null = & $ProgressCallback "verification-started" }
+    Assert-QuickSetupDownloadedInstaller -Id $Id -Definition $Definition -Path $installerPath -SignatureProvider $SignatureProvider -MsiPlatformReader $MsiPlatformReader
     if ($Definition.InstallerType -eq "msix") {
-      Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "msix" -ExpectedArchitecture $Definition.ExpectedArchitecture -ExpectedPackageName $Definition.PackageName -ExpectedPackagePublisher $Definition.PackagePublisher | Out-Null
       if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
       if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       if ($AppxPackageProvider) {
@@ -431,26 +483,20 @@ function Invoke-QuickSetupPackageInstall {
       }
       $exitCode = Invoke-QuickSetupInstallerProcess -Path "pymanager.exe" -Arguments @($Definition.RuntimeArguments) -ProcessRunner $ProcessRunner
     } elseif ($Definition.InstallerType -eq "msi") {
-      Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "msi" -ExpectedArchitecture $Definition.ExpectedArchitecture -MsiPlatformReader $MsiPlatformReader | Out-Null
-      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
-      if (!$signature.IsValid) { throw $signature.Message }
       if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
       if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       $arguments = @("/i", ('"' + $installerPath + '"')) + @($Definition.Arguments)
       $exitCode = Invoke-QuickSetupInstallerProcess -Path "msiexec.exe" -Arguments $arguments -ProcessRunner $ProcessRunner
     } else {
-      Test-QuickSetupInstallerFile -Path $installerPath -InstallerType "exe" -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$Definition.AllowX86BootstrapForX64) | Out-Null
-      $signature = Test-QuickSetupAuthenticodePublisher -Path $installerPath -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -SignatureProvider $SignatureProvider
-      if (!$signature.IsValid) { throw $signature.Message }
       if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
       if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
       $exitCode = Invoke-QuickSetupInstallerProcess -Path $installerPath -Arguments @($Definition.Arguments) -ProcessRunner $ProcessRunner
     }
     if ($ProgressCallback) { $null = & $ProgressCallback "installation-completed" }
-    [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -eq 3010) }
+    [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -in @(3010, 1641)) }
   } finally {
     Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
   }
 }
 
-Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupInstallerCachePath, Get-QuickSetupGithubReleaseInstaller, Get-QuickSetupLibreOfficeInstaller, Get-QuickSetupPythonManagerInstaller, Invoke-QuickSetupPackageInstall, Invoke-QuickSetupInstallerProcess
+Export-ModuleMember -Function Get-QuickSetupInstallerDefinition, Get-QuickSetupInstallerCachePath, Get-QuickSetupGithubReleaseInstaller, Get-QuickSetupLibreOfficeInstaller, Get-QuickSetupPythonInstaller, Get-QuickSetupSevenZipInstaller, Test-QuickSetupBootstrapAuthorization, Assert-QuickSetupInstallerSignature, Assert-QuickSetupDownloadedInstaller, Invoke-QuickSetupPackageInstall, Invoke-QuickSetupInstallerProcess

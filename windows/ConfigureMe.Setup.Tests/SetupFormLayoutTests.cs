@@ -15,6 +15,28 @@ public sealed class SetupFormLayoutTests
         {
             try
             {
+                foreach (var scale in new[] { 1f, 1.25f, 1.5f, 2f })
+                {
+                    using var scaled = new SetupForm(runStartupDetection: false);
+                    scaled.Show();
+                    scaled.Scale(new SizeF(scale, scale));
+                    scaled.Font = new Font("Segoe UI", 9F * scale);
+                    foreach (var size in new[] { new Size(1180, 900), new Size(900, 700), new Size(1024, 768) })
+                    {
+                        // Fixed physical viewport exercises wrapping/scrolling even at 200%.
+                        scaled.MinimumSize = Size.Empty;
+                        scaled.Size = size;
+                        Application.DoEvents();
+                        scaled.AssertPackageLayout();
+                        scaled.AssertButtonLayout();
+                    }
+                    var action = scaled.Controls.Find("ActionPanel", true).Single();
+                    var primary = action.Controls.OfType<FlowLayoutPanel>().SelectMany(panel => panel.Controls.OfType<Button>())
+                        .Single(button => button.Text == "Ausgewählte installieren");
+                    primary.Text = "Install selected applications";
+                    Application.DoEvents();
+                    scaled.AssertButtonLayout();
+                }
                 using var form = new SetupForm(runStartupDetection: false);
                 form.Show();
                 Application.DoEvents();
@@ -25,6 +47,7 @@ public sealed class SetupFormLayoutTests
                     form.Size = size;
                     Application.DoEvents();
                     form.AssertPackageLayout();
+                    form.AssertButtonLayout();
                 }
                 form.Scale(new SizeF(1.5f, 1.5f));
                 Application.DoEvents();

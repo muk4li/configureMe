@@ -174,13 +174,7 @@ function Invoke-QuickSetupGuiWorker {
       $downloadPhase = "verification-started"
       Write-QuickSetupGuiPackageEvent -Type "download-completed" -Id $id -Status "downloaded"
       Write-QuickSetupGuiPackageEvent -Type "verification-started" -Id $id -Status "verifying"
-      if ($definition.InstallerType -eq "msix") {
-        Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType "msix" -ExpectedArchitecture $definition.ExpectedArchitecture -ExpectedPackageName $definition.PackageName -ExpectedPackagePublisher $definition.PackagePublisher | Out-Null
-      } else {
-        Test-QuickSetupInstallerFile -Path $temporaryPath -InstallerType $definition.InstallerType -ExpectedArchitecture $definition.ExpectedArchitecture -AllowX86BootstrapForX64:([bool]$definition.AllowX86BootstrapForX64) | Out-Null
-        $signature = Test-QuickSetupAuthenticodePublisher -Path $temporaryPath -ExpectedPublisher $definition.Publisher -ExpectedCommonName $definition.ExpectedCommonName
-        if (!$signature.IsValid) { throw $signature.Message }
-      }
+      Assert-QuickSetupDownloadedInstaller -Id $id -Definition $definition -Path $temporaryPath
       if ($temporaryPath -ne $cachePath) {
         Move-Item -LiteralPath $temporaryPath -Destination $cachePath -Force
       }
@@ -280,10 +274,10 @@ function Invoke-QuickSetupGuiWorker {
           } else { $null }
           $cachedInstaller = if ($cachePath -and (Test-Path -LiteralPath $cachePath -PathType Leaf)) { $cachePath } else { $null }
           $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $installer -ProgressCallback $progressCallback -CachedInstallerPath $cachedInstaller
-          if ($installResult.ExitCode -notin @(0, 3010)) {
+          $result.InstallerExitCode = [int]$installResult.ExitCode
+          if ($installResult.ExitCode -notin @(0, 3010, 1641)) {
             $result.Status = "Failed"
             $result.ErrorCode = "installer-exit"
-            $result.InstallerExitCode = [int]$installResult.ExitCode
             $result.Phase = "installation"
             $result.Notes = "$($installer.Notes) Installer exited with code $($installResult.ExitCode)."
             $errors.Add("$name installer exit code $($installResult.ExitCode).")
