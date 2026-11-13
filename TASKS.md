@@ -190,14 +190,14 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-016
 
-**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Blocked** (Korrektur und lokale Verifikation vorhanden; PR/Windows-CI-Abnahme offen); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
+**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Blocked** (Korrektur, lokale Verifikation und Windows-CI bestanden; separater PR offen); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: konkurrierendes File.Move ohne Überschreiben sicher behandeln, jeden vorhandenen Gewinner erneut prüfen und GUI-/EXE-Self-Tests vom Benutzer-Cache isolieren.
 - Technische Evidenz: [AF-012](docs/audits/initial-audit.md#af-012); Windows-Lauf 43435533839 und deterministischer Zweithreadtest gegen ursprünglichen Code scheitern mit bereits vorhandenem Ziel.
 - Dateien/Module: EngineBundle.cs; SetupForm.cs; Program.cs; EngineBundleTests.cs; SetupFormLayoutTests.cs; TestApplicationData.cs; portable Testprojektverknüpfung; Windows-CI.
-- Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; GitHub-API derzeit 403, daher PR-Erstellung/Workflowstart noch nicht möglich. Kein Merge als Ersatz.
+- Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; GitHub-API derzeit 403, daher automatische PR-Erstellung nicht möglich. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden. Kein Merge als Ersatz.
 - Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
-- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und noch offenen tatsächlichen Windows-/CI-Belegen. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
+- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. Separater PR noch offen. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
 
 ## Priorisierte nächste Arbeit
 
