@@ -76,8 +76,7 @@ describe("profile configuration", () => {
     expect(script.indexOf("if ($DryRun)")).toBeLessThan(script.indexOf("Get-Command winget"));
   });
 
-  it("parses the generated bootstrap with Windows PowerShell without running it", () => {
-    if (process.platform !== "win32") return;
+  it.skipIf(process.platform !== "win32")("parses the generated bootstrap with Windows PowerShell without running it", () => {
     const parser = "$source = [Console]::In.ReadToEnd(); $tokens = $null; $errors = $null; [void][System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$errors); if ($errors.Count -gt 0) { $errors | ForEach-Object { [Console]::Error.WriteLine($_.Message) }; exit 1 }";
     const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", parser], {
       input: createWindowsBootstrapScript(),
