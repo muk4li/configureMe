@@ -2,6 +2,13 @@
 
 Stand: 2026-11-13. Diese Roadmap betrifft ausschließlich configureMe; [Centrality](https://github.com/muk4li/centrality) besitzt globale Prioritäten und Abhängigkeiten. Kein lokaler Phasenabschluss bedeutet eine globale Betriebsfreigabe. **Keine Termine zugesagt, keine Zukunftsintegration als vorhanden markiert.** Evidenz: [Initialaudit](docs/audits/initial-audit.md), Aufgaben: [TASKS.md](TASKS.md).
 
+
+## Public-first-Priorität seit PD-001..004
+
+Lokale Phasen behalten ihre IDs. Innerhalb dieser Phasen gilt: (1) CI-/Engine-Stabilität im getrennten PR #8, (2) öffentliche UI, (3) Mehrprofile/Sitzungsänderungen, (4) akzeptierter Snapshotvertrag vor Import, (5) Download-UX mit weiterhin gesperrter ausführbarer Distribution, (6) native Planübergabe/echte Windows-11-/Server-Abnahme, (7) optionale private Profile/Auth, (8) spätere Centrality-Geräteintegration. A/B dürfen vor Release-Signierung als nicht ausführbare Vorschau entstehen.
+
+CM-1 erhält CM-017..022: Produktvertrag, öffentliches Routing/Katalog, reine Kombination, Sitzungsspeicherung, begrenzte Serverprüfung und Browser-/CI-Preview. Voraussetzung sind explizite Trustgrenzen und unveränderte private Auth. Abschluss nur mit Unit-/API-/Browsernachweisen und ohne Engine-/Installeraktivität. CM-3 erhält CM-023 erst nach Vertragsannahme. CM-2/4 erhalten CM-024/025: Vergleich/Planexport jetzt, ausführbare ZIPs/native Imports und tatsächliche Kompatibilität erst nach deren Gates. Risiken: anonyme Ressourcenlast, irreführende Fixture-/Supportzusagen, manipulierter Browserzustand, voreilige Distribution. Keine globale Phasenfreigabe daraus.
+
 ## CM-0
 
 **Audit und Engineering-Baseline.** Status: Abschluss an CM-015 gebunden; offene Produktbefunde sind ausdrücklich zulässig, eine Sicherheitsfreigabe nicht.

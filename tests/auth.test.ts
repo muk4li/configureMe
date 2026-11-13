@@ -11,7 +11,11 @@ describe("signed sessions", () => {
   it("accepts a valid session and rejects a modified token", () => {
     const token = createSessionToken("test-user", "user");
     expect(verifySessionToken(token)?.username).toBe("test-user");
-    expect(verifySessionToken(`${token.slice(0, -1)}x`)).toBeUndefined();
+    const [payload, signature] = token.split(".");
+    const changedSignature = Buffer.from(signature, "base64url");
+    changedSignature[0] ^= 1; // Change signed bytes, not unused Base64url padding bits.
+    expect(changedSignature).not.toEqual(Buffer.from(signature, "base64url"));
+    expect(verifySessionToken(`${payload}.${changedSignature.toString("base64url")}`)).toBeUndefined();
   });
 
   it("rejects malformed, expired, and invalid-identity claims", () => {
