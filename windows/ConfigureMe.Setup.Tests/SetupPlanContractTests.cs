@@ -35,6 +35,19 @@ public sealed class SetupPlanContractTests
         Assert.Equal(0, result.ExitCode);
     }
 
+    [Fact]
+    public async Task FailedDetectionCannotContinueToPlanningOrAnyInstallation()
+    {
+        var plan = new ValidatedSetupPlan(["git"], ["git"], new Dictionary<string, string[]>(), new Dictionary<string, bool>());
+        var calls = new List<string>();
+        await Assert.ThrowsAsync<InvalidDataException>(() => SetupPlanDryRun.RunAsync(plan, (action, ids, confirmed) =>
+        {
+            calls.Add(action); Assert.False(confirmed);
+            return Task.FromResult(new WorkerRunResult(1, [], ""));
+        }));
+        Assert.Equal(new[] { "detect" }, calls);
+    }
+
     [Theory]
     [MemberData(nameof(Cases))]
     public void BothConsumersUseTheSameContractFixtures(string file, bool valid, bool native)

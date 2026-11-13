@@ -1,6 +1,6 @@
 # configureMe: technischer Repository-Leitfaden
 
-Stand: **2026-11-13**, Public-first A/B im Feature-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
+Stand: **2026-11-14**, Public-first A/B und UX #11 in main, Setup-Plan-v1 im Review-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
 
 ## Zweck und Grenzen
 
@@ -50,7 +50,7 @@ flowchart LR
 | Route | Verhalten / Grenze |
 | --- | --- |
 | `/` | öffentlicher Windows-Konfigurator ohne Login, zeigt auch optionale Auth-Fehlerhinweise |
-| `POST /api/public/plan` | begrenzte anonyme reine Previewberechnung; kein ZIP/EXE, keine Persistenz oder privaten Daten |
+| `POST /api/public/plan` | begrenzte anonyme Preview-/Setup-Plan-v1-JSON-Berechnung; kein ZIP/EXE, keine Persistenz oder privaten Daten |
 | `/api/health` | öffentliche statische Liveness `{status: ok}`; keine OAuth-/Deployment-Readiness-Zusage |
 | `/dashboard`, `/catalog`, `/profiles`, `/setup` | über `(portal)/layout.tsx` geschützt; ohne Session Redirect |
 | `GET /api/profiles` | Session erforderlich; liest alle lokalen Profile, kein Schreibendpunkt |

@@ -44,3 +44,7 @@ Host: Debian 13 x64, .NET SDK 10.0.403, PowerShell 7.5.4. Für alle dotnet-Befeh
 **Noch offen:** tatsächliche PR-Erstellung. API-POST bleibt Forbidden; Review-Branch und PR-Beschreibung sind vorbereitet. Daher bleibt CM-016 bis zum separaten PR formal Blocked, obwohl Korrektur und geforderte Windows-CI-Prüfung bestanden sind. Die einzige CI-Warnung betrifft Node-20-Metadaten bestehender @v4-Actions (vom Runner auf Node 24 ausgeführt); keine ungefragte Actions-Aktualisierung in diesem Fix.
 
 Die vier neuen Fälle sind im gemeinsamen EngineBundleTests-Code und werden sowohl vom portablen als auch vom Windows-Testprojekt kompiliert. Keine Produktdatei wird für die gewöhnliche Testausführung mutiert; die einmalige Red-Diagnose lief mit garantiertem Wiederherstellen der Quelle. Temporäre Testroots werden im Dispose/finally entfernt. Keine realen Drittanbieterinstallationen oder Änderungen an Windows/Systemkonfiguration durchgeführt.
+
+## Statuskorrektur 2026-11-14
+
+Der oben dokumentierte damalige PR-Blocker ist durch den inzwischen gemergten PR #8 erledigt (main e4a9ebc, erneut in 5f878a7 geprüft). CM-016 ist eindeutig konsolidiert und Done. Die historischen Test-/APIbefunde bleiben unverändert nachvollziehbar; dieser Status ist keine zusätzliche Release-/Handoff-Freigabe.

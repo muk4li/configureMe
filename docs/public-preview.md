@@ -1,6 +1,6 @@
 # Öffentliche Windows-Vorschau lokal testen
 
-Stufe A/B: öffentliche Planung mit **synthetischen lokalen Fixtures**, keine produktive myConfigs-data-Integration. Keine Installation, Engineausführung, Hersteller-Installerdownloads, Registryänderung oder Administratorrechte. GitHub OAuth ist für die Vorschau nicht nötig. Private Routen bleiben geschützt. Ausführbare Downloads sind gesperrt; der JSON-Export trägt `kind: configureme-preview`, `executable: false` und ist kein gültiges bestehendes Installerplanformat.
+Stufe A/B: öffentliche Planung mit **synthetischen lokalen Fixtures**, keine produktive myConfigs-data-Integration. Keine Installation, Engineausführung, Hersteller-Installerdownloads, Registryänderung oder Administratorrechte. GitHub OAuth ist für die Vorschau nicht nötig. Private Routen bleiben geschützt. Ausführbare Downloads sind gesperrt; der Preview-Export trägt `kind: configureme-preview`, `executable: false` und ist kein gültiges bestehendes Installerplanformat. Daneben exportiert der Reviewstand einen getrennten [Setup-Plan v1](setup-plan-contract.md) ausschließlich für lokalen Import/Dry-Run, ohne Installationsrechte.
 
 ## Windows: separater temporärer Arbeitsbereich
 
@@ -18,7 +18,7 @@ npm run preview
 
 Direkt im Repo sind `npm ci` und `npm run preview` ebenfalls möglich, erzeugen dort aber Build-/Dependencydateien. Der temporäre Checkout ist für maximale Trennung empfohlen. Ohne Git kann ein sauberer Source-Download in ein neues Verzeichnis entpackt werden; eine CI-EXE startet nicht diese Webvorschau.
 
-Für die noch nicht gemergte UX-Reviewfassung im Clonebefehl `feature/configurator-ux-round-1` statt `main` wählen. Geänderte Katalogfilter, bestehende Planhinweise und Screenshotnachweise: [UX-Runde 1](ux/feedback-round-1.md).
+UX-Runde 1 ist mit PR #11 gemergt. Für den noch nicht gemergten Setup-Plan-Reviewstand im Clonebefehl `feature/setup-plan-v1` statt `main` wählen. Geänderte Katalogfilter, bestehende Planhinweise und Screenshotnachweise: [UX-Runde 1](ux/feedback-round-1.md).
 
 ## Nachvollziehbare Schreibzugriffe
 

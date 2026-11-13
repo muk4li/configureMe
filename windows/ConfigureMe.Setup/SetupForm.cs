@@ -38,6 +38,7 @@ internal sealed class SetupForm : Form
     private bool _isPreparingDownloads;
     private bool _operationInProgress;
     private readonly List<Button> _exclusiveButtons = [];
+    private readonly List<Button> _manualSelectionButtons = [];
     private SetupRunReport? _runReport;
     private WorkerEvent? _lastSystemEvent;
     private bool _reflowingPackages;
@@ -212,6 +213,7 @@ internal sealed class SetupForm : Form
         selectionActions.Controls.Add(CreateButton("Auswahl aufheben", (_, _) => SelectAll(false)));
         selectionActions.Controls.Add(CreateButton("Nur fehlende", (_, _) => SelectMissing()));
         selectionActions.Controls.Add(CreateButton("Developer-Profil", (_, _) => LoadDeveloperProfileSelection()));
+        _manualSelectionButtons.AddRange(selectionActions.Controls.OfType<Button>());
         actionPanel.Controls.Add(selectionActions, 0, 0);
 
         var mainActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, WrapContents = true, Margin = new Padding(0) };
@@ -759,7 +761,15 @@ internal sealed class SetupForm : Form
             _reportPath = _runReport.JsonPath;
             if (_lastSystemEvent is not null) _runReport.Apply(_lastSystemEvent);
             foreach (var id in ordered)
-                _runReport.Record(id, PackageName(id), _states[id].IsInstalled ? "Already installed" : dryRun ? "Dry run" : "Pending", detectedVersion: _states[id].DetectedVersion);
+            {
+                var state = _states[id];
+                var failedDetection = _importedPlan is not null && dryRun && state.Detection is
+                    PackageDetectionState.Unknown or PackageDetectionState.Checking or PackageDetectionState.Failed;
+                _runReport.Record(id, PackageName(id), failedDetection ? "Failed" : state.IsInstalled ? "Already installed" : dryRun ? "Dry run" : "Pending",
+                    notes: failedDetection ? state.Error ?? "Detection incomplete; no change is asserted." : null,
+                    detectedVersion: state.DetectedVersion, errorCode: failedDetection ? "detection-error" : null,
+                    phase: failedDetection ? "detection" : null);
+            }
             _runReport.Write(completed: dryRun);
             if (dryRun)
             {
@@ -1174,6 +1184,7 @@ internal sealed class SetupForm : Form
             name.Text = PackageName(id) + (parents.Length == 0 ? "" : " (Abhängigkeit)");
         }
         _installSelectedButton.Enabled = false;
+        foreach (var button in _manualSelectionButtons) button.Enabled = false;
         AppendLog("Setup-Plan v1 importiert: " + string.Join(", ", plan.PackageIds) + ". Nur Prüfung/Dry-Run; keine Installation gestartet.");
         foreach (var reminder in plan.Reminders.OrderBy(item => item.Key))
             AppendLog($"Planhinweis {reminder.Key}: {reminder.Value}. Keine Konfigurations- oder Anmeldeaktion.");
@@ -1195,6 +1206,7 @@ internal sealed class SetupForm : Form
         }
         LoadDeveloperProfileSelection(); // Deliberate return to the preexisting manual profile, not imported authorization.
         _installSelectedButton.Enabled = true;
+        foreach (var button in _manualSelectionButtons) button.Enabled = true;
         _currentActionLabel.Text = "Manuelle Auswahl · bestehende Bestätigung vor Installation erforderlich";
     }
 
@@ -1316,7 +1328,8 @@ internal sealed class SetupForm : Form
     private void SetBusyState(bool busy, string message, bool marquee)
     {
         _currentActionLabel.Text = !busy && _lastFailureText is not null ?
-            _lastFailureText[..Math.Min(_lastFailureText.Length, 180)] : message;
+            _lastFailureText[..Math.Min(_lastFailureText.Length, 180)] : !busy && _importedPlan is not null
+                ? "Importierter Plan · nur Dry-Run · keine Installationsfreigabe" : message;
         _currentActionLabel.ForeColor = !busy && _lastFailureText is not null
             ? Color.FromArgb(255, 138, 138) : MutedColor;
         _progressBar.Visible = busy && marquee;
@@ -1326,6 +1339,7 @@ internal sealed class SetupForm : Form
         }
         var exclusive = _operationInProgress || _installQueue.IsBusy;
         foreach (var button in _exclusiveButtons) button.Enabled = !exclusive;
+        foreach (var button in _manualSelectionButtons) button.Enabled = !exclusive && _importedPlan is null;
         _installSelectedButton.Enabled = !exclusive && _importedPlan is null;
         foreach (var id in _states.Keys) UpdatePackageRow(id);
         _cancelButton.Enabled = _downloadCancellation is not null || _installQueue.IsBusy;
