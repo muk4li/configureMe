@@ -23,6 +23,7 @@
     <Compile Include="..\ConfigureMe.Setup\SetupRunReport.cs" Link="Source\SetupRunReport.cs" />
     <Compile Include="..\ConfigureMe.Setup\WorkerDiagnostic.cs" Link="Source\WorkerDiagnostic.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\GlobalUsings.cs" Link="Tests\GlobalUsings.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\TestApplicationData.cs" Link="Tests\TestApplicationData.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\EngineBundleTests.cs" Link="Tests\EngineBundleTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\InstallPlanResolverTests.cs" Link="Tests\InstallPlanResolverTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\PackageInstallQueueTests.cs" Link="Tests\PackageInstallQueueTests.cs" />

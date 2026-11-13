@@ -49,9 +49,9 @@ internal sealed class SetupForm : Form
     private bool _isAdministrator;
     private string? _lastFailureText;
 
-    public SetupForm(bool runStartupDetection = true)
+    public SetupForm(bool runStartupDetection = true, string? applicationDataRoot = null)
     {
-        _engine = EngineBundle.ExtractVerified();
+        _engine = EngineBundle.ExtractVerified(applicationDataRoot);
         _worker = new PowerShellWorkerClient(_engine);
         var catalog = JsonSerializer.Deserialize<CatalogDocument>(File.ReadAllText(_engine.CatalogPath), JsonOptions)
             ?? throw new InvalidDataException("The configureMe package catalog could not be loaded.");

@@ -7,6 +7,21 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (args.Length == 1 && args[0] is "--layout-self-test" or "--startup-layout-self-test" or "--self-test")
+        {
+            var testRoot = Directory.CreateTempSubdirectory("configureme-self-test-").FullName;
+            try { Run(args, testRoot); }
+            finally
+            {
+                EngineBundle.ValidatePath(testRoot);
+                Directory.Delete(testRoot, recursive: true);
+            }
+        }
+        else Run(args);
+    }
+
+    private static void Run(string[] args, string? applicationDataRoot = null)
+    {
         if (args.Length == 1 && args[0] == "--layout-self-test")
         {
             try
@@ -16,7 +31,7 @@ internal static class Program
                 Application.SetCompatibleTextRenderingDefault(false);
                 foreach (var scale in new[] { 1f, 1.25f, 1.5f, 2f })
                 {
-                    using var form = new SetupForm(runStartupDetection: false);
+                    using var form = new SetupForm(runStartupDetection: false, applicationDataRoot: applicationDataRoot);
                     form.Show();
                     Application.DoEvents();
                     form.AssertMainLayout();
@@ -49,7 +64,7 @@ internal static class Program
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            using var form = new SetupForm(runStartupDetection: false);
+            using var form = new SetupForm(runStartupDetection: false, applicationDataRoot: applicationDataRoot);
             using var timer = new System.Windows.Forms.Timer { Interval = 300 };
             timer.Tick += (_, _) =>
             {
@@ -76,7 +91,7 @@ internal static class Program
         {
             try
             {
-                var engine = EngineBundle.ExtractVerified();
+                var engine = EngineBundle.ExtractVerified(applicationDataRoot);
                 var worker = new PowerShellWorkerClient(engine);
                 var result = worker.RunAsync("list", null, false).GetAwaiter().GetResult();
                 Environment.ExitCode = result.ExitCode == 0 && result.Events.Any(item => item.Type == "catalog") ? 0 : 1;

@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # Validate this repair without a main push when PR API access is unavailable.
+    branches: [main, fix/engine-cache-extraction-race]
     tags: ["quicksetup-v*"]
   workflow_dispatch:
 
@@ -50,19 +51,23 @@ jobs:
         shell: powershell
         run: |
           $resultsPath = Join-Path $env:RUNNER_TEMP "configureMe-gui-test-results"
-          dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=gui-tests.trx" --results-directory $resultsPath
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $resultFile = Join-Path $resultsPath "gui-tests.trx"
-            if (Test-Path -LiteralPath $resultFile) {
-              [xml]$results = Get-Content -LiteralPath $resultFile -Raw
-              foreach ($test in @($results.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq "Failed" })) {
-                $message = "$($test.testName): $($test.Output.ErrorInfo.Message)`n$($test.Output.ErrorInfo.StackTrace)"
-                $escaped = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
-                Write-Host "::error title=Windows GUI test failure::$escaped"
+          # Three independent full-suite runs; any failure fails the job, never retry-to-pass.
+          for ($iteration = 1; $iteration -le 3; $iteration++) {
+            $resultName = "gui-tests-$iteration.trx"
+            dotnet test windows\ConfigureMe.Setup.Tests\ConfigureMe.Setup.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=$resultName" --results-directory $resultsPath
+            $testExit = $LASTEXITCODE
+            if ($testExit -ne 0) {
+              $resultFile = Join-Path $resultsPath $resultName
+              if (Test-Path -LiteralPath $resultFile) {
+                [xml]$results = Get-Content -LiteralPath $resultFile -Raw
+                foreach ($test in @($results.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq "Failed" })) {
+                  $message = "$($test.testName): $($test.Output.ErrorInfo.Message)`n$($test.Output.ErrorInfo.StackTrace)"
+                  $escaped = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+                  Write-Host "::error title=Windows GUI test failure::$escaped"
+                }
               }
+              exit $testExit
             }
-            exit $testExit
           }
 
       - name: Retain failed GUI test results
