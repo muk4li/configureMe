@@ -42,6 +42,12 @@ describe("bounded anonymous preview API", () => {
     const response = await POST(request({ ...freshSelection(), profileIds: ["missing"] }));
     expect(await response.json()).toMatchObject({ valid: false, issues: [{ code: "UNKNOWN_PROFILE" }] });
   });
+  it("still refuses an injected dependency exclusion even though normal UI actions prevent it", async () => {
+    const response = await POST(request({ ...freshSelection(), profileIds: [], addedPackageIds: ["github-cli"], removedPackageIds: ["git"] }));
+    const plan = await response.json();
+    expect(plan.valid).toBe(false); expect(plan.executable).toBe(false);
+    expect(plan.issues.map((issue: { code: string }) => issue.code)).toContain("REQUIRED_REMOVAL");
+  });
   it("returns bounded rate-limit errors before doing body work", async () => {
     vi.mocked(isPublicPlanRateLimited).mockReturnValue(true);
     const response = await POST(request());
