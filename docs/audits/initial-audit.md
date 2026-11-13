@@ -266,3 +266,6 @@ Abschließende lokale Konsistenzprüfung: **7 Markdown-Dateien, 91 lokale Links/
 - Maßnahme: kein Überschreiben; bei konkurrierendem Ziel dieselbe Pfad-/Reparse-/Größen-/Hashprüfung wie bei Cachetreffern. Einzig eigene temporäre Dateien entfernen. Expliziter Test-Root für SetupForm und temporäre Roots für Self-Tests. Details und Grenzen: [Folgeprüfprotokoll](engine-cache-race.md).
 
 Diese Ergänzung ändert weder die ursprünglichen Audit-Snapshot-Ergebnisse noch den offenen AF-006/CM-006-Handoff-Befund. CM-016 wird erst nach tatsächlichem Windows-CI-Erfolg und separatem PR Done.
+## Folgeauftrag 2026-11-13: Public-first A/B
+
+PD-001..004 des Eigentümers autorisieren öffentliche Windows-Planung ohne Login mit begrenzter Serverprüfung und synthetischen Fixtures. Die ursprüngliche Bestandsaufnahme oben beschreibt weiterhin ihren Basiscommit. [A/B-Implementierung und tatsächliche Prüfungen](public-first-a-b.md) dokumentieren den neuen Stand einschließlich erneuter F-07-Prüfung. [Snapshotintegration](../integrations/public-snapshot-v1-proposal.md) bleibt Proposed und ausführbare Downloads bleiben hinter CM-001/005/006/010. Keine globale Centrality-Entscheidung wurde umgeschrieben; der separate Engine-Fix/PR #8 wird nicht in diese Featurearbeit übernommen.

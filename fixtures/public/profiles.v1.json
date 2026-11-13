@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "local-fixture-v1",
+  "sourceKind": "local-fixture",
+  "profiles": [
+    { "id": "essentials", "name": "Everyday essentials", "description": "A small foundation: Git, VS Code and 7-Zip.", "targets": ["windows-11", "windows-server-2022"], "packages": ["git", "vscode", "seven-zip"], "options": {} },
+    { "id": "developer", "name": "Developer toolkit", "description": "GitHub CLI, Node.js LTS, Python and PowerShell.", "targets": ["windows-11", "windows-server-2022"], "packages": ["github-cli", "nodejs-lts", "python", "powershell-7"], "options": { "configureGit": true, "interactiveAuthentication": true } },
+    { "id": "server-operations", "name": "Server operations", "description": "SDK and OpenSSH planning for Server 2022 Desktop Experience.", "targets": ["windows-server-2022"], "packages": ["dotnet-10-sdk", "openssh-client", "powershell-7"], "options": { "interactiveAuthentication": false } },
+    { "id": "optional-tools", "name": "Optional & manual tools", "description": "See web, manual and detection-only steps before deciding.", "targets": ["windows-server-2022"], "packages": ["teams", "docker-desktop", "github-copilot-cli"], "options": {} }
+  ]
+}

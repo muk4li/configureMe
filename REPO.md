@@ -1,12 +1,12 @@
 # configureMe: technischer Repository-Leitfaden
 
-Stand: **2026-11-13**, geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
+Stand: **2026-11-13**, Public-first A/B im Feature-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
 
 ## Zweck und Grenzen
 
 configureMe erstellt nachvollziehbare Softwareauswahlen und lokale Windows-Setup-Pakete. Das Portal installiert nicht im Browser und besitzt keinen Geräte-Agenten. Die lokale Engine führt erst nach Bestätigung kontrollierte Installationsdefinitionen aus. Webportal und native EXE sind unabhängig nutzbare Einstiege; die EXE benötigt weder Portal noch Git, Node, WinGet oder globales .NET.
 
-Implementiert sind öffentliche Produktseite, geschütztes Portal, GitHub-OAuth mit Allowlist, signierte Sessions, lokaler Profilprovider, Paketkatalog, Abhängigkeitsauflösung, Windows-ZIP-Erzeugung sowie ein selbstständiges Windows-Server-2022-Setup mit WinForms, Worker und Berichten. Kein implementierter GitHub-Konfigurationsprovider, Profil-Webeditor, dauerhafte Datenbank, zentrale Session-Widerrufsdatenbank, OIDC-/Hub- oder VPN-Integration. Linux/macOS sind Planungsbezeichnungen; im aktuellen Katalog sind dafür keine installierbaren Pakete freigegeben.
+Implementiert sind der öffentliche Windows-Konfigurator mit synthetischen Fixtures, Mehrprofil-/Sitzungsplanung und nicht ausführbarem servervalidiertem JSON-Export sowie das weiterhin geschützte Portal, GitHub-OAuth mit Allowlist, signierte Sessions, lokaler Profilprovider, Paketkatalog, Abhängigkeitsauflösung, Windows-ZIP-Erzeugung sowie ein selbstständiges Windows-Server-2022-Setup mit WinForms, Worker und Berichten. Kein implementierter GitHub-Konfigurationsprovider, Profil-Webeditor, dauerhafte Datenbank, zentrale Session-Widerrufsdatenbank, OIDC-/Hub- oder VPN-Integration. Linux/macOS sind Planungsbezeichnungen; im aktuellen Katalog sind dafür keine installierbaren Pakete freigegeben.
 
 ## Stack und Verzeichnisse
 
@@ -49,7 +49,8 @@ flowchart LR
 
 | Route | Verhalten / Grenze |
 | --- | --- |
-| `/` | öffentliche Produktseite, zeigt auch Auth-Fehlerhinweise |
+| `/` | öffentlicher Windows-Konfigurator ohne Login, zeigt auch optionale Auth-Fehlerhinweise |
+| `POST /api/public/plan` | begrenzte anonyme reine Previewberechnung; kein ZIP/EXE, keine Persistenz oder privaten Daten |
 | `/api/health` | öffentliche statische Liveness `{status: ok}`; keine OAuth-/Deployment-Readiness-Zusage |
 | `/dashboard`, `/catalog`, `/profiles`, `/setup` | über `(portal)/layout.tsx` geschützt; ohne Session Redirect |
 | `GET /api/profiles` | Session erforderlich; liest alle lokalen Profile, kein Schreibendpunkt |
@@ -124,7 +125,7 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\co
 
 Unter Linux mit .NET 10 und PowerShell 7: `dotnet test windows/ConfigureMe.Setup.Portable.Tests/ConfigureMe.Setup.Portable.Tests.csproj --configuration Release`, sowie `pwsh -NoProfile -File tests/installer-regressions.ps1`, `tests/codex-desktop-script.ps1` und `tests/quicksetup-portable.ps1`. Windows-GUI/PS5.1 können dort nicht ausgeführt werden. Keine echten Installer in gewöhnlichen Tests. Die vollständige [manuelle Windows-Abnahme](docs/windows-setup-0.3.0-retest.md) verlangt separat freigegebene isolierte Testmaschinen.
 
-Aktuelle Auditergebnisse und exakte Grenzen stehen im [Prüfprotokoll](docs/audits/initial-audit.md#prufungen). Wichtig: Vitest zählt auf Linux auch einen früh zurückkehrenden Windows-Parser-Test als bestanden; dies ist kein ausgeführter Windows-Test. Der bestehende Workflow enthält keine Web-Qualitätsjobs (CM-004).
+Aktuelle Auditergebnisse und exakte Grenzen stehen im [Prüfprotokoll](docs/audits/initial-audit.md#prufungen). Wichtig: Der bisherige Audit-Snapshot enthielt einen stillen Windows-Parser-Frühreturn. Dieser Fall wird jetzt unter Linux explizit übersprungen und im Windows-Webjob tatsächlich ausgeführt. Der neue Webworkflow prüft Linux und Windows; der Windows-Parserfall ist unter Linux explizit skipped. Der getrennte Windows-Setup-Workflow bleibt erhalten.
 
 ## Betrieb und Cross-Repo-Verträge
 
@@ -141,3 +142,23 @@ Compose beschreibt Loopback-Bindung, nicht privilegierten Container, read-only R
 | Temporärer Netzzugang | spätere Centrality-Phase; kein vorhandener Control-Plane-/MFA-/TTL-/Widerrufsvertrag |
 
 [Quellenregister und Informationsgrenzen](docs/audits/initial-audit.md#quellen), [Integrationsvorschlag](docs/integrations/configuration-contract-proposal.md), [lokale Aufgaben](TASKS.md). Private Betriebs- und Personendetails werden hier nicht kopiert.
+
+## Public-first A/B: Ist und Soll
+
+[PD-001..004 und Quellen](docs/decisions/public-first-mvp.md) autorisieren öffentliche Planung, keine produktive Distribution. [Vorschau](docs/public-preview.md) läuft ohne OAuth und ohne Engine. src/lib/public-planning.ts hält Strict-Schemas, Zielmatrix, deterministische Kombination und Herkunft; public-session.ts validiert gespeicherte Auswahl. Die React-Komponente synchronisiert sessionStorage über useSyncExternalStore, keine Benutzerpersistenz im Server. /api/public/plan prüft Auswahl mit eigener Fixture/Kataloginstanz neu, maximal 8 KiB, 5 Sekunden Bodyzeit, 60 Requests/Minute und vier parallele Bodyleser je Prozess, Same-Origin/JSON, no-store. Diese Grenzen ersetzen keine verteilten Proxy-/DoS-Kontrollen.
+
+```mermaid
+flowchart LR
+    Fixture[Lokale synthetische Fixtures] --> Rules[Reine validierte Planungslogik]
+    Catalog[Vertrauenswürdiger Anwendungskatalog] --> Rules
+    Browser[Anonymer Konfigurator] --> Session[sessionStorage: deklarative Auswahl]
+    Session --> Rules
+    Rules --> Review[Herkunft, Optionen, Abhängigkeiten und Konflikte]
+    Review --> API[Begrenzte öffentliche Preview-API]
+    API --> Check[Server revalidiert und berechnet neu]
+    Check --> JSON[Nicht ausführbares Preview-JSON]
+    Future[Geplanter freigegebener myConfigs-Snapshot] -.-> Rules
+    JSON -.-> Gate[Geplante lokale Adapter und Releasegates vor Setupdownload]
+```
+
+Aktuell keine produktive myConfigs-Quelle: fixtures/public/profiles.v1.json ist ausdrücklich local-fixture-v1 mit sourceCommit=null. Echter Import/Adapter: [Proposed-Vertrag](docs/integrations/public-snapshot-v1-proposal.md), CM-003/011/023; Runtime-GitHub-Reads nicht Teil der öffentlichen Architektur. Bestehender LocalConfigurationProvider/private Profile bleiben davon getrennt. Windows 11 plant WinGet-fähige IDs, Server 2022 vorhandene native Modi, x64 ausschließlich. Echte Windows-11-/Server-VM-Installerabnahme bleibt offen. ZIP/GUI/Plan-Datei-Vergleich und Migrationsgates stehen im Produktauftrag. Keine Installerdefinitionen oder privaten Authrechte geändert.

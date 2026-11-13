@@ -44,3 +44,7 @@ next-env.d.ts
 # .NET
 **/bin/
 **/obj/
+
+# browser test evidence (CI retains failures separately)
+/test-results/
+/playwright-report/

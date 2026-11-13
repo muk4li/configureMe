@@ -12,6 +12,14 @@ Arbeite als verantwortlicher Engineering-Partner: kleine wartbare Änderungen, �
 - Ist Centrality nicht erreichbar, Zugriffslücke melden, lokal unabhängige Arbeiten fortführen und grenzverändernde Entscheidungen blockieren. Keine Vorgaben erfinden oder akzeptierte Entscheidungen stillschweigend überschreiben.
 - Home-/Cloud-Betrieb verbleibt in den Infrastruktur-Repos, Hub-UI in personal-platform, Agentenorchestrierung in myagents. Keine gemeinsame App-Datenbank, Adminidentität oder zentrale Laufzeitabhängigkeit ohne belegten Bedarf und akzeptierten Vertrag.
 
+## Public-first-Produktrahmen
+
+- PD-001 bis PD-004 aus [Produktauftrag](docs/decisions/public-first-mvp.md) gelten lokal: öffentliche Windows-Planung ohne Login, optionale private Auth, lokale unabhängige Ausführung, versionierte deklarative Snapshots. Centrality bleibt globale Architekturautorität.
+- Profile deterministisch kombinieren, Herkunft/Abhängigkeiten/Konflikte sichtbar halten; explizite Sitzungshinweise dürfen Sicherheits-/Plattformregeln nie überschreiben. Browserzustand ist untrusted, serverseitig neu validieren.
+- Öffentliche und geschützte APIs getrennt halten. Keine privaten Profile, Secrets, VPN-Daten oder frei definierbaren Aktionen in öffentlichen Snapshots/sessionStorage/Downloads. Kein Auth-Bypass im Previewmodus.
+- Synthetische Fixtures ausdrücklich kennzeichnen, nicht als myConfigs-Integration darstellen. Echter Import erst nach akzeptiertem Vertrag, ausführbare Downloads erst nach Release-/Windowsfreigaben. Preview-JSON ist kein ausführbarer Installationsplan.
+- Parallelen Engine-Fix/PR #8 nicht in Featurearbeit mischen oder überschreiben; reservierte Task-IDs erhalten. Preview und Browserprüfungen: [Anleitung](docs/public-preview.md).
+
 ## Sicherheitsgrenzen
 
 - Das Webportal plant und erzeugt Downloads; es führt keine Installationen auf Zielgeräten aus. Kein Remote-Execution-Agent oder VPN-Enrollment als Nebenänderung.
