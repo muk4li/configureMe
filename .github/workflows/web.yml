@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/public-windows-configurator]
+    branches: [main, feature/configurator-ux-round-1]
   workflow_dispatch:
 permissions:
   contents: read
