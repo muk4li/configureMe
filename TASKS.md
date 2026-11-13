@@ -9,7 +9,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-001](#cm-001) | P0 | Ready | CM-2 | Unabhängige Release-Vertrauenskette und Distributionsgate |
 | [CM-002](#cm-002) | P1 | Ready | CM-1 | Clean-Checkout-Docker- und Env-Voraussetzungen reparieren |
 | [CM-003](#cm-003) | P1 | Ready | CM-3 | F-07-Vertrag mit Datenowner abstimmen |
-| [CM-004](#cm-004) | P1 | Ready | CM-1 | Web-Qualitätsgates und echte Testzählung ergänzen |
+| [CM-004](#cm-004) | P1 | In Progress | CM-1 | Web-Qualitätsgates und echte Testzählung ergänzen |
 | [CM-005](#cm-005) | P1 | Blocked | CM-2 | Vollständige Windows-Server-2022-Abnahme belegen |
 | [CM-006](#cm-006) | P1 | Ready | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
 | [CM-007](#cm-007) | P2 | Ready | CM-1 | Session-Widerruf und Allowlist-Lebenszyklus entscheiden |
@@ -23,12 +23,12 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-015](#cm-015) | P1 | Done | CM-0 | Engineering-Baseline und Initialaudit reviewfähig erstellen |
 
 | [CM-016](#cm-016) | P1 | In Progress | CM-1 | Reserviert: separater Engine-Cache-Fix, Review #8 |
-| [CM-017](#cm-017) | P1 | In Progress | CM-1 | Public-first-Produktvertrag und Architektur dokumentieren |
-| [CM-018](#cm-018) | P1 | In Progress | CM-1 | Öffentlicher Windows-Konfigurator und Katalog |
-| [CM-019](#cm-019) | P1 | In Progress | CM-1 | Deterministische Mehrprofil-/Abhängigkeitsauflösung |
-| [CM-020](#cm-020) | P1 | In Progress | CM-1 | Sitzungsspeicherung und explizite Overrides |
-| [CM-021](#cm-021) | P1 | In Progress | CM-1 | Begrenzte anonyme serverseitige Planvalidierung |
-| [CM-022](#cm-022) | P1 | In Progress | CM-1 | Isolierte Preview und Web-/Browser-CI |
+| [CM-017](#cm-017) | P1 | Done | CM-1 | Public-first-Produktvertrag und Architektur dokumentieren |
+| [CM-018](#cm-018) | P1 | Done | CM-1 | Öffentlicher Windows-Konfigurator und Katalog |
+| [CM-019](#cm-019) | P1 | Done | CM-1 | Deterministische Mehrprofil-/Abhängigkeitsauflösung |
+| [CM-020](#cm-020) | P1 | Done | CM-1 | Sitzungsspeicherung und explizite Overrides |
+| [CM-021](#cm-021) | P1 | Done | CM-1 | Begrenzte anonyme serverseitige Planvalidierung |
+| [CM-022](#cm-022) | P1 | Done | CM-1 | Isolierte Preview und Web-/Browser-CI |
 | [CM-023](#cm-023) | P1 | Blocked | CM-3 | Snapshotvertrag akzeptieren und offline importieren |
 | [CM-024](#cm-024) | P1 | Blocked | CM-2 | Sichere öffentliche Setup-Downloadintegration |
 | [CM-025](#cm-025) | P1 | Blocked | CM-2 | Windows-Matrix und lokale Planübergabe nachweisen |
@@ -68,7 +68,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-004
 
-**Web-Qualitätsgates und echte Testzählung ergänzen** — P1; Status: **Ready**; Komponente: Web/CI/QA; Phase: [CM-1](ROADMAP.md#cm-1).
+**Web-Qualitätsgates und echte Testzählung ergänzen** — P1; Status: **In Progress**; Komponente: Web/CI/QA; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Node-Lockfile-Install, Typecheck, Lint, Tests und Build in CI prüfen. Plattformabhängige Parserprüfung wirklich unter Windows ausführen oder explizit als nicht ausgeführt kennzeichnen.
 - Technische Evidenz: AF-004: nur Windows-Workflow; Vitest-Parserfall beendet unter Linux ohne Assertion und wird trotzdem als passed gezählt.
@@ -76,6 +76,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 - Abhängigkeiten/Freigaben: Keine Produktänderung; Testtoolversionen aus Lockfile.
 - Akzeptanzkriterien: Alle Webgates auf PR prüfbar; keine stille Nullassertion als Windows-Nachweis; PR-Fehler führt ungleich null.
 - Verifikation: Absichtlich gebrochene Typ-/Test-/Parserfixtures im geeigneten Testzweig; tatsächliche Testzahl und Plattform im Ergebnis.
+
+A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt grün (Lauf 43454638089), stille Linux-Frühreturns entfernt. Die ursprünglich weiter geforderte gezielte CI-Gate-Fault-Injection ist nicht durchgeführt; deshalb diese ältere Aufgabe nicht Done. CM-017..022 besitzen ihre eigenen erfüllten A/B-Kriterien.
 
 ## CM-005
 
@@ -211,7 +213,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-017
 
-**Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **In Progress**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
+**Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **Done**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: PD-001..004, Ist/Soll, Datenowner, Migrations- und Sicherheitsgates festhalten.
 - Technische Evidenz: Aktueller Nutzerauftrag; docs/decisions/public-first-mvp.md; Centrality/myConfigs-SHAs erneut geprüft.
@@ -222,7 +224,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-018
 
-**Öffentlicher Windows-Konfigurator und Katalog** — P1; Status: **In Progress**; Komponente: Web/UI; Phase: [CM-1](ROADMAP.md#cm-1).
+**Öffentlicher Windows-Konfigurator und Katalog** — P1; Status: **Done**; Komponente: Web/UI; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Öffentlicher Einstieg ohne Login, zwei x64-Ziele, Profile/Kategorien/Modi und finale Übersicht.
 - Technische Evidenz: PD-001/004; eigene öffentliche Komponente, private Routengruppe unverändert.
@@ -233,7 +235,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-019
 
-**Deterministische Mehrprofil-/Abhängigkeitsauflösung** — P1; Status: **In Progress**; Komponente: Reiner Planer; Phase: [CM-1](ROADMAP.md#cm-1).
+**Deterministische Mehrprofil-/Abhängigkeitsauflösung** — P1; Status: **Done**; Komponente: Reiner Planer; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Null bis mehrere Profile, Herkunft, Deduplizierung, transitive Abhängigkeiten, Konflikte und Grenzen.
 - Technische Evidenz: PD-003; src/lib/public-planning.ts und öffentliche Unitfälle.
@@ -244,7 +246,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-020
 
-**Sitzungsspeicherung und explizite Overrides** — P1; Status: **In Progress**; Komponente: Browserzustand; Phase: [CM-1](ROADMAP.md#cm-1).
+**Sitzungsspeicherung und explizite Overrides** — P1; Status: **Done**; Komponente: Browserzustand; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: sessionStorage mit striktem Snapshot-/Selektionsschema; additions/removals und begrenzte Optionshinweise.
 - Technische Evidenz: PD-003; public-session.ts, use-public-selection.ts.
@@ -255,7 +257,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-021
 
-**Begrenzte anonyme serverseitige Planvalidierung** — P1; Status: **In Progress**; Komponente: Öffentliche API/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
+**Begrenzte anonyme serverseitige Planvalidierung** — P1; Status: **Done**; Komponente: Öffentliche API/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Nur eingeschränkte deklarative Auswahl neu berechnen; keine Installer- oder ZIP-Aktivität.
 - Technische Evidenz: Neue öffentliche Angriffsfläche; POST /api/public/plan, public-request.ts, eigener Ratebucket.
@@ -266,7 +268,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 
 ## CM-022
 
-**Isolierte Preview und Web-/Browser-CI** — P1; Status: **In Progress**; Komponente: Entwicklung/QA; Phase: [CM-1](ROADMAP.md#cm-1).
+**Isolierte Preview und Web-/Browser-CI** — P1; Status: **Done**; Komponente: Entwicklung/QA; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Loopback-Preview ohne OAuth/Engine, Schreibzugriffe dokumentieren; reproduzierbare echte Browsertests und Webgates.
 - Technische Evidenz: scripts/Start-WebPreview.mjs; docs/public-preview.md; neuer Webworkflow.
@@ -321,3 +323,5 @@ Public-first A/B (CM-017..022) ist durch PD-001..004 zusätzlich autorisiert. C/
 CM-009 ist ein kleiner parallel ausführbarer lokaler Korrektur-PR; CM-005 bleibt bis zur Freigabe realer VM-Installationen blockiert. Eine Dokumentationsbaseline macht keine dieser Produktaufgaben automatisch Done.
 
 CM-012-Präzisierung durch PD-002: kein GitHub-Runtimeprovider für die öffentliche Seite. Ein künftiger Reader wäre höchstens ein separat autorisierter manueller Snapshotimport; CM-003/011/023 müssen zuerst erfüllt sein.
+
+A/B-Abschlussnachweis: [Web-CI 43454638089](https://github.com/muk4li/configureMe/actions/runs/43454638089) für c5bcdba, beide Plattformjobs erfolgreich; lokal 39 Unit-/API-Tests plus 1 expliziter Linux-Skip, 12 Browserfälle, Preview-Smoke und Scopeprüfung. CM-017..022 Done bedeutet keine C/D-, Release-, Deployment- oder globale Architekturfreigabe.
