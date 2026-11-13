@@ -21,6 +21,8 @@ public sealed class SetupPlanFileTests
         var snapshot = SetupPlanFile.ReadSnapshot(path);
         File.WriteAllText(path, "{}");
         Assert.Equal(fixture, snapshot);
+        var engine = EngineBundle.ExtractVerified(data.Root);
+        Assert.NotNull(SetupPlanContract.Validate(snapshot, File.ReadAllBytes(engine.CatalogPath), new("windows-server-2022", "x64")));
         File.WriteAllBytes(path, new byte[SetupPlanContract.MaxBytes + 1]);
         Assert.Throws<InvalidDataException>(() => SetupPlanFile.ReadSnapshot(path));
     }

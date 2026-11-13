@@ -13,7 +13,7 @@ describe("setup-plan v1", () => {
     else expect(() => parseSetupPlan(bytes)).toThrow();
   });
   it("exports exactly the shared native end-to-end fixture", () => {
-    expect(createSetupPlan(selection)).toEqual(JSON.parse(readFileSync("tests/fixtures/setup-plan-v1/valid-server.json", "utf8")));
+    expect(Buffer.from(JSON.stringify(createSetupPlan(selection), null, 2) + "\n")).toEqual(readFileSync("tests/fixtures/setup-plan-v1/valid-server.json"));
   });
   it("binds the contract to the exact trusted catalog bytes", () => {
     expect(createHash("sha256").update(readFileSync("bootstrap/windows-server-2022-developer/config/catalog.json")).digest("hex"))

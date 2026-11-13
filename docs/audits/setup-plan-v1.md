@@ -16,9 +16,9 @@ Old merged UX branch push trigger removed. CM-016 consolidated under its stable 
 
 ## Actual checks (in progress)
 
-- Local Linux: typegen, typecheck, lint passed; test counts updated at completion.
+- Local Linux: typegen, typecheck, lint passed; 95 Unit/API tests passed with 1 explicit Linux skip of the Windows parser.
 - Default Turbopack production build failed because the runtime denies local sockets (`EPERM`); an approved out-of-sandbox invocation had the same failure. Webpack diagnostic also failed in environment TypeScript config subprocess handling. Browser test server cannot start. Neither is counted as passed.
 - Native Windows GUI and portable projects cross-build with zero warnings/errors. Standard local VSTest aborts on socket permission denial, not a passed run. A temporary out-of-repository in-process diagnostic invoked 43 shared native contract/target/dry-run assertions successfully; this is supplementary, not a full test-suite result.
-- GitHub PR creation via `gh pr create`: `POST api.github.com/graphql: Forbidden`. Review branch pushed; [manual PR comparison](https://github.com/muk4li/configureMe/compare/main...feature/setup-plan-v1?expand=1). Workflow outcomes still to be recorded.
+- GitHub PR creation via `gh pr create`: `POST api.github.com/graphql: Forbidden`. Review branch pushed; [manual PR comparison](https://github.com/muk4li/configureMe/compare/main...feature/setup-plan-v1?expand=1). Web CI [43529661662](https://github.com/muk4li/configureMe/actions/runs/43529661662) for d20942d passed on Linux and Windows, including production builds and all 22 browser cases on Linux. Complete Windows workflow result still pending.
 
 No physical Windows 11/Server VM, real monitor DPI, genuine vendor installation, or independently signed release acceptance performed in this task. Existing CET/update requirements and self-contained production model remain unchanged.

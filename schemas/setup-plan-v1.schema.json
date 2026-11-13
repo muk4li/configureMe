@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://configureme.invalid/schemas/setup-plan-v1.schema.json",
+  "$id": "urn:configureme:setup-plan:1",
   "title": "configureMe declarative setup plan v1 (no execution authority)",
   "type": "object",
   "additionalProperties": false,

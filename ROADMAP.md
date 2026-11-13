@@ -81,3 +81,7 @@ UX-Runde 1 / CM-026: Dependency-Zustände und Targetkatalog konsistent machen, D
 - Abhängigkeiten: globale Centrality-Phase 7 und deren Sicherheitsgates; Tailscale für eigene vertrauenswürdige Geräte autorisiert diese Integration nicht.
 - Akzeptanz: anfangs nur vollständiger reviewter Vorschlag; spätere Implementierung erfordert separate Zustimmung sowie Negativtests für Ablauf, Widerruf, Offline/Crash, Schlüssel-/Scope-Trennung und minimale Rechte.
 - Abschlussbeleg: lokale Vorbereitung schließt die globale Phase 7 ausdrücklich nicht ab. Keine Control-Plane, Geräteschlüssel oder temporären Netzrechte werden im aktuellen Auftrag implementiert.
+
+## Masterauftrag Setup-Plan v1 (2026-11-14)
+
+Der aktuelle Auftrag autorisiert den lokalen JSON-Vertrag, öffentlichen JSON-Export und sicheren Import/Dry-Run in der bestehenden EXE (CM-027..031), unabhängig von der weiterhin gesperrten ausführbaren Distribution. Keine Auslagerung/zweite Engine. Reihenfolge: ZIP-Ursache/Regression, gemeinsamer Vertrag, Export, Import, Integration/CI. Windows 11 wird modelliert, hat aber noch keinen nativen Adapter. CM-001/005/006/010 und öffentliche Distribution bleiben separate Releasegates; externer Profilimport (CM-023) bleibt Proposed/blockiert. Private Vorlagen und geschützte Provisionierung sind spätere getrennte Bereiche ohne Agenten-/Infrastrukturpflicht für die Grundinstallation.

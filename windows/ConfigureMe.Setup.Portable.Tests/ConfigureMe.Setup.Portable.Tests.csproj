@@ -16,6 +16,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <Compile Include="..\ConfigureMe.Setup\EngineBundle.cs" Link="Source\EngineBundle.cs" />
     <Compile Include="..\ConfigureMe.Setup\InstallPlanResolver.cs" Link="Source\InstallPlanResolver.cs" />
+    <Compile Include="..\ConfigureMe.Setup\SetupPlanFile.cs" Link="Source\SetupPlanFile.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanDryRun.cs" Link="Source\SetupPlanDryRun.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanContract.cs" Link="Source\SetupPlanContract.cs" />
     <Compile Include="..\ConfigureMe.Setup\Models.cs" Link="Source\Models.cs" />

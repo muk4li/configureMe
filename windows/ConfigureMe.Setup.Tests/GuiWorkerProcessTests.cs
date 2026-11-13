@@ -11,7 +11,9 @@ public sealed class GuiWorkerProcessTests
     {
         using var data = new TestApplicationData();
         var engine = EngineBundle.ExtractVerified(data.Root);
-        var snapshot = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "PlanFixtures", "valid-server.json"));
+        var savedPath = Path.Combine(data.Root, "exported-plan.json");
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "PlanFixtures", "valid-server.json"), savedPath);
+        var snapshot = OperatingSystem.IsWindows() ? SetupPlanFile.ReadSnapshot(savedPath) : File.ReadAllBytes(savedPath);
         var plan = SetupPlanContract.Validate(snapshot, File.ReadAllBytes(engine.CatalogPath), new("windows-server-2022", "x64"));
         // Actual embedded offline plan logic. OS-independent fixture below is used on Linux.
         if (!OperatingSystem.IsWindows())

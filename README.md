@@ -9,7 +9,7 @@ configureMe ist ein öffentlicher Windows-Konfigurator ohne Loginpflicht für Pl
 ## Funktionsumfang
 
 - Öffentliche Windows-11-/Server-2022-Planung mit Mehrprofil-Auswahl, sichtbaren Abhängigkeiten/Konflikten und sessionStorage
-- Klar gekennzeichnete synthetische Fixtures; servervalidierter, nicht ausführbarer JSON-Export. Öffentliche ZIP-/EXE-Downloads bleiben gesperrt
+- Klar gekennzeichnete synthetische Fixtures; servervalidierter Preview-Export sowie separater Setup-Plan-v1-JSON-Export für die vorhandene EXE. Öffentliche ZIP-/EXE-Downloads bleiben gesperrt
 
 - Responsives, dunkles Portal mit Produktstartseite, Dashboard, Softwarekatalog, Profilübersicht und Setup-Assistent
 - GitHub OAuth mit serverseitiger Benutzer-Allowlist, initialem Administrator, signierten HttpOnly-Sessions und CSRF-State im OAuth-Flow
@@ -43,6 +43,12 @@ npm run preview
 `http://127.0.0.1:3000` öffnen. Kein OAuth nötig. Der Previewprozess verwendet keine .env-Dateien oder produktiven App-Credentials und startet keine Engine. Ausgewählte Software wird weder heruntergeladen noch installiert. [Windows-Anleitung mit temporärem Checkout, Schreibzugriffen und Tests](docs/public-preview.md).
 
 Für das optionale private Portal separat sichere Laufzeitkonfiguration für AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET und die Login-Allowlist bereitstellen und `npm run dev` verwenden. Die öffentliche Planung funktioniert ohne diese Werte; private Routen bleiben geschützt. Keine produktiven Secrets in den Preview-Checkout kopieren.
+
+## Setup-Plan v1: Web → vorhandene EXE → Dry-Run
+
+In der öffentlichen UI eine konfliktfreie Auswahl treffen und **Export setup plan v1** wählen. Die Datei `configureme-setup-plan.v1.json` lokal speichern. In der vorhandenen EXE auf vollständig aktualisiertem Windows Server 2022 x64 Desktop Experience **Setup-Plan importieren** und danach **Dry-Run** wählen. Import startet keine Installation; die EXE validiert Format, Katalog, Ziel, IDs, Modi und Abhängigkeiten unabhängig. Importierte Auswahl ist vorerst nur für Review/Dry-Run freigegeben. **Manuelle Auswahl** stellt die bisherige lokale Bedienung wieder her. Details und Grenzen: [Planvertrag](docs/setup-plan-contract.md), [Prüfprotokoll](docs/audits/setup-plan-v1.md).
+
+Windows 11 ist im Planformat modelliert, der native Import/Dry-Run dafür noch nicht implementiert. Legacy-Plan und Preview-JSON sind separate, nicht automatisch migrierte Formate. Der JSON-Plan enthält keine Secrets, freien Befehle oder Installationsrechte. Es bleibt eine universelle self-contained EXE; keine Neukompilierung pro Plan, kein Agent und keine private Infrastrukturpflicht. CI-Artefakte sind weiterhin unsigniert und keine öffentlich freigegebenen Releases.
 
 ## Tests und Qualität
 

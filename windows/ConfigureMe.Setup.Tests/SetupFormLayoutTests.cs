@@ -20,6 +20,7 @@ public sealed class SetupFormLayoutTests
         Assert.Contains("GitHub CLI", git.AccessibleDescription);
         Assert.Contains("Abhängigkeit", form.Controls.Find("PackageName:git", true).Single().Text);
         Assert.Equal(new[] { "git", "github-cli" }, plan.PackageIds);
+        Assert.False(Directory.Exists(Path.Combine(root, "Reports"))); // Import starts no operation/report.
         Assert.ThrowsAny<Exception>(() => form.ImportPlanSnapshot("{}"u8.ToArray(), new("windows-server-2022", "x64")));
         Assert.True(cli.Checked); // Failed import cannot replace a previously valid selection.
         form.ApplyWorkerEvent(new WorkerEvent("package-detected", "git", "installed", null,
