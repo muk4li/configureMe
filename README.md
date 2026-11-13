@@ -1,5 +1,7 @@
 # configureMe
 
+Engineering-Einstieg: [REPO.md](REPO.md) · [Arbeitsregeln](AGENTS.md) · [Roadmap](ROADMAP.md) · [Aufgaben](TASKS.md) · [Initialaudit](docs/audits/initial-audit.md).
+
 configureMe ist ein selbst hostbares Portal, mit dem sich nachvollziehbare Setup-Pläne für neue Computer zusammenstellen lassen. Die Anwendung installiert nicht aus dem Browser und betreibt keinen Geräte-Agenten: Ein Benutzer lädt ein lokales Paket herunter, prüft es und bestätigt die Installation auf dem Zielgerät.
 
 > **v1 ist ein MVP/Preview.** Bestehende Windows-Profile verwenden WinGet. Das Profil `windows-server-2022-developer` ist zusätzlich als natives Windows Forms Setup für Windows Server 2022 x64 vorgesehen. Das selbstständige Setup benötigt beim Start weder eine .NET-Runtime noch Git, WinGet, Node.js oder den configureMe-Webserver; Windows PowerShell 5.1 bleibt der lokale Worker für die vorhandene Installationsengine. CI erzeugt ein kurzlebiges, unsigniertes Entwicklungsartefakt; es wird kein öffentliches Release erstellt. Das Artefakt ist nicht für öffentliches Vertrauens-Onboarding freigegeben. Ein echter interaktiver GUI-/E2E-Lauf auf einem frischen Windows Server 2022 ist noch erforderlich.
