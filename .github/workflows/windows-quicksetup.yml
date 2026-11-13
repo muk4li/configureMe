@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    # Validate this repair without a main push when PR API access is unavailable.
-    branches: [main, fix/engine-cache-extraction-race]
+    branches: [main]
     tags: ["quicksetup-v*"]
   workflow_dispatch:
 
