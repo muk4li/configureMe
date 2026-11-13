@@ -28,6 +28,7 @@ describe("public fixture planning", () => {
   it("removes ordinary packages but refuses hidden dependency removal", () => {
     const result = resolvePublicPlan({ ...freshSelection(), removedPackageIds: ["vscode"] });
     expect(result.valid).toBe(true); expect(result.packages.some(item => item.id === "vscode")).toBe(false);
+    expect(result.overrides.removedPackageIds).toEqual(["vscode"]);
     const blocked = resolvePublicPlan({ ...selection(), addedPackageIds: ["github-cli"], removedPackageIds: ["git"] });
     expect(blocked.issues.some(item => item.code === "REQUIRED_REMOVAL")).toBe(true);
     expect(blocked.packages.map(item => item.id)).toEqual(["git", "github-cli"]);

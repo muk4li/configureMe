@@ -1,0 +1,43 @@
+name: Public web validation
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/public-windows-configurator]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx next typegen
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Install development browser
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+      - name: Exercise anonymous configurator without OAuth or installers
+        if: runner.os == 'Linux'
+        run: npm run test:browser
+      - name: Retain browser failure evidence
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-browser-failures
+          path: test-results/
+          retention-days: 7

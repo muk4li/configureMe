@@ -124,7 +124,9 @@ export function resolvePublicPlan(input: unknown, profiles: readonly PublicProfi
     kind: "configureme-preview" as const, schemaVersion: 1 as const, executable: false as const,
     valid: issues.length === 0, target: selection.target, architecture: selection.architecture,
     source: { kind: publicSnapshot.sourceKind, snapshotId: publicSnapshot.snapshotId, sourceCommit: null },
-    profileIds: [...selection.profileIds].sort(), packages, options, optionSources, issues,
+    profileIds: [...selection.profileIds].sort(),
+    overrides: { addedPackageIds: [...selection.addedPackageIds].sort(), removedPackageIds: [...selection.removedPackageIds].sort(), options: { ...selection.options } },
+    packages, options, optionSources, issues,
     distribution: { enabled: false as const, reason: "Executable setup downloads await independent release and target-system approval." },
   };
 }
