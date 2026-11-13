@@ -22,19 +22,19 @@ internal sealed class EngineBundle
     ];
 
     private readonly string _engineRoot;
-    private readonly Dictionary<string, string> _hashes;
+    private readonly Dictionary<string, (string Hash, long Size)> _files;
 
-    private EngineBundle(string engineRoot, Dictionary<string, string> hashes)
+    private EngineBundle(string engineRoot, Dictionary<string, (string Hash, long Size)> files)
     {
         _engineRoot = engineRoot;
-        _hashes = hashes;
+        _files = files;
     }
 
     public string BootstrapPath => Path.Combine(_engineRoot, "bootstrap.ps1");
     public string CatalogPath => Path.Combine(_engineRoot, "config", "catalog.json");
     public string ProfilePath => Path.Combine(_engineRoot, "config", "windows-server-2022-developer.json");
 
-    public static EngineBundle ExtractVerified(string? applicationDataRoot = null)
+    public static EngineBundle ExtractVerified(string? applicationDataRoot = null, Action<string>? beforePublish = null)
     {
         var assembly = Assembly.GetExecutingAssembly();
         using var manifestStream = assembly.GetManifestResourceStream("ConfigureMe.Engine.manifest.json")
@@ -57,7 +57,7 @@ internal sealed class EngineBundle
         CreateSafeDirectory(destination);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var files = new Dictionary<string, (string Hash, long Size)>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in manifest.Files)
         {
             if (!ResourceNames.Contains(file.ResourceName, StringComparer.Ordinal) || !seen.Add(file.ResourceName))
@@ -91,15 +91,7 @@ internal sealed class EngineBundle
             var parent = Path.GetDirectoryName(targetPath)!;
             CreateSafeDirectory(parent);
             ValidatePath(targetPath);
-            if (File.Exists(targetPath))
-            {
-                var existingHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(targetPath))).ToLowerInvariant();
-                if (!existingHash.Equals(actualHash, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new IOException($"The extracted engine file '{relativePath}' was modified; refusing to run it.");
-                }
-            }
-            else
+            if (!File.Exists(targetPath))
             {
                 var temporaryPath = targetPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 try
@@ -108,29 +100,53 @@ internal sealed class EngineBundle
                     {
                         output.Write(bytes);
                     }
+                    // Test seam at the publication boundary; normal callers supply no callback.
+                    beforePublish?.Invoke(targetPath);
                     ValidatePath(targetPath);
-                    File.Move(temporaryPath, targetPath);
+                    try
+                    {
+                        File.Move(temporaryPath, targetPath); // Never replace another instance's file.
+                    }
+                    catch (IOException) when (File.Exists(targetPath))
+                    {
+                        // Another instance may have published first. Existence is not trust:
+                        // the same path/size/hash checks below apply to every winner.
+                    }
                 }
                 finally
                 {
-                    if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+                    if (File.Exists(temporaryPath))
+                    {
+                        ValidatePath(temporaryPath);
+                        File.Delete(temporaryPath); // Only our uniquely named unpublished file.
+                    }
                 }
             }
-            hashes.Add(targetPath, actualHash);
+            VerifyFile(targetPath, actualHash, file.SizeBytes);
+            files.Add(targetPath, (actualHash, file.SizeBytes));
         }
 
-        return new EngineBundle(destination, hashes);
+        return new EngineBundle(destination, files);
     }
 
     public void VerifyUnchanged()
     {
-        foreach (var (path, expectedHash) in _hashes)
+        foreach (var (path, expected) in _files)
         {
-            ValidatePath(path);
-            if (!Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new IOException($"The extracted engine file '{path}' was modified; refusing to run it.");
-            }
+            VerifyFile(path, expected.Hash, expected.Size);
+        }
+    }
+
+    private static void VerifyFile(string path, string expectedHash, long expectedSize)
+    {
+        ValidatePath(path);
+        // On Windows, disallow writers/deletion while verifying these exact bytes.
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        ValidatePath(path);
+        if (input.Length != expectedSize ||
+            !Convert.ToHexString(SHA256.HashData(input)).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new IOException($"The extracted engine file '{path}' was modified; refusing to run it.");
         }
     }
 

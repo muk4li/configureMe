@@ -21,6 +21,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-013](#cm-013) | P2 | Blocked | CM-4 | Eigenständigen Betriebs-/Integrationsvertrag vorbereiten |
 | [CM-014](#cm-014) | P3 | Blocked | CM-5 | Späteren Gerätezugangsvertrag nur als Vorschlag vorbereiten |
 | [CM-015](#cm-015) | P1 | Done | CM-0 | Engineering-Baseline und Initialaudit reviewfähig erstellen |
+| [CM-016](#cm-016) | P1 | Blocked | CM-1 | Engine-Cache-Publikation nebenläufigkeitssicher machen |
 
 ## CM-001
 
@@ -186,6 +187,17 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 - Abhängigkeiten/Freigaben: Keine Außenaktion für lokale Dokumentation; PR-API-Blocker transparent statt automatischem Merge.
 - Akzeptanzkriterien: Alle Pflichtdokumente konsistent; Quellen mit SHA/Datum; ausführbares Backlog, Alternativenvergleich und Tests belegt; nur Markdown-Diff, keine fremden Änderungen; Review-Commit/Branch vorhanden.
 - Verifikation: Link-/Anker-/ID-/Status-/Quellenprüfung, git diff --check, Diff auf Privates/Scope prüfen; tatsächliche Auditchecks aus initial-audit.md.
+
+## CM-016
+
+**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Blocked** (Korrektur und lokale Verifikation vorhanden; PR/Windows-CI-Abnahme offen); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: konkurrierendes File.Move ohne Überschreiben sicher behandeln, jeden vorhandenen Gewinner erneut prüfen und GUI-/EXE-Self-Tests vom Benutzer-Cache isolieren.
+- Technische Evidenz: [AF-012](docs/audits/initial-audit.md#af-012); Windows-Lauf 43435533839 und deterministischer Zweithreadtest gegen ursprünglichen Code scheitern mit bereits vorhandenem Ziel.
+- Dateien/Module: EngineBundle.cs; SetupForm.cs; Program.cs; EngineBundleTests.cs; SetupFormLayoutTests.cs; TestApplicationData.cs; portable Testprojektverknüpfung; Windows-CI.
+- Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; GitHub-API derzeit 403, daher PR-Erstellung/Workflowstart noch nicht möglich. Kein Merge als Ersatz.
+- Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
+- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und noch offenen tatsächlichen Windows-/CI-Belegen. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
 
 ## Priorisierte nächste Arbeit
 

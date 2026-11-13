@@ -18,7 +18,7 @@ Stand: 2026-11-13. Diese Roadmap betrifft ausschließlich configureMe; [Centrali
 **Stabilität und Codequalität.** Status: geplant, lokale Fehlerarbeit unabhängig von der Plattform möglich.
 
 - Ziel: reproduzierbare Webentwicklung und nachvollziehbare Fehler-/Trust-Aussagen.
-- Deliverables: CM-002 Docker-/Env-Basis, CM-004 Web-CI, CM-006 sichere Dateihandoff-Prüfung, CM-008 Web-Fehlerbehandlung, CM-009 konsistente UI-Aussagen; Sessionentscheidung CM-007.
+- Deliverables: CM-002 Docker-/Env-Basis, CM-004 Web-CI, CM-006 sichere Dateihandoff-Prüfung, CM-008 Web-Fehlerbehandlung, CM-009 konsistente UI-Aussagen; Sessionentscheidung CM-007; CM-016 nebenläufigkeitssichere Engine-Publikation und Testcache-Isolierung.
 - Voraussetzungen: CM-0; bestätigte reproduzierbare Fälle und kleinste geeignete Änderung pro PR.
 - Risiken: Sicherheitskorrekturen werden durch unpassende Mock-Erleichterungen verdeckt; lokale Fixes brechen Legacy-/native Pakete.
 - Abhängigkeiten: keine Hub-/VPN-/Konfigurationsdienst-Pflicht; falls eine Betreiberentscheidung benötigt wird, nur diese Teilaufgabe blockieren.

@@ -252,3 +252,17 @@ Unveränderliche zentrale Ausgangspunkte: [F-07 im früheren Audit](https://gith
 Pflichtdateien werden über README/REPO miteinander verknüpft; stabile CM-/AF-IDs, phasenbezogene Abhängigkeiten und Proposed-/Blocked-Zustände bleiben erhalten. Der bestehende Next.js-AGENTS-Block wurde unverändert integriert. Nur Markdown gehört zum Review-Diff; temporäre Auditproben, private Checkouts und Buildausgaben bleiben außerhalb Git. Kein automatischer Merge in main und kein Release/Deployment. API-Zugriffsgrenzen werden im Abschlussbericht getrennt vom bereitgestellten Git-Review-Branch genannt.
 
 Abschließende lokale Konsistenzprüfung: **7 Markdown-Dateien, 91 lokale Links/Anker, 15 eindeutige Task-IDs mit übereinstimmenden Tabellen-/Detailstatus und Pflichtfeldern, 11 eindeutige Befunde, 6 Roadmap-Phasen, 4 unveränderte Nachbar-Commits**; ursprünglicher Next.js-Block bytegleich, Codefences ausgeglichen, keine unerwarteten Steuerzeichen und ausschließlich Markdown im Diff. Beide einfachen Mermaid-Flussdiagramme wurden auf Richtung, eindeutige Knoten und vorhandene Kantenendpunkte gegen die beschriebenen Modulgrenzen geprüft; kein Mermaid-Rendering durchgeführt. Private Quellinhalte wurden manuell gegen den vorgesehenen öffentlichen Scope geprüft. `git diff --check` bestand. Der lokale Testserver wurde beendet. CM-015 bezeichnet nur den abgeschlossenen Dokumentationsauftrag; die Produkt-/Betriebsbefunde bleiben offen.
+
+## Folgeprüfung 2026-11-13: Engine-Cache-Race
+
+### AF-012
+
+**Nebenläufige Extraktion kollidiert im gemeinsam genutzten Benutzer-Cache.** Schwere: **Mittel**. Kategorie: Verfügbarkeit/Testisolierung. Status: **Confirmed** am Folgeprüfungs-Basiscommit `70a032ae19e2e0da0d39af5a5a5f8991f668e913`. Betroffene Komponente: Embedded Engine/GUI-Tests. Task: [CM-016](../../TASKS.md#cm-016).
+
+- Fundstelle: ursprüngliches `windows/ConfigureMe.Setup/EngineBundle.cs:94–112`, `SetupForm.cs:54`, Layouttests und der erste EngineBundle-Test ohne isolierten Root.
+- Evidenz: [Windows-Lauf 43435533839](https://github.com/muk4li/configureMe/actions/runs/43435533839) scheitert mit dem gemeldeten Move-Stacktrace. Zwei Instanzen können beide ein fehlendes Ziel beobachten; nach der Publikation des Gewinners schlägt der zweite Move fehl. xUnit-Testklassen teilen dabei ohne Root-Injektion denselben manifestgebundenen Benutzer-Cache.
+- Risiko: sporadischer Test-/Anwendungsstartfehler bei Parallelität; Tests schreiben unbeabsichtigt nach LOCALAPPDATA. Keine Hash- oder Signaturumgehung als Exploit nachgewiesen.
+- Prüfung: Zwei dedizierte Threads werden nach dem Fehlend-Check synchronisiert; der zweite Move erfolgt garantiert nach Abschluss des ersten ExtractVerified. Ursprüngliche Logik scheitert reproduzierbar; korrigierte portable Suite besteht dreimal. Windows-GUI-/Gesamtworkflow für die Korrektur noch nicht belegt.
+- Maßnahme: kein Überschreiben; bei konkurrierendem Ziel dieselbe Pfad-/Reparse-/Größen-/Hashprüfung wie bei Cachetreffern. Einzig eigene temporäre Dateien entfernen. Expliziter Test-Root für SetupForm und temporäre Roots für Self-Tests. Details und Grenzen: [Folgeprüfprotokoll](engine-cache-race.md).
+
+Diese Ergänzung ändert weder die ursprünglichen Audit-Snapshot-Ergebnisse noch den offenen AF-006/CM-006-Handoff-Befund. CM-016 wird erst nach tatsächlichem Windows-CI-Erfolg und separatem PR Done.
