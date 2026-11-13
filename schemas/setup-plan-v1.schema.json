@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://configureme.invalid/schemas/setup-plan-v1.schema.json",
+  "title": "configureMe declarative setup plan v1 (no execution authority)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatId",
+    "schemaVersion",
+    "catalogRevision",
+    "status",
+    "authorization",
+    "target",
+    "planning",
+    "packages",
+    "options"
+  ],
+  "properties": {
+    "formatId": {
+      "const": "configureme/setup-plan"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "catalogRevision": {
+      "const": "6601f3174f2ce113bbbf1a98a280ca6c16ba1245aac01448071b0970c294800b"
+    },
+    "status": {
+      "const": "validated-plan"
+    },
+    "authorization": {
+      "const": "none"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "architecture"
+      ],
+      "properties": {
+        "os": {
+          "enum": [
+            "windows-11",
+            "windows-server-2022"
+          ]
+        },
+        "architecture": {
+          "const": "x64"
+        }
+      }
+    },
+    "planning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestedPackageIds",
+        "profileIds"
+      ],
+      "properties": {
+        "requestedPackageIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true
+        },
+        "profileIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "uniqueItems": true
+        }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "mode",
+          "dependsOn"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "mode": {
+            "enum": [
+              "winget",
+              "automatic",
+              "manual",
+              "web-fallback",
+              "detection-only"
+            ]
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "minItems": 0,
+            "maxItems": 50,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "configureGit": {
+          "type": "boolean"
+        },
+        "interactiveAuthentication": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

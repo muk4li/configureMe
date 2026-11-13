@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createSetupPlan } from "@/lib/setup-plan";
 import { resolvePublicPlan, selectionSchema } from "@/lib/public-planning";
 import { isPublicOriginAllowed, PublicInputError, readPublicJson } from "@/lib/public-request";
 import { isPublicPlanRateLimited } from "@/lib/public-rate-limit";
@@ -18,7 +19,12 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = selectionSchema.safeParse(await readPublicJson(request));
     if (!parsed.success) return error("Invalid or incompatible public selection.", 400);
-    return NextResponse.json(resolvePublicPlan(parsed.data), { headers });
+    const preview = resolvePublicPlan(parsed.data);
+    if (request.nextUrl.searchParams.get("export") === "setup-plan-v1") {
+      if (!preview.valid || !preview.packages.length) return error("Resolve the selection before exporting a setup plan.", 422);
+      return NextResponse.json(createSetupPlan(parsed.data), { headers });
+    }
+    return NextResponse.json(preview, { headers });
   } catch (exception) {
     if (exception instanceof PublicInputError) return error(exception.message, exception.status);
     return error("The public plan could not be validated.", 500);

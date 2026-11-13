@@ -16,12 +16,15 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <Compile Include="..\ConfigureMe.Setup\EngineBundle.cs" Link="Source\EngineBundle.cs" />
     <Compile Include="..\ConfigureMe.Setup\InstallPlanResolver.cs" Link="Source\InstallPlanResolver.cs" />
+    <Compile Include="..\ConfigureMe.Setup\SetupPlanDryRun.cs" Link="Source\SetupPlanDryRun.cs" />
+    <Compile Include="..\ConfigureMe.Setup\SetupPlanContract.cs" Link="Source\SetupPlanContract.cs" />
     <Compile Include="..\ConfigureMe.Setup\Models.cs" Link="Source\Models.cs" />
     <Compile Include="..\ConfigureMe.Setup\PackageInstallQueue.cs" Link="Source\PackageInstallQueue.cs" />
     <Compile Include="..\ConfigureMe.Setup\PackageDownloadPlan.cs" Link="Source\PackageDownloadPlan.cs" />
     <Compile Include="..\ConfigureMe.Setup\PowerShellWorkerClient.cs" Link="Source\PowerShellWorkerClient.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupRunReport.cs" Link="Source\SetupRunReport.cs" />
     <Compile Include="..\ConfigureMe.Setup\WorkerDiagnostic.cs" Link="Source\WorkerDiagnostic.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\SetupPlanContractTests.cs" Link="Tests\SetupPlanContractTests.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\GlobalUsings.cs" Link="Tests\GlobalUsings.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\TestApplicationData.cs" Link="Tests\TestApplicationData.cs" />
     <Compile Include="..\ConfigureMe.Setup.Tests\EngineBundleTests.cs" Link="Tests\EngineBundleTests.cs" />
@@ -46,10 +49,18 @@
     <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\assets\firefox-bookmarks.html" LogicalName="ConfigureMe.Engine.assets.firefox-bookmarks.html" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\schemas\setup-plan-v1.schema.json" LogicalName="ConfigureMe.Contract.schema.json" />
+    <EmbeddedResource Include="..\..\contracts\setup-plan-v1.policy.json" LogicalName="ConfigureMe.Contract.policy.json" />
+  </ItemGroup>
+
   <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
     <Exec Command="&quot;$(PowerShellExecutable)&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
     <ItemGroup>
       <EmbeddedResource Include="$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json" LogicalName="ConfigureMe.Engine.manifest.json" />
     </ItemGroup>
   </Target>
+  <ItemGroup>
+    <None Include="..\..\tests\fixtures\setup-plan-v1\*.json" Link="PlanFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

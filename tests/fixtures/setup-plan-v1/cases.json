@@ -1,0 +1,187 @@
+[
+  {
+    "file": "valid-server.json",
+    "valid": true,
+    "native": true
+  },
+  {
+    "file": "valid-windows11-contract-only.json",
+    "valid": true,
+    "native": false
+  },
+  {
+    "file": "valid-reminders.json",
+    "valid": true,
+    "native": true
+  },
+  {
+    "file": "valid-nonautomatic-modes.json",
+    "valid": true,
+    "native": true
+  },
+  {
+    "file": "invalid-formatId-configureme-pre.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-schemaVersion-2.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-schemaVersion-1.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-catalogRevision-000000000000000.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-authorization-install.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-status-execute.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-target.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-architecture.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-target-extra.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-option.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-option-type.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-command.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-url.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-unknown-id.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-missing-dependency.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-altered-dependency.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-duplicate-package.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-unsorted-package.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-unsorted-root.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-duplicate-root.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-extra-package.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-mode.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-action.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-empty.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-provenance-limit.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-missing-field.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-duplicate-key.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-escaped-duplicate.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-nested-duplicate.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-deep.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-oversized.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-truncated.json",
+    "valid": false,
+    "native": false
+  },
+  {
+    "file": "invalid-null.json",
+    "valid": false,
+    "native": false
+  }
+]

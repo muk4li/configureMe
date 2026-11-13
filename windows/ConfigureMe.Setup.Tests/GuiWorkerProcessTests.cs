@@ -6,6 +6,29 @@ namespace ConfigureMe.Setup.Tests;
 
 public sealed class GuiWorkerProcessTests
 {
+    [Fact]
+    public async Task WebExportedContractReachesRealOfflineEnginePlanWithoutInstalling()
+    {
+        using var data = new TestApplicationData();
+        var engine = EngineBundle.ExtractVerified(data.Root);
+        var snapshot = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "PlanFixtures", "valid-server.json"));
+        var plan = SetupPlanContract.Validate(snapshot, File.ReadAllBytes(engine.CatalogPath), new("windows-server-2022", "x64"));
+        // Actual embedded offline plan logic. OS-independent fixture below is used on Linux.
+        if (!OperatingSystem.IsWindows())
+        {
+            var (exit, events) = await RunFixtureAsync("plan", plan.PackageIds, null);
+            Assert.Equal(0, exit);
+            Assert.Contains(events, item => PowerShellWorkerClient.ReadString(item, "type") == "install-plan");
+            Assert.DoesNotContain(events, item => PowerShellWorkerClient.ReadString(item, "type") == "installation-started");
+            return;
+        }
+        var worker = new PowerShellWorkerClient(engine);
+        var result = await SetupPlanDryRun.RunAsync(plan, (action, ids, confirmed) => worker.RunAsync(action, ids, confirmed));
+        var preview = Assert.Single(result.Events, item => item.Type == "install-plan");
+        Assert.Equal(plan.PackageIds, preview.Data.EnumerateArray().Select(item => item.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
+        Assert.DoesNotContain(result.Events, item => item.Type is "download-started" or "installation-started");
+    }
+
     [Theory]
     [InlineData(null, 0)]
     [InlineData("seven-zip", 1)]

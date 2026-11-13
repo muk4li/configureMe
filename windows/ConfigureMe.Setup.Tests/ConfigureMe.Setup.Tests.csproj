@@ -21,4 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ConfigureMe.Setup\ConfigureMe.Setup.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\tests\fixtures\setup-plan-v1\*.json" Link="PlanFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
