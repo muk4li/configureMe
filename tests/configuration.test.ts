@@ -81,10 +81,12 @@ describe("profile configuration", () => {
     const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", parser], {
       input: createWindowsBootstrapScript(),
       encoding: "utf8",
+      timeout: 20_000, // Bound the external PS5.1 process, including a cold Windows startup.
     });
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);
-  });
+  }, 30_000); // This process-bound test needs more than Vitest's default five seconds.
+
 
   it("reads and safely saves validated JSON profiles through the local provider", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "configureme-test-"));
