@@ -12,6 +12,7 @@ export function PublicConfigurator() {
   const { selection, ready, note: storageNote, saveSelection } = usePublicSelection();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [selectionNote, setSelectionNote] = useState("");
   const [serverPlan, setServerPlan] = useState<PublicPlan>();
   const revision = useRef(0);
   const plan = useMemo(() => resolvePublicPlan(selection), [selection]);
@@ -24,14 +25,17 @@ export function PublicConfigurator() {
   function update(next: PublicSelection) {
     revision.current++;
     saveSelection(next);
-    setServerPlan(undefined); setError("");
+    setServerPlan(undefined); setError(""); setSelectionNote("");
   }
   function toggleProfile(id: string) {
     update({ ...selection, profileIds: selection.profileIds.includes(id)
       ? selection.profileIds.filter(value => value !== id) : [...selection.profileIds, id] });
   }
   function togglePackage(id: string, checked: boolean) {
-    update(setPackageSelected(selection, id, checked));
+    const next = setPackageSelected(selection, id, checked);
+    const restored = selection.removedPackageIds.filter(value => value !== id && !next.removedPackageIds.includes(value));
+    update(next);
+    if (restored.length) setSelectionNote(`Required dependencies included: ${restored.join(", ")}. Their previous exclusions were cleared because you selected a tool that needs them.`);
   }
 
   function chooseOption(key: OptionName, value: string) {
@@ -106,6 +110,7 @@ export function PublicConfigurator() {
           <section className="panel config-section software-catalog" aria-labelledby="packages-title">
             <div className="config-heading"><span className="step-number">03</span><h2 id="packages-title">Fine-tune your software</h2></div>
             <p className="config-hint">Dependencies stay visible. Manual, web and detection-only entries do not promise automatic installation.</p>
+            {selectionNote && <p className="notice dependency-selection-note" role="status">{selectionNote}</p>}
             <p className="catalog-count" data-testid="visible-catalog-count">{visibleCount} available tools for this target</p>
             {incompatible.length > 0 && <div className="error-note incompatible-selection" role="alert" aria-label="Incompatible selected tools">
               <strong>Selected tools unavailable for {targetNames[selection.target]}</strong>

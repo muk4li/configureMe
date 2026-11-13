@@ -62,6 +62,17 @@ test("required dependencies stay checked without creating exclusions or API conf
   await page.getByRole("checkbox", { name: "GitHub CLI", exact: true }).uncheck();
   await expect(git).not.toBeChecked();
 });
+test("explicit parent selection visibly restores a previously excluded dependency", async ({ page }) => {
+  await open(page);
+  await page.getByRole("checkbox", { name: "Git", exact: true }).uncheck();
+  await page.getByRole("checkbox", { name: "GitHub CLI", exact: true }).check();
+  await expect(page.getByRole("checkbox", { name: "Git", exact: true })).toBeChecked();
+  await expect(page.locator(".dependency-selection-note")).toContainText("previous exclusions were cleared");
+  await expect(page.locator("#configurator").getByRole("alert")).toHaveCount(0);
+  const response = page.waitForResponse(response => response.url().endsWith("/api/public/plan"));
+  await page.getByRole("button", { name: "Validate plan on server" }).click();
+  expect(await (await response).json()).toMatchObject({ valid: true });
+});
 test("a separate direct choice survives removal of the parent and reload", async ({ page }) => {
   await open(page); await page.getByRole("button", { name: "Clear this selection" }).click();
   await page.getByRole("checkbox", { name: "GitHub CLI", exact: true }).check();

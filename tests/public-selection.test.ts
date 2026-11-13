@@ -12,6 +12,16 @@ describe("direct, profile and dependency intent", () => {
     expect(resolvePublicPlan(clickedGit)).toMatchObject({ valid: true, packages: [{ id: "git", requiredBy: ["github-cli"] }, { id: "github-cli" }] });
     expect(resolvePublicPlan(setPackageSelected(clickedGit, "github-cli", false)).packages).toEqual([]);
   });
+  it("explicit parent selection restores only its dependencies, not unrelated legacy exclusions", () => {
+    const excludedGit = setPackageSelected(freshSelection(), "git", false);
+    const chosenParent = setPackageSelected(excludedGit, "github-cli", true);
+    expect(chosenParent.removedPackageIds).not.toContain("git");
+    expect(resolvePublicPlan(chosenParent).valid).toBe(true);
+    const legacy = { ...empty(), addedPackageIds: ["github-cli"], removedPackageIds: ["git"] };
+    const unrelatedAddition = setPackageSelected(legacy, "python", true);
+    expect(unrelatedAddition.removedPackageIds).toContain("git");
+    expect(resolvePublicPlan(unrelatedAddition).valid).toBe(false);
+  });
   it("keeps Git when directly selected before or after its parent", () => {
     for (const order of [["git", "github-cli"], ["github-cli", "git"]]) {
       let state = empty();

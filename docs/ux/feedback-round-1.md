@@ -6,7 +6,7 @@
 
 Previously the checkbox read the *effective* package list while its handler always treated an uncheck as an explicit exclusion. GitHub CLI required Git, so the resolver correctly kept Git and rejected the new `removedPackageIds: [git]`. The checked UI and negative intent consequently contradicted each other.
 
-`setPackageSelected` now derives required-by state from the same `resolvePublicPlan` used for rendering and API validation. An active dependency cannot create a negative override. Its checked checkbox is disabled with a visible “Required for …” explanation. “Also keep … separately” explicitly records direct intent; removing the parent later retains only direct/profile/other-parent requests. Existing explicit malformed/legacy exclusions are not silently normalized away: warnings/export blocking remain until Undo or another explicit repair. Server-side rejection of injected exclusions remains unchanged and has a route regression test.
+`setPackageSelected` now derives required-by state from the same `resolvePublicPlan` used for rendering and API validation. An active dependency cannot create a negative override. Its checked checkbox is disabled with a visible “Required for …” explanation. “Also keep … separately” explicitly records direct intent; removing the parent later retains only direct/profile/other-parent requests. Explicitly selecting a new parent also restores its required dependencies if previously excluded, with a visible notice. This only clears exclusions in that parent’s actual transitive graph; adding an unrelated package never repairs an unrelated legacy conflict. Profile defaults do not silently override explicit exclusions. Existing explicit malformed/legacy exclusions are otherwise not silently normalized away: warnings/export blocking remain until Undo or another explicit repair. Server-side rejection of injected exclusions remains unchanged and has a route regression test.
 
 Intent remains in the existing contract: addedPackageIds = direct choices, selected profile packages = profile requests, resolver requiredBy = automatic dependencies, removedPackageIds = explicit exclusions. No session-key/schema migration or relaxation of API validation.
 
@@ -42,12 +42,12 @@ Host: Debian 13 x64, Node 24.22.1, npm 11.9.0, existing Chromium 155.0.8059.79. 
 | Command | Actual result / limit |
 | --- | --- |
 | `npx next typegen`; `npm run typecheck`; `npm run lint` | passed |
-| `npm test` | 50 passed, 1 explicit Linux skip of Windows parser, 8 files |
+| `npm test` | 51 passed, 1 explicit Linux skip of Windows parser, 8 files |
 | `NEXT_TELEMETRY_DISABLED=1 npm run build` | production build passed, no deployment |
-| `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser` | 20 passed at 375/768/1280/1440/1920; browser/API checks, no external browser requests allowed |
+| `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser` | 21 passed at 375/768/1280/1440/1920; browser/API checks, no external browser requests allowed |
 | Source archive SHA-512, path SHA-256/license tests | passed; provenance is a source record, not independent release authentication |
 | Documentation links/status/IDs and `git diff --check` | 93 local links/anchors and 26 stable task IDs/statuses/fields passed; original installer/Engine/auth/API/schema/lock/framework rules unchanged |
 
 The first browser run correctly refused to click an intentionally disabled label. The regression now asserts disabled state, then forces only the physical click attempt through Playwright's guard and verifies that the browser does not create an exclusion and the real API accepts the unchanged valid selection. No assertion removed. Screenshot capture uses instant scroll reset and checks geometry before capture, preventing CSS smooth-scroll from recording a transient sticky position.
 
-The existing web workflow targets this review branch instead of the already merged public-first branch so tests can run while PR API access is blocked. CI and final review status are recorded after actual execution; a workflow definition alone is not a passing result. Existing security/release/real-Windows-acceptance gates remain open. No automatic merge.
+The existing web workflow targets this review branch instead of the already merged public-first branch so tests can run while PR API access is blocked. Initial complete web CI [43521482655](https://github.com/muk4li/configureMe/actions/runs/43521482655) for dec3160 passed on Linux and Windows. The additional prior-exclusion/explicit-parent case has its own new local regression tests and subsequent CI verification; a workflow definition alone is not a passing result. Existing security/release/real-Windows-acceptance gates remain open. No automatic merge.

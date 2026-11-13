@@ -9,10 +9,22 @@ export function setPackageSelected(input: PublicSelection, id: string, selected:
   const current = resolvePublicPlan(selection).packages.find(item => item.id === id);
   if (!selected && current?.requiredBy.length) return selection;
   if (selected && modeFor(definition, selection.target) === "unavailable") return selection;
-  return selectionSchema.parse({ ...selection,
+  const next = selectionSchema.parse({ ...selection,
     addedPackageIds: selected ? [...new Set([...selection.addedPackageIds, id])].sort() : selection.addedPackageIds.filter(value => value !== id),
     removedPackageIds: selected ? selection.removedPackageIds.filter(value => value !== id) : [...new Set([...selection.removedPackageIds, id])].sort(),
   });
+  if (!selected) return next;
+  // Explicitly selecting a parent also requests its own transitive dependencies.
+  // Clear only their old exclusions, never unrelated malformed/legacy conflicts.
+  const graph = resolvePublicPlan(next);
+  const dependencies = new Set<string>();
+  function collect(parent: string) {
+    for (const item of graph.packages) if (item.requiredBy.includes(parent) && !dependencies.has(item.id)) {
+      dependencies.add(item.id); collect(item.id);
+    }
+  }
+  collect(id);
+  return { ...next, removedPackageIds: next.removedPackageIds.filter(value => !dependencies.has(value)) };
 }
 export function catalogGroupsFor(target: WindowsTarget) {
   const available = publicCatalog.filter(item => modeFor(item, target) !== "unavailable");
