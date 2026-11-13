@@ -21,9 +21,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-013](#cm-013) | P2 | Blocked | CM-4 | Eigenständigen Betriebs-/Integrationsvertrag vorbereiten |
 | [CM-014](#cm-014) | P3 | Blocked | CM-5 | Späteren Gerätezugangsvertrag nur als Vorschlag vorbereiten |
 | [CM-015](#cm-015) | P1 | Done | CM-0 | Engineering-Baseline und Initialaudit reviewfähig erstellen |
-| [CM-016](#cm-016) | P1 | Blocked | CM-1 | Engine-Cache-Publikation nebenläufigkeitssicher machen |
-
-| [CM-016](#cm-016) | P1 | In Progress | CM-1 | Reserviert: separater Engine-Cache-Fix, Review #8 |
+| [CM-016](#cm-016) | P1 | Done | CM-1 | Engine-Cache-Publikation nebenläufigkeitssicher machen |
 | [CM-017](#cm-017) | P1 | Done | CM-1 | Public-first-Produktvertrag und Architektur dokumentieren |
 | [CM-018](#cm-018) | P1 | Done | CM-1 | Öffentlicher Windows-Konfigurator und Katalog |
 | [CM-019](#cm-019) | P1 | Done | CM-1 | Deterministische Mehrprofil-/Abhängigkeitsauflösung |
@@ -204,23 +202,14 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-016
 
-**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Blocked** (Korrektur, lokale Verifikation und Windows-CI bestanden; separater PR offen); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
+**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Done** (PR #8 gemergt, in main 5f878a7 geprüft); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: konkurrierendes File.Move ohne Überschreiben sicher behandeln, jeden vorhandenen Gewinner erneut prüfen und GUI-/EXE-Self-Tests vom Benutzer-Cache isolieren.
 - Technische Evidenz: [AF-012](docs/audits/initial-audit.md#af-012); Windows-Lauf 43435533839 und deterministischer Zweithreadtest gegen ursprünglichen Code scheitern mit bereits vorhandenem Ziel.
 - Dateien/Module: EngineBundle.cs; SetupForm.cs; Program.cs; EngineBundleTests.cs; SetupFormLayoutTests.cs; TestApplicationData.cs; portable Testprojektverknüpfung; Windows-CI.
 - Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; GitHub-API derzeit 403, daher automatische PR-Erstellung nicht möglich. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden. Kein Merge als Ersatz.
 - Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
-- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. Separater PR noch offen. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
-**Reserviert: separater Engine-Cache-Fix** — P1; Status: **In Progress**; Komponente: Engine/Windows-QA; Phase: [CM-1](ROADMAP.md#cm-1).
-
-- Beschreibung: Bleibt ausschließlich im bestehenden Fix-Branch a1ab0b5 und PR #8; in diesem Feature keine Engineänderung.
-- Technische Evidenz: Vorheriger Auftrag, grüner Windows-Lauf 43444854566 und aktueller offener PR #8.
-- Dateien/Module: Externe Engine-/GUI-Dateien des separaten PRs
-- Abhängigkeiten/Freigaben: Review/Merge nur durch Eigentümer; lokale Dokumentationskonflikte beim späteren Zusammenführen prüfen.
-- Akzeptanzkriterien: Separater Review des Fixes; keine Vermischung mit öffentlicher UI.
-- Verifikation: Bestehende Windows-CI-Belege im Fix-PR; hier keine neue Statusfreigabe dieser fremden Arbeit.
-
+- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. PR #8 gemergt (e4a9ebc); geprüft am 2026-11-14. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
 ## CM-017
 
 **Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **Done**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
@@ -339,7 +328,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 4. **CM-004 / P1:** Webgates und echte plattformabhängige Testzählung ergänzen.
 5. **CM-003 / P1:** Proposed-Datenvertrag mit Datenowner reviewen; noch keinen GitHub-Provider bauen.
 
-Public-first A/B (CM-017..022) ist durch PD-001..004 zusätzlich autorisiert. C/D (CM-023/024/025) bleiben gesperrt. CM-016 gehört weiterhin zum separaten PR #8. Die obige Sicherheitspriorisierung bleibt bestehen; eine reine Vorschau benötigt keine ausführbare Releasefreigabe.
+Public-first A/B (CM-017..022) ist durch PD-001..004 zusätzlich autorisiert. C/D (CM-023/024/025) bleiben gesperrt. CM-016 ist durch den gemergten separaten PR #8 abgeschlossen. Die obige Sicherheitspriorisierung bleibt bestehen; eine reine Vorschau benötigt keine ausführbare Releasefreigabe.
 
 CM-009 ist ein kleiner parallel ausführbarer lokaler Korrektur-PR; CM-005 bleibt bis zur Freigabe realer VM-Installationen blockiert. Eine Dokumentationsbaseline macht keine dieser Produktaufgaben automatisch Done.
 
