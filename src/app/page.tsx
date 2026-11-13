@@ -12,10 +12,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
   return <main className="landing">
     <header className="public-header">
       <Link className="brand" href="/"><span className="brand-mark">c</span><span>configure<span className="brand-muted">Me</span></span></Link>
-      <a className="button button-quiet" href="/api/auth/github">Private portal · optional sign-in ↗</a>
+      <a className="button button-quiet" href="/api/auth/github">Private portal · optional sign-in</a>
     </header>
     {auth && authMessages[auth] && <p className="notice" role="status">{authMessages[auth]}</p>}
     <PublicConfigurator />
-    <footer className="site-footer"><span>Plan in your browser. Review and run locally, when released.</span><a href="https://github.com/muk4li/configureMe">Source on GitHub ↗</a></footer>
+    <footer className="site-footer"><span>Plan in your browser. Review and run locally, when released.</span><a href="https://github.com/muk4li/configureMe">Source on GitHub</a></footer>
   </main>;
 }

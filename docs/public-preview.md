@@ -14,7 +14,7 @@ npm ci
 npm run preview
 ```
 
-Öffne `http://127.0.0.1:3000`. Der Previewprozess bindet nur Loopback, deaktiviert Next-CLI-Telemetrie und entfernt bekannte configureMe-OAuth-/Authvariablen aus seiner eigenen Kindprozessumgebung. Er verändert keine Benutzer-/Maschinenvariablen, keine produktive Auth und keine bestehende .env-Datei. Verwende einen frischen Checkout ohne .env und keine produktiven Secrets. Bei belegtem Port vor Start beispielsweise `$env:CONFIGUREME_PREVIEW_PORT = "3200"` nur in dieser Shell setzen. Beenden mit Ctrl+C; anschließend kann der selbst erstellte Previewordner nach Schließen aller Prozesse entfernt werden.
+Öffne `http://127.0.0.1:3000`. Der Previewprozess bindet nur Loopback, deaktiviert Next-CLI-Telemetrie und entfernt bekannte configureMe-OAuth-/Authvariablen unabhängig von Groß-/Kleinschreibung aus seiner eigenen Kindprozessumgebung. Er verändert keine Benutzer-/Maschinenvariablen, keine produktive Auth und keine bestehende .env-Datei. Verwende einen frischen Checkout ohne .env und keine produktiven Secrets. Bei belegtem Port vor Start beispielsweise `$env:CONFIGUREME_PREVIEW_PORT = "3200"` nur in dieser Shell setzen. Beenden mit Ctrl+C; anschließend kann der selbst erstellte Previewordner nach Schließen aller Prozesse entfernt werden.
 
 Direkt im Repo sind `npm ci` und `npm run preview` ebenfalls möglich, erzeugen dort aber Build-/Dependencydateien. Der temporäre Checkout ist für maximale Trennung empfohlen. Ohne Git kann ein sauberer Source-Download in ein neues Verzeichnis entpackt werden; eine CI-EXE startet nicht diese Webvorschau.
 
