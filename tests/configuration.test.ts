@@ -76,16 +76,17 @@ describe("profile configuration", () => {
     expect(script.indexOf("if ($DryRun)")).toBeLessThan(script.indexOf("Get-Command winget"));
   });
 
-  it("parses the generated bootstrap with Windows PowerShell without running it", () => {
-    if (process.platform !== "win32") return;
+  it.skipIf(process.platform !== "win32")("parses the generated bootstrap with Windows PowerShell without running it", () => {
     const parser = "$source = [Console]::In.ReadToEnd(); $tokens = $null; $errors = $null; [void][System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$errors); if ($errors.Count -gt 0) { $errors | ForEach-Object { [Console]::Error.WriteLine($_.Message) }; exit 1 }";
     const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", parser], {
       input: createWindowsBootstrapScript(),
       encoding: "utf8",
+      timeout: 20_000, // Bound the external PS5.1 process, including a cold Windows startup.
     });
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);
-  });
+  }, 30_000); // This process-bound test needs more than Vitest's default five seconds.
+
 
   it("reads and safely saves validated JSON profiles through the local provider", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "configureme-test-"));

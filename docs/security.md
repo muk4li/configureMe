@@ -9,6 +9,14 @@
 - Bootstrap-POSTs benötigen eine Sitzung und den exakt passenden Origin. Anmelde-Callback und Bundle-Erstellung haben prozesslokale Rate-Limits; sie sind für eine einzelne Instanz gedacht und ersetzen keinen Schutz am Reverse Proxy.
 - Sicherheits-Header verhindern MIME-Sniffing, Framing und unnötige Browser-Berechtigungen.
 
+## Öffentliche Planung seit PD-001..004
+
+Die Startseite und POST /api/public/plan benötigen bewusst keine Anmeldung. Nur deklarative Auswahl aus gebündelten synthetischen öffentlichen Fixtures und festem Katalog; kein Zugriff auf private profiles/, OAuth, Geräte, Secrets oder Installerprozesse. sessionStorage ist untrusted. Server revalidiert Snapshot-ID, Ziel/x64, Profil-/Paket-IDs, Optionen, Abhängigkeiten und Konflikte. Previewexport ist kein ausführbares Installationsschema. /api/profiles und /api/bootstrap sowie die private Routengruppe behalten ihre bisherigen Authgrenzen.
+
+Plan-POST: application/json, exakter konfigurierter Origin (ohne APP_URL die Request-Origin), keine cross-site Fetch-Metadata/CORS-Freigabe, maximal 8 KiB/5 Sekunden Bodylesezeit, 60 Versuche/Minute und vier aktive Bodyleser **pro Prozess**. Statischer Limitkey, kein Vertrauen in frei gesetzte X-Forwarded-For-Identitäten. Fehlende/falsche Origins werden zurückgewiesen; ein direkter HTTP-Client kann Origin fälschen, erhält aber ausschließlich dieselbe öffentliche begrenzte Berechnung, keine Berechtigung. no-store/nosniff, keine Benutzerpersistenz oder ausführbare Generierung. Globale Verbindungslimits, TLS/Host-/Proxyregeln und volumetrischer DoS-Schutz sind externe Deploymentvoraussetzungen, nicht durch Unit-/Browsertests belegt.
+
+Kein öffentlicher ZIP-/EXE-Endpunkt oder Environment-Schalter schaltet Distribution frei. CM-001/005/006/010 und eine gesonderte Freigabe bleiben Voraussetzung. Preview ist keine Produktions-/Internetfreigabe. [Vertrag und Migration](decisions/public-first-mvp.md), [isolierter lokaler Start](public-preview.md).
+
 ## Download-Provenienz
 
 Windows-Pakete enthalten `plan.json`, `plan.sha256`, einen festen `install.ps1`-Einstiegspunkt und eine README. Der Bootstrap vergleicht SHA-256 vor dem Parsen des Plans. Diese Prüfsumme schützt nur vor unbeabsichtigter Beschädigung: Ein Angreifer, der Plan und Prüfsumme gemeinsam ändert, wird dadurch nicht erkannt.
