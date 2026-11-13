@@ -22,6 +22,8 @@ CM-1 erhält CM-017..022 (A/B in diesem Feature mit lokalen Tests und Web-CI 434
 
 ## CM-1
 
+UX-Runde 1 / CM-026: Dependency-Zustände und Targetkatalog konsistent machen, Desktopfläche/Stickyübersicht und Kategoriegrids verbessern, bestehende Planhinweise erklären und lokal lizenzierte Icons ergänzen. Keine neue Engine-/Distributions-/Authfunktion; Abschluss an Unit/API-/Browsernachweise und UI-Review gebunden.
+
 **Stabilität und Codequalität.** Status: geplant, lokale Fehlerarbeit unabhängig von der Plattform möglich.
 
 - Ziel: reproduzierbare Webentwicklung und nachvollziehbare Fehler-/Trust-Aussagen.

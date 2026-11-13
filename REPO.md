@@ -162,3 +162,7 @@ flowchart LR
 ```
 
 Aktuell keine produktive myConfigs-Quelle: fixtures/public/profiles.v1.json ist ausdrücklich local-fixture-v1 mit sourceCommit=null. Echter Import/Adapter: [Proposed-Vertrag](docs/integrations/public-snapshot-v1-proposal.md), CM-003/011/023; Runtime-GitHub-Reads nicht Teil der öffentlichen Architektur. Bestehender LocalConfigurationProvider/private Profile bleiben davon getrennt. Windows 11 plant WinGet-fähige IDs, Server 2022 vorhandene native Modi, x64 ausschließlich. Echte Windows-11-/Server-VM-Installerabnahme bleibt offen. ZIP/GUI/Plan-Datei-Vergleich und Migrationsgates stehen im Produktauftrag. Keine Installerdefinitionen oder privaten Authrechte geändert.
+
+## UX-Runde 1
+
+Die Paket-UI verwendet `public-selection.ts`: Aktionen prüfen den aktuellen requiredBy-Graph desselben Planers, der auf dem Server validiert; erforderliche Pakete sind sichtbar gesperrt, direkte Auswahl bleibt getrennt. Targetfilter verstecken nur im Katalog, nie im gespeicherten Plan/Validierungsweg. Inkompatible bestehende Auswahl bleibt als Konflikt sichtbar. Bestehende globale boolesche Planhinweise haben kontextbezogene Erklärungen; sie starten keine Installer oder Anmeldung. Kategorien verwenden ein zusammenhängendes responsives Toolgrid, die Desktopübersicht einen begrenzten Stickybereich. Inline-Icons: drei belegte Brandassets plus neutrale Fallbacks ohne Runtimefetch. [Regeln, Präferenzsemantik, Lizenzen und Nachweise](docs/ux/feedback-round-1.md).

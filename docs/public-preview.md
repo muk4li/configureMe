@@ -8,7 +8,7 @@ Voraussetzungen: vorhandenes Git und Node.js 22+ mit npm. Diese Anleitung instal
 
 ```powershell
 $previewRoot = Join-Path $env:TEMP ("configureme-preview-" + [guid]::NewGuid().ToString("N"))
-git clone --branch feature/public-windows-configurator https://github.com/muk4li/configureMe.git $previewRoot
+git clone --branch main https://github.com/muk4li/configureMe.git $previewRoot
 Set-Location $previewRoot
 npm ci
 npm run preview
@@ -17,6 +17,8 @@ npm run preview
 Öffne `http://127.0.0.1:3000`. Der Previewprozess bindet nur Loopback, deaktiviert Next-CLI-Telemetrie und entfernt bekannte configureMe-OAuth-/Authvariablen unabhängig von Groß-/Kleinschreibung aus seiner eigenen Kindprozessumgebung. Er verändert keine Benutzer-/Maschinenvariablen, keine produktive Auth und keine bestehende .env-Datei. Verwende einen frischen Checkout ohne .env und keine produktiven Secrets. Bei belegtem Port vor Start beispielsweise `$env:CONFIGUREME_PREVIEW_PORT = "3200"` nur in dieser Shell setzen. Beenden mit Ctrl+C; anschließend kann der selbst erstellte Previewordner nach Schließen aller Prozesse entfernt werden.
 
 Direkt im Repo sind `npm ci` und `npm run preview` ebenfalls möglich, erzeugen dort aber Build-/Dependencydateien. Der temporäre Checkout ist für maximale Trennung empfohlen. Ohne Git kann ein sauberer Source-Download in ein neues Verzeichnis entpackt werden; eine CI-EXE startet nicht diese Webvorschau.
+
+Für die noch nicht gemergte UX-Reviewfassung im Clonebefehl `feature/configurator-ux-round-1` statt `main` wählen. Geänderte Katalogfilter, bestehende Planhinweise und Screenshotnachweise: [UX-Runde 1](ux/feedback-round-1.md).
 
 ## Nachvollziehbare Schreibzugriffe
 
@@ -29,7 +31,7 @@ Direkt im Repo sind `npm ci` und `npm run preview` ebenfalls möglich, erzeugen 
 
 Windows-Ziel wählen; Essentials und Developer kombinieren; GitHub CLI fordert Git nur einmal an. Visual Studio Code abwählen und neu laden: Änderung bleibt in diesem Tab. Ein unabhängig geöffneter neuer Tab beginnt mit Defaults; Browser können beim Duplizieren/opener-basierten Öffnen sessionStorage initial kopieren. Server Operations auf Server 2022 plus Developer erzeugt einen sichtbaren Authentifizierungsoptionskonflikt; explizites Yes/No löst ihn. Wechsel zu Windows 11 behält die Auswahl und zeigt unzulässige Profile/Pakete, statt sie still zu verlieren.
 
-Git bei ausgewählter GitHub CLI entfernen: Abhängigkeit bleibt sichtbar, Export ist blockiert, Undo stellt Konsistenz her. Serverprüfung und Export funktionieren ohne Login. Der Export ist ausschließlich nicht ausführbares JSON. Kein ZIP/EXE-Downloadbutton darf aktiv sein. `/api/profiles` und `/api/bootstrap` bleiben anonym 401, `/dashboard` leitet um. Verweigerter sessionStorage lässt Änderungen im RAM zu; unbekannte/manipulierte gespeicherte Daten werden verworfen oder als sichtbarer Planungskonflikt behandelt.
+Bei ausgewählter GitHub CLI ist Git als erforderlich markiert und seine Abwahl gesperrt; ein Klick erzeugt keinen versteckten Ausschluss. „Also keep Git separately“ hält Git zusätzlich direkt fest, wenn GitHub CLI später abgewählt wird. Alte/manipulierte Dependency-Ausschlüsse bleiben als Konflikt sichtbar und können ausdrücklich über Undo repariert werden. Serverprüfung und Export funktionieren ohne Login. Der Export ist ausschließlich nicht ausführbares JSON. Kein ZIP/EXE-Downloadbutton darf aktiv sein. `/api/profiles` und `/api/bootstrap` bleiben anonym 401, `/dashboard` leitet um. Verweigerter sessionStorage lässt Änderungen im RAM zu; unbekannte/manipulierte gespeicherte Daten werden verworfen oder als sichtbarer Planungskonflikt behandelt.
 
 ## Automatisierte Prüfungen
 
