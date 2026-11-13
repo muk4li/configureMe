@@ -1,0 +1,54 @@
+{
+  "package": "simple-icons",
+  "version": "16.37.0",
+  "archiveSha512": "sha512-8mCJIhpMYOL9g13GW59EiL3sVXJnTEKGCTZFaekl9UQ3Qo0SwVjnLaJ82QiaH8BKBdouEDzrHMXIWh8cBIy48A==",
+  "assets": [
+    {
+      "title": "Git",
+      "slug": "git",
+      "hex": "F03C2E",
+      "source": "https://git-scm.com/community/logos",
+      "license": {
+        "type": "CC-BY-3.0"
+      },
+      "svgSha256": "95724d436215d483de82288610c3c144854138f49945424697fcdf8be66e17d6",
+      "usage": "Unchanged path; decorative product/brand identification only.",
+      "packageIds": [
+        "git"
+      ],
+      "pathSha256": "ed516395255004961b34e6fb9f96a08c9d31ddcda52e2b532aee004b31e27ef6"
+    },
+    {
+      "title": ".NET",
+      "slug": "dotnet",
+      "hex": "512BD4",
+      "source": "https://github.com/dotnet/brand/blob/c7d0f51b8ec59531332d05fb27a5b758a7a3d689/logo/dotnet-logo.svg",
+      "guidelines": "https://github.com/dotnet/brand/blob/c7d0f51b8ec59531332d05fb27a5b758a7a3d689/dotnet-styleGuide-2024.pdf",
+      "license": {
+        "type": "CC0-1.0"
+      },
+      "svgSha256": "3b7e1243fb2389116b0a5237c9f07e82f6d2eb18ee40bd232f28abccd7956993",
+      "usage": "Unchanged path; decorative product/brand identification only.",
+      "packageIds": [
+        "dotnet-10-sdk"
+      ],
+      "pathSha256": "2f043a4066da8402bff930a1581a4555f44c0875172fdfebea734cfe06930c0f"
+    },
+    {
+      "title": "GitHub Copilot",
+      "slug": "githubcopilot",
+      "hex": "000000",
+      "source": "https://primer.style/foundations/icons/copilot-24",
+      "license": {
+        "type": "MIT"
+      },
+      "svgSha256": "c72c1e0018e84b3128c5a1ac43ec2be135ac6ec4eb9c0ea18ed76416d23f2af3",
+      "usage": "Unchanged path; decorative product/brand identification only.",
+      "packageIds": [
+        "github-copilot-desktop",
+        "github-copilot-cli"
+      ],
+      "pathSha256": "995f11748f4ada6b69d53672773139d38ceb2cc7111aaec7f21022da85a31073"
+    }
+  ]
+}

@@ -33,6 +33,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-023](#cm-023) | P1 | Blocked | CM-3 | Snapshotvertrag akzeptieren und offline importieren |
 | [CM-024](#cm-024) | P1 | Blocked | CM-2 | Sichere öffentliche Setup-Downloadintegration |
 | [CM-025](#cm-025) | P1 | Blocked | CM-2 | Windows-Matrix und lokale Planübergabe nachweisen |
+| [CM-026](#cm-026) | P1 | Done | CM-1 | UX-Runde 1: Auswahl, Targetfilter und Layout konsistent machen |
 
 ## CM-001
 
@@ -318,6 +319,17 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Abhängigkeiten/Freigaben: CM-024-Gates und eigene Autorisierung isolierter echter Tests; PR #8 separat reviewen.
 - Akzeptanzkriterien: x64-Ziele, keine Core-/ARM-Zusagen; Previewformat nicht direkt ausführbar; tatsächliche Version/Architektur, Rechte, Offline/Neustart/Idempotenz nachgewiesen.
 - Verifikation: Matrixreview jetzt; später freigegebene frische VMs mit Quell-/Artefakt-/Plan-/OSbindung und negativen Ziel-/Rechtefällen.
+
+## CM-026
+
+**UX-Runde 1: Auswahl, Targetfilter und Layout konsistent machen** — P1; Status: **Done**; Komponente: öffentlicher Konfigurator/QA; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: erforderliche Pakete ohne versteckte Ausschlüsse behandeln; inkompatible Auswahl sichtbar bewahren; breiteres responsives Grid, höher beginnende Planübersicht, verständliche vorhandene Hinweise und lokale lizenzierte Icons.
+- Technische Evidenz: [UX-Bericht](docs/ux/feedback-round-1.md); alter Handler speicherte Git-Abwahl trotz requiredBy; Basis main 3442f9f mit PR #8/#9/#10, keine offenen PRs beim Start.
+- Dateien/Module: public-selection.ts; öffentliche React-Komponenten; globals.css; vorhandene Unit/API-/Playwrighttests; lokale Iconassets/Lizenzen; Vorschau-/UX-Dokumentation.
+- Abhängigkeiten/Freigaben: keine C/D-/Deployment-/Installerfreigabe; Engine/Auth/Trust/DataProvider unverändert. PR-API aktuell Forbidden, eigener Review-Branch erforderlich.
+- Akzeptanzkriterien: sichtbarer Zustand, gültiger Plan und Payload konsistent; gemeinsame Abhängigkeiten korrekt; Zielwechsel ohne stillen Verlust; normale Kategorien nur mit verfügbaren Einträgen; bestehende Hinweise ohne neue Wirkung verständlich; 375/768/1280/1440/1920 ohne Overflow/Überlappung, Desktop zweispaltig mit erreichbarer Übersicht; Icons lokal mit belegter Lizenz oder neutralem Fallback.
+- Verifikation: Typegen/Typecheck/Lint/Produktionsbuild bestanden; 51 Unit/API-Tests plus 1 expliziter Linux-Skip, 21 Browserfälle; Web-CI 43522606123 für bb651df erfolgreich. Screenshots, Asset-/Lizenz-/Hashprüfung und Scopeprüfung dokumentiert. PR-Erstellung durch API-Forbidden blockiert, Review-Branch gepusht; kein Merge. Done betrifft die implementierten UX-Kriterien, keine Release-/Deploymentfreigabe.
 
 ## Priorisierte nächste Arbeit
 
