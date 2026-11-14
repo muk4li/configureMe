@@ -1,0 +1,17 @@
+{
+  "formatId": "configureme/linux-plan",
+  "schemaVersion": 1,
+  "catalogRevision": "ee0df937ee9811942bd7ab58a34aec59b97d9c1a89793eac2d593fb0856a8f88",
+  "authorization": "none",
+  "target": {
+    "os": "ubuntu-24.04",
+    "architecture": "amd64"
+  },
+  "steps": [
+    "base-tools",
+    "ufw"
+  ],
+  "options": {
+    "addInvokingUserToDockerGroup": false
+  }
+}

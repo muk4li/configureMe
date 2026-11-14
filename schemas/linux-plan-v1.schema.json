@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:configureme:linux-plan:1",
+  "title": "configureMe declarative Linux plan v1 (no execution authority)",
+  "description": "Selects steps from linux/catalog.json. Contains no commands, URLs, paths, package names, versions, keys or environment variables. Size and nesting limits: contracts/linux-plan-v1.policy.json. catalogRevision must be the SHA-256 of the catalog file; step dependencies come from the catalog and are checked, never added.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatId",
+    "schemaVersion",
+    "catalogRevision",
+    "authorization",
+    "target",
+    "steps",
+    "options"
+  ],
+  "properties": {
+    "formatId": {
+      "const": "configureme/linux-plan"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "catalogRevision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "authorization": {
+      "const": "none"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "architecture"
+      ],
+      "properties": {
+        "os": {
+          "const": "ubuntu-24.04"
+        },
+        "architecture": {
+          "const": "amd64"
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "base-tools",
+          "docker-apt-repository",
+          "docker-engine",
+          "unattended-upgrades"
+        ]
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "addInvokingUserToDockerGroup"
+      ],
+      "properties": {
+        "addInvokingUserToDockerGroup": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

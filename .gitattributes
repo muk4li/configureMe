@@ -2,3 +2,7 @@
 bootstrap/windows-server-2022-developer/config/catalog.json text eol=lf
 # Shared byte fixtures must survive Windows autocrlf unchanged.
 tests/fixtures/setup-plan-v1/*.json text eol=lf
+# Linux plan v1: catalogRevision binds the exact catalog bytes; plans and fixtures stay LF.
+linux/catalog.json text eol=lf
+linux/plans/*.json text eol=lf
+tests/fixtures/linux-plan-v1/* text eol=lf

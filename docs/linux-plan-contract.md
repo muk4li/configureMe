@@ -6,6 +6,20 @@
 - Basis: configureMe `main` `b17968b`.
 - Erster Einsatz: `huu-server-01` (Ubuntu Server 24.04 LTS, amd64), Runner wird vom Eigentümer per SSH lokal gestartet.
 
+## Umsetzungsstand
+
+Getrennt nach implementiert, getestet und betrieben. Nur was hier steht, ist umgesetzt.
+
+| Teil | Implementiert | Getestet | Betrieben |
+| --- | --- | --- | --- |
+| Schema `schemas/linux-plan-v1.schema.json`, Policy `contracts/linux-plan-v1.policy.json` (16 KiB, Tiefe 4) | ja | Konstanten-Abgleich Schema/Policy/Python (`tests/linux/test_contract_constants.py`) | – |
+| Katalog `linux/catalog.json`, feste Quellen `linux/trusted.py` | ja; **Docker-Pins noch Platzhalter `UNVERIFIED-PLACEHOLDER`** | Katalogvalidierung (unbekannte Felder, feste Quellen, Paketnamen, Pins, Abhängigkeiten) | – |
+| Plan `linux/plans/huu-server-01.json` | ja (`addInvokingUserToDockerGroup: false`) | validiert gegen echten Katalog | – |
+| Validator `linux/linux_plan.py` | ja | `python3 -m unittest discover -s tests/linux` mit synthetischen Fixtures `tests/fixtures/linux-plan-v1/` | – |
+| Runner (Dry-Run, Apply) | nein | – | nein |
+
+Validator-Regeln: Größe ≤ 16 384 Byte, Verschachtelungstiefe ≤ 4 (vor dem Parsen geprüft), UTF-8 ohne BOM, doppelte Schlüssel (`object_pairs_hook`), `NaN`/`Infinity`, unbekannte und fehlende Felder, exakte Typen (`true` ist keine `1`), `catalogRevision` = SHA-256 der Katalogdatei, Schritte nur aus dem Katalog, eindeutig, in Katalogreihenfolge, Abhängigkeiten aus dem Katalog geprüft und nie ergänzt, Docker-Gruppe nur mit `docker-engine`. Der Katalog muss die festen Quellen aus `linux/trusted.py` exakt wiederholen und darf keine Pakete ergänzen; Platzhalter-Pins werden erkannt (`placeholder_pins`), der spätere Runner lehnt sie ab.
+
 ## Problem
 
 ADR-004 weist die Servereinrichtung nach der Ubuntu-Grundinstallation einem configureMe-Linux-Runner zu. configureMe hat bisher keinen Linux-Weg ([linux.md](linux.md)). Gebraucht wird ein deklarativer, versionierter Plan und ein lokaler Runner, der den Plan ohne freie Befehle, mit Dry-Run, Bestätigung und idempotent umsetzt.

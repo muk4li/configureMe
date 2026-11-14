@@ -1,0 +1,66 @@
+{
+  "formatId": "configureme/linux-catalog",
+  "schemaVersion": 1,
+  "target": {
+    "os": "ubuntu-24.04",
+    "codename": "noble",
+    "architecture": "amd64"
+  },
+  "sources": {
+    "ubuntu-archive": {
+      "kind": "distribution-archive",
+      "pinned": false
+    },
+    "docker-apt-repository": {
+      "kind": "apt-repository",
+      "pinned": true,
+      "uri": "https://download.docker.com/linux/ubuntu",
+      "suite": "noble",
+      "components": "stable",
+      "architecture": "amd64",
+      "keyUrl": "https://download.docker.com/linux/ubuntu/gpg",
+      "keyFingerprint": "9DC858229FC7DD38854AE2D88D81803C0EBFCD88",
+      "keyPath": "/etc/apt/keyrings/docker.asc",
+      "sourcesPath": "/etc/apt/sources.list.d/docker.sources"
+    }
+  },
+  "steps": [
+    {
+      "id": "base-tools",
+      "title": "Basiswerkzeuge aus dem Ubuntu-Archiv",
+      "dependsOn": [],
+      "packages": [
+        { "name": "ca-certificates" },
+        { "name": "curl" },
+        { "name": "git" },
+        { "name": "gnupg" }
+      ]
+    },
+    {
+      "id": "docker-apt-repository",
+      "title": "Offizielles Docker-APT-Repository mit festem Schlüssel",
+      "dependsOn": ["base-tools"],
+      "packages": []
+    },
+    {
+      "id": "docker-engine",
+      "title": "Docker Engine und Compose-Plugin in exakten Versionen",
+      "dependsOn": ["docker-apt-repository"],
+      "packages": [
+        { "name": "docker-ce", "version": "UNVERIFIED-PLACEHOLDER" },
+        { "name": "docker-ce-cli", "version": "UNVERIFIED-PLACEHOLDER" },
+        { "name": "containerd.io", "version": "UNVERIFIED-PLACEHOLDER" },
+        { "name": "docker-buildx-plugin", "version": "UNVERIFIED-PLACEHOLDER" },
+        { "name": "docker-compose-plugin", "version": "UNVERIFIED-PLACEHOLDER" }
+      ]
+    },
+    {
+      "id": "unattended-upgrades",
+      "title": "Automatische Sicherheitsupdates ohne automatischen Neustart",
+      "dependsOn": [],
+      "packages": [
+        { "name": "unattended-upgrades" }
+      ]
+    }
+  ]
+}
