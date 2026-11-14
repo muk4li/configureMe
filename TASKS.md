@@ -526,16 +526,16 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 
 ## CM-042
 
-**Linux-/Ubuntu-Provisionierung über lokalen Runner** — P1; Status: **In Progress** (Vertrag Proposed, kein Code); Komponente: neuer Linux-Plan, Linux-Katalog, lokaler Runner; Phase: CM-6 (neu, siehe Centrality).
+**Linux-/Ubuntu-Provisionierung über lokalen Runner** — P1; Status: **In Progress** (Vertrag Accepted 2026-11-14, nicht implementiert); Komponente: neuer Linux-Plan, Linux-Katalog, lokaler Runner; Phase: CM-6 (neu, siehe Centrality).
 
 - Beschreibung: Erster Linux-Weg für configureMe. Ein deklarativer, versionierter Plan richtet eine frisch per Autoinstall installierte Ubuntu-Server-24.04-VM ein: Basiswerkzeuge, offizielles Docker-APT-Repo, Docker Engine + Compose-Plugin, unattended-upgrades, optional Docker-Gruppe nur bei ausdrücklicher Planentscheidung. Ausgeführt durch einen **lokalen Runner auf der VM**, den der Eigentümer per SSH startet; das Webportal führt nichts aus.
 - Bezug auf die VM: Der Runner kommt per `git clone` eines festen configureMe-Commits auf die VM und läuft mit einem Plan aus dem Repo.
-- Auftrag/Quelle: Centrality [ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), O-024/O-025 (geprüft `6fee069`). Erster Einsatz: `huu-server-01`. Vorschlag: [Linux-Plan v1](docs/linux-plan-contract.md) (**Proposed**).
+- Auftrag/Quelle: Centrality [ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), O-024/O-025 (geprüft `6fee069`). Erster Einsatz: `huu-server-01`. Vertrag: [Linux-Plan v1](docs/linux-plan-contract.md) (**Accepted** 2026-11-14: eigenes Format, Python-3.12-Standardbibliothek, Docker-Gruppe `false` für huu-server-01, nur Docker-Pakete gepinnt).
 - Grenzen: keine frei definierbaren Shell-Befehle aus Plandaten; Paketdefinitionen und Quellen sind Anwendungscode (Ubuntu-Archiv, offizielles Docker-APT-Repo mit festem Schlüssel-Fingerprint); Dry-Run als Standard; ausdrückliche Bestätigung vor Root-Aktionen, keine Selbst-Elevation; idempotent; keine Secrets in Plan oder Bericht; kein Remote-Agent, kein VPN-Enrollment.
 - Abgrenzung: Autoinstall/cloud-init (myHome-Lab) übernimmt Platte, Benutzer, SSH-Key, Locale, openssh. **Firewall/ufw und Isolation gehören zu myHome-Lab**, nicht zu CM-042. Caddy und Apps kommen danach per Compose, nicht über configureMe. Hyper-V, VPN, Secrets nicht im Umfang.
-- Schnitt: (1) Vertrag Proposed → (2) Schema/Katalog/Validierung → (3) Runner mit Dry-Run → (4) Installationsschritte → (5) Doku/Anleitung. Teil 2 ff. erst nach Eigentümerentscheidung zum Vertrag.
+- Schnitt: (1) Vertrag Proposed → (2) Schema/Katalog/Validierung → (3) Runner mit Dry-Run → (4) Installationsschritte → (5) Doku/Anleitung. Teil 1 abgeschlossen (Vertrag Accepted); Teile 2–5 als aufeinander aufbauende PRs.
 - Akzeptanzkriterien: Plan validiert gegen ein Linux-Schema; Dry-Run zeigt alle Schritte ohne Änderung; zweiter Lauf ändert nichts; Erkennung prüft tatsächliche Versionen; Bericht trennt erfolgreich/bereits erfüllt/übersprungen/fehlgeschlagen; Tests ohne echte Installation; bestehende Web- und Windows-Gates unverändert grün.
-- Verifikation: noch keine; reale Installation nur durch den Eigentümer nach Freigabe.
+- Verifikation: noch keine Codeprüfung (kein Code); reale Installation nur durch den Eigentümer nach Freigabe.
 
 ## Priorisierte nächste Arbeit
 
