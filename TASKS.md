@@ -400,7 +400,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Dateien/Module: public/.gitkeep; .env.example; .gitignore; Deploymentdokumentation.
 - Abhängigkeiten/Freigaben: Dockerdaemonzugriff und isolierter Clean-Checkout-Build/Health/API-Test fehlen; keine Gruppenzuordnung/Sudo-/Hoständerung als Umgehung.
 - Akzeptanzkriterien: Alle COPY-Quellen vorhanden; einzig explizite Env-Beispieldatei aus Ignore ausnehmen, echte Dateien weiter ignoriert; leere Authwerte; vollständigen Dockerbuild erst nach tatsächlichem Test als bestanden melden.
-- Verifikation: Git-/Datei-/Env-Struktur geprüft; bestehende Web-CI; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002 bleibt offen.
+- Verifikation: Git-/Datei-/Env-Struktur geprüft; vollständige Web-CI 43566003380 für 73db0ef erfolgreich; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002/041 bleiben offen.
 
 ## Priorisierte nächste Arbeit
 

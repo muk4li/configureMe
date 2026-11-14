@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, fix/docker-checkout-inputs]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
