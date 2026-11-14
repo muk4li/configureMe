@@ -36,7 +36,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-028](#cm-028) | P1 | Done | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
-| [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-031](#cm-031) | P1 | Done | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-032](#cm-032) | P1 | Done | CM-1 | Windows-v1-Baseline nach PR #12 synchronisieren |
 
 ## CM-001
 
@@ -379,7 +380,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-031
 
-**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Blocked**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
+**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Done**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Webexport und nativer Import nutzen dieselben positiven/negativen Fixtures; vollständige vorhandene Workflows und Dokumentationsgrenzen prüfen.
 - Technische Evidenz: Masterauftrag Phase E; gemeinsamer valid-server-Export wird in TS byteinhaltlich und nativ vor Workerplanung geprüft.
@@ -388,7 +389,18 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Akzeptanzkriterien: Alle ausführbaren Gates tatsächlich grün; OS-/Provenienz-/Releasegrenzen sichtbar; separater reviewfähiger PR, kein Merge.
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
-Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Die damalige PR-Erstellungsblockade ist durch den Eigentümer gemergten PR #12 erledigt (f744d63). Erneut geprüft: main-Web-CI 43562422332 und Windows-CI 43562422337 erfolgreich. Keine öffentliche Releasefreigabe.
+
+## CM-032
+
+**Windows-v1-Baseline nach PR #12 synchronisieren** — P1; Status: **Done**; Komponente: Dokumentation/Audit; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: gemergten Stand, CI-/Vertragsstatus und tatsächliche Folgefreigaben synchronisieren; historische Audits erhalten.
+- Technische Evidenz: main f744d63; PR #12 merged; Web-CI 43562422332 und Windows-CI 43562422337 erfolgreich; Centrality 12776e9, Datenmodell 75b91cf nur lesend geprüft.
+- Dateien/Module: REPO.md; ROADMAP.md; TASKS.md; Setup-Plan-/Vorschau-/Auditdokumentation.
+- Abhängigkeiten/Freigaben: nur lokale Dokumentationspflege; keine fremden Änderungen oder Release-/Installationsfreigabe.
+- Akzeptanzkriterien: CM-031 nicht fälschlich blockiert; Import/Dry-Run versus Installation/Release klar; stabile eindeutige IDs; reviewfähiger Branch/PR-Beschreibung bei API-Sperre.
+- Verifikation: lokale Links/Anker, Task-IDs/Status und git diff --check; Produktcode unverändert; aktuelle Nachweise im Baseline-Audit.
 
 ## Priorisierte nächste Arbeit
 
