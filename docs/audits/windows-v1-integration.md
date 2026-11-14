@@ -12,3 +12,9 @@ Tested product commit: `9775d28baee0d32cd34ecb2820dc0546ca654022`.
 Final follow-up commit changes this audit plus removal of the two temporary test-branch push triggers only. Ordinary main/PR/manual triggers remain. No additional suite run is claimed for this documentation-only follow-up SHA. Individual branch code CI and review boundaries are in [progress](windows-v1-progress.md).
 
 Open gates remain: contract acceptance/phase C and activation permission, actual Windows-11 platform acceptance, external profile contract/public file-set, parent/ACL/privileged handoff acceptance, full build/final-app provenance, independent publisher/signing/release approval, actual clean target/vendor tests and Docker-host access. Current Docker checks do not prove container build/run. No secrets, private source data, foreign writes or production system changes.
+
+## Consolidated PR requested after integration testing
+
+On 2026-11-14 the owner explicitly requested one complete PR. `feature/windows-v1-complete-review` therefore carries the already combined, tested implementation as a consolidated review against main, with the later documentation evidence included. The earlier test-only description above records the original validation strategy; it is not a current prohibition on this requested PR. Creating the PR does not merge main, accept proposed contracts, activate imported installations/Windows-11 registration, or approve release/distribution.
+
+The consolidated review is now open as [PR #13](https://github.com/muk4li/configureMe/pull/13); API access was restored in the replacement environment. Ordinary PR workflows rerun against its current head. Prior successful results above remain bound to their original tested SHA. No merge or activation has occurred.
