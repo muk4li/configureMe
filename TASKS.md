@@ -48,6 +48,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 | [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
 | [CM-042](#cm-042) | P1 | In Progress | CM-6 | Linux-/Ubuntu-Provisionierung über lokalen Runner (huu-server-01) |
+| [CM-043](#cm-043) | P1 | Ready | CM-6 | Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal |
+| [CM-044](#cm-044) | P1 | Blocked | CM-6 | Portalzugang aus Ubuntu-VM über kontrollierten LAN-Pfad |
 
 ## CM-001
 
@@ -536,6 +538,27 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Schnitt: (1) Vertrag Proposed → (2) Schema/Katalog/Validierung → (3) Runner mit Dry-Run → (4) Installationsschritte → (5) Doku/Anleitung. Teil 1 abgeschlossen (Vertrag Accepted); Teile 2–5 als aufeinander aufbauende PRs.
 - Akzeptanzkriterien: Plan validiert gegen ein Linux-Schema; Dry-Run zeigt alle Schritte ohne Änderung; zweiter Lauf ändert nichts; Erkennung prüft tatsächliche Versionen; Bericht trennt erfolgreich/bereits erfüllt/übersprungen/fehlgeschlagen; Tests ohne echte Installation; bestehende Web- und Windows-Gates unverändert grün.
 - Verifikation: noch keine Codeprüfung (kein Code); reale Installation nur durch den Eigentümer nach Freigabe.
+
+## CM-043
+
+**Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal** — P1; Status: **Ready für Implementierungsentwurf**, **keine** Freigabe für reale Installation oder öffentliche Distribution; Phase: CM-6.
+
+- Auftrag: Ubuntu-24.04/amd64-Profil im lokal auf dem Windows-Host betriebenen configureMe-Webportal auswählen und ein offline prüfbares Paket aus **Linux-Runner, `configureme/linux-plan` v1, Katalog, Manifest, Prüfsummen, Versions-/Commitnachweis und Prüfanleitung** herunterladen. Downloads sind keine Remote-Ausführung.
+- Verantwortung: configureMe für Plan, sichere Auswahl, Quelle und Paket; der Runner wird **auf der VM selbst** gestartet. Bestehende Windows-Plan-/ZIP-/OAuth-/Public-Preview-Grenzen bleiben unverändert.
+- Abhängigkeiten: akzeptierter CM-042-Vertrag, vorhandener/reviewter Linux-Runner und zugehöriger Katalog; CM-001-Provenienzgrenzen gelten weiterhin. Bundleexport kann nicht als implementiert gelten, solange CM-042 auf `main` fehlt.
+- Akzeptanz: reproduzierbares, eindeutiges Offline-Paket und server-/clientseitig strikte Ziel-/Abhängigkeits-/Katalogprüfung; negative Tests für falsches OS, kaputte/ausgetauschte Dateien, Katalogabweichung, unerlaubte Inhalte und Downloadzugriffe. Hash aus dem selben Bundle ersetzt **keinen** unabhängigen Herkunftsnachweis.
+- Tests: synthetische Portal-/Bundle-/Importtests ohne Installationsrechte; echter Download und Host-/VM-Test später separat nach Freigabe.
+- Technischer und Sicherheitsvertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
+
+## CM-044
+
+**Portalzugang aus Ubuntu-VM über kontrollierten LAN-Pfad** — P1; Status: **Blocked bis HL-011/015/016 und VM-Netz HL-012/013 geklärt**, Phase: CM-6.
+
+- Auftrag: sicheren Transport der Weboberfläche und CM-043-Downloads vom Windows-Host zur VM definieren, einschließlich Host-Bindung, TLS/Artefaktherkunft, erlaubten Clients/Origins, Auth und Limits. **Keine Remote Execution, kein SSH-/Docker-/Hyper-V-Zugriff durch das Portal und keine Router-Portfreigabe.**
+- Abhängigkeiten: HL-011/015/016 sowie HL-012/013, gemeinsame Regeln mit HL-018. Host-Firewallkonfiguration ist myHome-Lab-Verantwortung; configureMe dokumentiert App-Bindung und sicherheitsrelevante Endpunkte.
+- Akzeptanz: nach expliziter Host-Freigabe erlaubter VM-Zugriff; unerlaubte LAN-, externe und Admin-/Downloadzugriffe negativ getestet. Kein `0.0.0.0`-/Origin-Bypass als pauschale Lösung; ohne vertrauenswürdigen LAN-Transport nur unabhängig verifiziertes Offline-Handoff.
+- Tests: synthetische Origin-/ACL-/Downloadfälle, danach reale LAN-Positiv-/Negativtests in gemeinsamer Session.
+- Vertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
 
 ## Priorisierte nächste Arbeit
 

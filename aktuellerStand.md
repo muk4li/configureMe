@@ -7,6 +7,8 @@
 - **In Arbeit:** CM-042 Linux-Runner für `huu-server-01` – [Vertrag Accepted](docs/linux-plan-contract.md) (2026-11-14); noch kein Code.
 - **Nächster Schritt:** Schema, Policy, Katalog und Planvalidierung mit Tests (CM-042 Teil 2).
 
+**Planungsnachtrag CE-013, 2026-11-14:** CM-043/044 [lokaler Portal-Handoff](docs/huu-local-portal-handoff.md) als separate Aufgaben dokumentiert. Portal auf Windows-Host stellt später geprüfte Linux-Bundles für die Ubuntu-VM bereit; Runner wird ausschließlich auf der VM ausgeführt. **Nicht implementiert, kein LAN-Zugriff, Download oder Apply geprüft.** CM-042-Code fehlt weiterhin auf `main`.
+
 Technischer Leitfaden: [REPO.md](REPO.md). Prüfprotokolle: [docs/audits/](docs/audits/).
 
 ## Protokoll (neueste zuerst)
