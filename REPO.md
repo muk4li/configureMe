@@ -190,3 +190,7 @@ Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verif
 ## Lokale Installer-Provenienz (CM-037, Review)
 
 [Additive Prüfevidenz](docs/audits/installer-provenance.md) erhält tatsächlichen SHA256/Größe, erwartete Hashes, denselben geprüften Signer/Policy, Paket-/Feedversion und redigierte konfigurierte/beobachtete Quelle bis Worker-/Aggregate-JSON, auch nach Prozessfehlern. Cached-Final-URI bleibt null. Erwartete Pfadhashes bleiben erhalten und werden gegen den gehaltenen Stream gebunden. Dies ist keine unabhängige Publisher-/Buildauthentifizierung; CM-010 bleibt für Build/Toolchain/finale Apparchitektur offen. Kontrollierte Branchabhängigkeit: zuerst Handoff-Teilsicherung.
+
+## Legacy-Wizard-UX (CM-039)
+
+Geschützter Wizard zeigt CPython-Vollinstaller und die hashgebundene unsigned-7-Zip-MSI-Ausnahme korrekt. Leere/HTML/trunkierte Fehler liefern verständliche HTTP-Meldungen; unerwartete Erfolgsausgaben werden nicht als ZIP gespeichert. ZIP-Headerprüfung ist keine Herkunfts-/Signaturprüfung. Auth, öffentliche Distribution und Installerprüfungen bleiben unverändert; CM-008s OAuth-State-Frage bleibt offen.

@@ -43,6 +43,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
 | [CM-037](#cm-037) | P1 | Done | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
 | [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
+| [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
 
 ## CM-001
 
@@ -471,6 +472,18 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d8f79c9`, [vollständige
 - Akzeptanzkriterien: Konkrete Quelle/Build/Signatur/Verifikation/Rotation/Freigabe-Kette; Matrix für OS/DPI/Rechte/Version/Architektur/Wiederholung/Fehler mit sicheren ausführbaren Befehlen; keine Releaseaktivierung.
 - Verifikation: Dokumentationslinks/Status/Scope und git diff --check; vorhandener kompletter Windows-CI-Lauf 43564614212, keine neue echte Zielsystemausführung behauptet.
 
+## CM-039
+
+**Legacy-Downloadfehler und Installermodus verständlich anzeigen** — P1; Status: **Done**; Komponente: Geschütztes Wizard-UX; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestätigten leeren/HTML-/defekten JSON-Fehler benutzerverständlich behandeln; unerwartete Erfolgsausgaben nicht als ZIP herunterladen; Python/7-Zip-Anzeige an reale Modi anpassen.
+- Technische Evidenz: AF-009/011 und aktuelle setup-wizard.tsx: Pythonmanager/pauschal signed 7-Zip sowie ungeprüftes response.json bei Fehlern.
+- Dateien/Module: setup-wizard.tsx; legacy-bundle-response.ts; gezielte Antworttests.
+- Abhängigkeiten/Freigaben: Keine Auth-/Katalog-/Installerpolicyänderung; ZIP-Headerprüfung ist nur UX, keine Signatur-/Herkunftszusage.
+- Akzeptanzkriterien: Leere/HTML/trunkierte Fehler ohne rohen Parsertext; korrekte JSON-Fehler begrenzt erhalten; tatsächliche ZIPbytes erhalten; kein Navigation/Selektionswechsel während laufendem Download.
+- Verifikation: Sechs Response-Regressionstests mit realem ZIP-Kontrollfall; vollständige bestehende Webgates/Browsergrenzen. OAuth-State-Sicherheitsfrage CM-008 bleibt separat offen.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `7742d44`, [vollständige CI 43565106502](https://github.com/muk4li/configureMe/actions/runs/43565106502) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 
