@@ -37,7 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
-| [CM-035](#cm-035) | P1 | In Progress | CM-1 | Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern |
+| [CM-035](#cm-035) | P1 | Done | CM-1 | Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern |
 
 ## CM-001
 
@@ -393,7 +393,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-035
 
-**Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern** — P1; Status: **In Progress**; Komponente: Consumer-Contracttests/Datenentscheidung; Phase: [CM-1](ROADMAP.md#cm-1).
+**Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern** — P1; Status: **Done**; Komponente: Consumer-Contracttests/Datenentscheidung; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Konkrete Producer-/Consumer-Abweichungen mit synthetischen Beispielen und echten Consumer-Validatoren testen; produktiven Import gesperrt lassen.
 - Technische Evidenz: Centrality 12776e9 und Datenquelle 75b91cf nur lesend geprüft; ADR-002/D-007 weiter Proposed; Reihenfolge, Limits, Zielworkflow und Identitäten unterscheiden sich.
@@ -401,6 +401,8 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Abhängigkeiten/Freigaben: Keine externe Schemaannahme oder produktive Providerfreigabe; CM-003/023 bleiben blockierend für echten Import.
 - Akzeptanzkriterien: Konkrete Entscheidungsvorlage; source-shaped Daten und unbekannte Versionen/Revisionen nicht implizit akzeptieren; keine Kürzung/Alias-/Targetkonvertierung; keine privaten Profile kopieren.
 - Verifikation: Fünf gezielte Vitestfälle; Typecheck/Lint und vorhandene komplette Web-CI; keine Installer oder Secrets.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `4848a0f`, [vollständige CI 43564368520](https://github.com/muk4li/configureMe/actions/runs/43564368520) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 
