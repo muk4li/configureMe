@@ -37,6 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-033](#cm-033) | P1 | In Progress | CM-1 | Importierten Ausführungsvertrag ohne Aktivierung vorbereiten |
 
 ## CM-001
 
@@ -389,6 +390,17 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
 Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+
+## CM-033
+
+**Importierten Ausführungsvertrag ohne Aktivierung vorbereiten** — P1; Status: **In Progress**; Komponente: Nativer Reviewzustand/Sicherheitsvertrag; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Snapshot-/Katalog-/Ziel-gebundene read-only Reviewzustände und klare spätere Bestätigungsgrenze schaffen; keine Installationsfunktion registrieren.
+- Technische Evidenz: Masterauftrag B; main f744d63 hat bewusst gesperrte importierte Installation. Vorhandenes detect/offline plan wird wiederverwendet.
+- Dateien/Module: ImportedPlanExecutionReview.cs; zugehörige portable/Windows-Tests; docs/imported-plan-execution-contract.md
+- Abhängigkeiten/Freigaben: Ausführungsvertrag bleibt Proposed; Paket C und reale importierte Installation benötigen eigene Annahme/Phasenfreigabe. Keine zweite Engine.
+- Akzeptanzkriterien: Eigene unveränderliche Bytes; erneut validierte Katalog-/Zielbindung; vollständige eindeutige Beobachtungen; fehlende/unklare Detection, Rechte und Modi sichtbar; Abbruch/late results geschlossen; kein Execute-/Authorize-API.
+- Verifikation: 20 gezielte Fälle, portable/Windows-Komplettsuite und EXE-Selftests; kein realer Installer. Temporäre In-Process-Diagnose nur ergänzend, nicht als VSTest zählen.
 
 ## Priorisierte nächste Arbeit
 
