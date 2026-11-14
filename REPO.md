@@ -174,3 +174,7 @@ Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md),
 ## Handoff-Teilsicherung (CM-036)
 
 Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verifikation bis zum Prozessende. [Evidenz und verbleibende Parent-/ACL-Grenzen](docs/audits/installer-handoff-lock.md). CM-006 bleibt umfassend offen. [Release-Vertrauensplan](docs/release-trust-plan.md) und [Zielsystemmatrix](docs/qa/windows-v1-acceptance.md) bereiten gesonderte Freigaben vor; keine Aktivierung importierter Installationen oder öffentliche Distribution.
+
+## Lokale Installer-Provenienz (CM-037, Review)
+
+[Additive Prüfevidenz](docs/audits/installer-provenance.md) erhält tatsächlichen SHA256/Größe, erwartete Hashes, denselben geprüften Signer/Policy, Paket-/Feedversion und redigierte konfigurierte/beobachtete Quelle bis Worker-/Aggregate-JSON, auch nach Prozessfehlern. Cached-Final-URI bleibt null. Erwartete Pfadhashes bleiben erhalten und werden gegen den gehaltenen Stream gebunden. Dies ist keine unabhängige Publisher-/Buildauthentifizierung; CM-010 bleibt für Build/Toolchain/finale Apparchitektur offen. Kontrollierte Branchabhängigkeit: zuerst Handoff-Teilsicherung.

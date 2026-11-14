@@ -15,7 +15,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-007](#cm-007) | P2 | Ready | CM-1 | Session-Widerruf und Allowlist-Lebenszyklus entscheiden |
 | [CM-008](#cm-008) | P2 | Ready | CM-1 | Web-Fehlerfälle und OAuth-Byteprüfung korrigieren |
 | [CM-009](#cm-009) | P1 | Ready | CM-1 | Trust- und Installermodus in der UI korrekt benennen |
-| [CM-010](#cm-010) | P1 | Ready | CM-2 | Aufgelöste Installer- und Build-Provenienz erfassen |
+| [CM-010](#cm-010) | P1 | In Progress | CM-2 | Aufgelöste Installer- und Build-Provenienz erfassen |
 | [CM-011](#cm-011) | P2 | Blocked | CM-3 | Versionierten Profiladapter implementieren |
 | [CM-012](#cm-012) | P2 | Blocked | CM-3 | Read-only GitHub-Provider erst nach Vertrag bauen |
 | [CM-013](#cm-013) | P2 | Blocked | CM-4 | Eigenständigen Betriebs-/Integrationsvertrag vorbereiten |
@@ -38,6 +38,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 | [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
+| [CM-037](#cm-037) | P1 | In Progress | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
 | [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 
 ## CM-001
@@ -143,7 +144,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-010
 
-**Aufgelöste Installer- und Build-Provenienz erfassen** — P1; Status: **Ready**; Komponente: Windows/Reporting/Release; Phase: [CM-2](ROADMAP.md#cm-2).
+**Aufgelöste Installer- und Build-Provenienz erfassen** — P1; Status: **In Progress**; Komponente: Windows/Reporting/Release; Phase: [CM-2](ROADMAP.md#cm-2).
 
 - Beschreibung: Quellrevision, tatsächliche Download-/Final-URI, erwartete/ist Digests, Signer und exakte Toolchain/Versionen reproduzierbar berichten, ohne Query-Secrets zu protokollieren.
 - Technische Evidenz: AF-010: Paketbericht hat Source/Version/Status, aber keinen vollständigen Binary-Digest-/Signerbeleg; dynamische Feeds und Versionsbereiche verhindern Gleichsetzung von Code-SHA und Installerbytes.
@@ -403,6 +404,17 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Akzeptanzkriterien: Mutationsversuche und vorhandene Writer vor Runner verweigern; unveränderte Bytes/Exitcodes/Reboot erhalten; Handle in allen Pfaden freigeben; keine Securitychecks lockern.
 - Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow 43564614212 für d5c6a52 erfolgreich; keine Linux-Locks als Windowsbeleg.
 
+## CM-037
+
+**Geprüfte Installerbytes und Quellen im Bericht erhalten** — P1; Status: **In Progress**; Komponente: Installer-/Worker-/Report-Provenienz; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Additive lokale Prüfevidenz desselben Verifikationsvorgangs mit tatsächlichem Digest/Größe/Signatur und redigierter beobachteter Quelle erhalten, auch bei späterem Prozessfehler.
+- Technische Evidenz: CM-010: ursprüngliche Downloadfunktion verwirft finale validierte URI; Installresultat enthält nur Exit/Reboot. Kontrollierte Abhängigkeit auf Handoff-Branch ca290e3.
+- Dateien/Module: Downloads/Installation/GuiWorker/Logging/bootstrap; installer-provenance.ps1; Aggregate-Reporttest; docs/audits/installer-provenance.md
+- Abhängigkeiten/Freigaben: Zuerst Handoff-Reviewbranch übernehmen; keine Releaseauthentizität/Signierung. Build-/Toolchain-Provenienz und finale Apparchitektur bleiben CM-010 offen.
+- Akzeptanzkriterien: Bisherige Rückgaben/stdout erhalten; erwarteter Pfadhash weiter geprüft und gegen gehaltenen Stream gebunden; SignatureProvider exakt einmal; cached finale URI unbekannt lassen; userinfo/query/fragment entfernen; ungültige Signaturen nie als erfolgreich berichten.
+- Verifikation: 86 bestehende + 25 neue PS7-Fixtureassertions; Windows PS5.1/7, Worker-/Aggregate-Suiten und vollständiger Publishworkflow; Mismatch-Stream/Pfad vor Signer verweigert.
+
 ## CM-038
 
 **Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten** — P1; Status: **Done**; Komponente: Release/QA-Vorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
@@ -413,6 +425,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Abhängigkeiten/Freigaben: Signer-/Schlüsselentscheidung, VMbereitstellung und echte Installationsfreigabe bleiben extern; CM-001/005 nicht als abgeschlossen ausgeben.
 - Akzeptanzkriterien: Konkrete Quelle/Build/Signatur/Verifikation/Rotation/Freigabe-Kette; Matrix für OS/DPI/Rechte/Version/Architektur/Wiederholung/Fehler mit sicheren ausführbaren Befehlen; keine Releaseaktivierung.
 - Verifikation: Dokumentationslinks/Status/Scope und git diff --check; vorhandener kompletter Windows-CI-Lauf 43564614212, keine neue echte Zielsystemausführung behauptet.
+
 
 ## Priorisierte nächste Arbeit
 

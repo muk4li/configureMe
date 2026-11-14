@@ -219,7 +219,8 @@ function Test-QuickSetupBootstrapAuthorization {
 }
 
 function Assert-QuickSetupInstallerSignature {
-  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$FileHashProvider)
+  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$FileHashProvider, [ref]$Verification)
+  if ($Verification) { $Verification.Value = $null }
   $signature = if ($SignatureProvider) { & $SignatureProvider $Path } else { Get-AuthenticodeSignature -LiteralPath $Path }
   if ($Id -eq "seven-zip" -and $Definition.VerificationPolicy -ceq "seven-zip-25.01-pinned-unsigned") {
     $pin = Get-QuickSetupSevenZipInstaller
@@ -230,10 +231,20 @@ function Assert-QuickSetupInstallerSignature {
         $actualHash -ine $pin.Sha256) {
       throw "The unsigned 7-Zip exception requires the exact reviewed official x64 MSI and SHA-256."
     }
-    if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned -and !$signature.SignerCertificate) { return }
+    if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned -and !$signature.SignerCertificate) {
+      if ($Verification) { $Verification.Value = [pscustomobject]@{ Status = "NotSigned"; Policy = "seven-zip-25.01-pinned-unsigned"; SignerSubject = $null; SignerThumbprint = $null } }
+      return
+    }
   }
   $result = Test-QuickSetupAuthenticodePublisher -Path $Path -ExpectedPublisher $Definition.Publisher -ExpectedCommonName $Definition.ExpectedCommonName -ExpectedOrganization $Definition.ExpectedOrganization -SignatureProvider { param($ignored) $signature }
   if (!$result.IsValid) { throw $result.Message }
+  if ($Verification) {
+    $Verification.Value = [pscustomobject]@{
+      Status = [string]$signature.Status; Policy = "authenticode"
+      SignerSubject = [string]$signature.SignerCertificate.Subject
+      SignerThumbprint = [string]$signature.SignerCertificate.Thumbprint
+    }
+  }
 }
 
 function Get-QuickSetupInstallerDefinition {
@@ -407,24 +418,60 @@ function Get-QuickSetupInstallerDefinition {
   }
 }
 
+function Get-QuickSetupVerifiedArtifactHash {
+  param([string]$Path, [string]$Algorithm, [IO.Stream]$ArtifactStream)
+  # Retain the original path-based digest check. A locked stream alone must
+  # never authorize a different file now resolved by the executable path.
+  $pathHash = (Get-FileHash -LiteralPath $Path -Algorithm $Algorithm).Hash.ToLowerInvariant()
+  if (!$ArtifactStream) { return $pathHash }
+  $position = $ArtifactStream.Position
+  $hasher = [Security.Cryptography.HashAlgorithm]::Create($Algorithm)
+  try {
+    $ArtifactStream.Position = 0
+    $streamHash = [BitConverter]::ToString($hasher.ComputeHash($ArtifactStream)).Replace("-", "").ToLowerInvariant()
+    if ($streamHash -cne $pathHash) { throw "The installer path $Algorithm hash does not match the locked artifact; refusing verification." }
+    return $streamHash
+  } finally { $ArtifactStream.Position = $position; $hasher.Dispose() }
+}
+
 function Assert-QuickSetupDownloadedInstaller {
-  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$MsiPlatformReader)
+  param([string]$Id, $Definition, [string]$Path, [scriptblock]$SignatureProvider, [scriptblock]$MsiPlatformReader,
+    [ref]$Verification, [IO.Stream]$ArtifactStream)
+  if ($Verification) { $Verification.Value = $null }
   Assert-QuickSetupSafePath -Path $Path
+  $measured = @{}
   foreach ($algorithm in @("SHA256", "SHA512")) {
     $expected = $Definition.$algorithm
     $length = if ($algorithm -eq "SHA256") { 64 } else { 128 }
-    if ($expected -and ($expected -notmatch "^[A-Fa-f0-9]{$length}$" -or
-        (Get-FileHash -LiteralPath $Path -Algorithm $algorithm).Hash -ine $expected)) {
-      throw "The cached/downloaded installer $algorithm does not match the official metadata."
+    if ($expected) {
+      if ($expected -notmatch "^[A-Fa-f0-9]{$length}$") { throw "The cached/downloaded installer $algorithm does not match the official metadata." }
+      $measured[$algorithm] = Get-QuickSetupVerifiedArtifactHash -Path $Path -Algorithm $algorithm -ArtifactStream $ArtifactStream
+      if ($measured[$algorithm] -ine $expected) { throw "The cached/downloaded installer $algorithm does not match the official metadata." }
     }
   }
+  # Also bind stream/path before signature checking when the vendor supplies
+  # only SHA512 or no digest; later provenance must not describe another file.
+  if (!$measured.ContainsKey("SHA256")) { $measured["SHA256"] = Get-QuickSetupVerifiedArtifactHash -Path $Path -Algorithm SHA256 -ArtifactStream $ArtifactStream }
   $allowBootstrap = Test-QuickSetupBootstrapAuthorization -Id $Id -Definition $Definition
   if (($Definition.BootstrapperKind -or $Definition.AllowX86BootstrapForX64) -and !$allowBootstrap) {
     throw "The package-specific bootstrapper authorization metadata is invalid."
   }
-  Test-QuickSetupInstallerFile -Path $Path -InstallerType $Definition.InstallerType -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:$allowBootstrap -MsiPlatformReader $MsiPlatformReader -ExpectedPackageName $Definition.PackageName -ExpectedPackagePublisher $Definition.PackagePublisher | Out-Null
+  $fileCheck = Test-QuickSetupInstallerFile -Path $Path -InstallerType $Definition.InstallerType -ExpectedArchitecture $Definition.ExpectedArchitecture -AllowX86BootstrapForX64:$allowBootstrap -MsiPlatformReader $MsiPlatformReader -ExpectedPackageName $Definition.PackageName -ExpectedPackagePublisher $Definition.PackagePublisher
+  $signatureCheck = $null
   if ($Definition.InstallerType -ne "msix") {
-    Assert-QuickSetupInstallerSignature -Id $Id -Definition $Definition -Path $Path -SignatureProvider $SignatureProvider
+    Assert-QuickSetupInstallerSignature -Id $Id -Definition $Definition -Path $Path -SignatureProvider $SignatureProvider -Verification ([ref]$signatureCheck)
+  } else {
+    # Manifest/signature presence is not Windows deployment trust validation.
+    $signatureCheck = [pscustomobject]@{ Status = "DeploymentValidationPending"; Policy = "msix-platform-deployment"; SignerSubject = $null; SignerThumbprint = $null }
+  }
+  if ($Verification) {
+    $Verification.Value = [pscustomobject]@{
+      Sha256 = $measured["SHA256"]
+      SizeBytes = if ($ArtifactStream) { $ArtifactStream.Length } else { (Get-Item -LiteralPath $Path).Length }
+      ExpectedSha256 = $Definition.Sha256; ExpectedSha512 = $Definition.Sha512
+      InstallerType = [string]$fileCheck.InstallerType; InstallerArchitecture = [string]$fileCheck.Architecture
+      Signature = $signatureCheck
+    }
   }
 }
 
@@ -438,9 +485,11 @@ function Invoke-QuickSetupPackageInstall {
     [scriptblock]$MsiPlatformReader,
     [scriptblock]$AppxPackageProvider,
     [scriptblock]$ProgressCallback,
-    [string]$CachedInstallerPath
+    [string]$CachedInstallerPath,
+    [ref]$Provenance
   )
 
+  if ($Provenance) { $Provenance.Value = $null }
   if ($Id -eq "openssh-client") {
     if ($Definition.InstallerType -ne "windows-capability") { throw "OpenSSH Client has an invalid installer type." }
     if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
@@ -461,6 +510,10 @@ function Invoke-QuickSetupPackageInstall {
   Assert-QuickSetupSafePath -Path $temporaryDirectory
   New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
   $installerLock = $null
+  $artifactProvenance = $null
+  $sourceProvenance = [pscustomobject]@{
+    SourceKind = "cached"; ConfiguredUri = ConvertTo-QuickSetupProvenanceUri $Definition.Uri; ObservedFinalUri = $null
+  }
   try {
     $extension = switch ($Definition.InstallerType) { "msi" { ".msi" } "msix" { ".msix" } default { ".exe" } }
     $installerPath = if ($CachedInstallerPath) { $CachedInstallerPath } else { Join-Path $temporaryDirectory ("installer" + $extension) }
@@ -469,7 +522,7 @@ function Invoke-QuickSetupPackageInstall {
       if (!(Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw "The verified installer cache file is missing." }
     } else {
       if ($ProgressCallback) { $null = & $ProgressCallback "download-started" }
-      Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider | Out-Null
+      Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider -Provenance ([ref]$sourceProvenance) | Out-Null
       if ($ProgressCallback) { $null = & $ProgressCallback "download-completed" }
     }
     # Keep the exact file read-locked before verification until the installer has
@@ -480,7 +533,15 @@ function Invoke-QuickSetupPackageInstall {
     $installerLock = [IO.File]::Open($installerPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
     Assert-QuickSetupSafePath -Path $installerPath
     if ($ProgressCallback) { $null = & $ProgressCallback "verification-started" }
-    Assert-QuickSetupDownloadedInstaller -Id $Id -Definition $Definition -Path $installerPath -SignatureProvider $SignatureProvider -MsiPlatformReader $MsiPlatformReader
+    $verification = $null
+    Assert-QuickSetupDownloadedInstaller -Id $Id -Definition $Definition -Path $installerPath -SignatureProvider $SignatureProvider -MsiPlatformReader $MsiPlatformReader -ArtifactStream $installerLock -Verification ([ref]$verification)
+    $artifactProvenance = [pscustomobject]@{
+      SchemaVersion = 1; EvidenceKind = "local-installer-verification"
+      PackageId = $Id; ResolvedVersion = [string]$Definition.Version
+      SourceKind = $sourceProvenance.SourceKind; ConfiguredUri = $sourceProvenance.ConfiguredUri; ObservedFinalUri = $sourceProvenance.ObservedFinalUri
+      Artifact = $verification
+    }
+    if ($Provenance) { $Provenance.Value = $artifactProvenance }
     if ($Definition.InstallerType -eq "msix") {
       if ($ProgressCallback) { $null = & $ProgressCallback "verification-completed" }
       if ($ProgressCallback) { $null = & $ProgressCallback "installation-started" }
@@ -501,7 +562,7 @@ function Invoke-QuickSetupPackageInstall {
       $exitCode = Invoke-QuickSetupInstallerProcess -Path $installerPath -Arguments @($Definition.Arguments) -ProcessRunner $ProcessRunner
     }
     if ($ProgressCallback) { $null = & $ProgressCallback "installation-completed" }
-    [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -in @(3010, 1641)) }
+    [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -in @(3010, 1641)); Provenance = $artifactProvenance }
   } finally {
     if ($installerLock) { $installerLock.Dispose() }
     Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue

@@ -249,6 +249,7 @@ try {
   } else {
     Write-Host 'NOT EXECUTED: installer deny-write/delete handoff assertions require Windows kernel sharing semantics (run in Windows PS5.1 and PS7 CI).'
   }
+  & (Join-Path $PSScriptRoot "installer-provenance.ps1")
   "Installer regressions: $script:checks assertions passed."
 } finally {
   $env:TEMP = $oldTemp; $env:LOCALAPPDATA = $oldLocal
