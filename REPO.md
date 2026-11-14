@@ -206,3 +206,7 @@ Der bestehende Callback prüft UTF8-Bytelängen vor timingSafeEqual, statt ungle
 ## Container-Checkoutvorbereitung (CM-041)
 
 Fehlender public-COPY-Eingang und eine leere sichere `.env.example` sind vorbereitet. Echte Envdateien bleiben ignoriert; keine Default-Credentials/Adminfreigabe. Docker-Socketzugriff fehlt hier, daher keine Container-/Health-/Deploymentabnahme und CM-002 weiter offen. [Grenzen](docs/deployment.md#clean-checkout-voraussetzungen-review-cm-041).
+
+## Linux-Runner-Integration
+
+Vorhandenen CM-042-Code aus 2780ec8 übernehmen statt neu schreiben: linux/ (feste Quellen/Schritte, unabhängiger strikter Validator, Dry-Run/Apply/Reports), getrenntes Schema und 93 Python-Mocktests. Webserver führt den Runner nie aus; keine Änderungen am Windowsvertrag. Reale VM-Abnahme und unabhängige Herkunft bleiben offen.

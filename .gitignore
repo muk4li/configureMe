@@ -49,3 +49,9 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 !.env.example
+
+# Python runner/test caches and local reports
+__pycache__/
+*.py[cod]
+/linux-runner-report.json
+/linux-runner-report.txt
