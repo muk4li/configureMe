@@ -44,6 +44,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-037](#cm-037) | P1 | Done | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
 | [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 | [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
+| [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 
 ## CM-001
 
@@ -484,6 +485,19 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d8f79c9`, [vollständige
 - Verifikation: Sechs Response-Regressionstests mit realem ZIP-Kontrollfall; vollständige bestehende Webgates/Browsergrenzen. OAuth-State-Sicherheitsfrage CM-008 bleibt separat offen.
 
 Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `7742d44`, [vollständige CI 43565106502](https://github.com/muk4li/configureMe/actions/runs/43565106502) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-040
+
+**OAuth-Statevergleich gegen UTF8-Längenfehler härten** — P1; Status: **Done**; Komponente: Bestehender OAuth-Callback; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Gleiche UTF16-Zeichenlängen mit unterschiedlichen UTF8-Bytelängen sicher ablehnen, ohne RangeError/500 und ohne Authentifizierungsumbau.
+- Technische Evidenz: Original main: zwei Unicode-GET-Fälle reproduzieren RangeError; sieben Kontrollfälle bestehen. Fix vergleicht Bufferlängen vor timingSafeEqual.
+- Dateien/Module: src/app/api/auth/github/callback/route.ts; tests/oauth-callback.test.ts
+- Abhängigkeiten/Freigaben: Nur bestehende Fehlergrenze; keine echten OAuth-Credentials oder Upstreamrequests, keine Allowlist-/Sessionlockerung.
+- Akzeptanzkriterien: Unpassender State führt zu sicherem Redirect und Cookie-Löschung ohne Upstream; gültiger ASCII-State durchläuft konfigurierte synthetische Session-/Allowlistkontrolle unverändert.
+- Verifikation: Neun echte GET-Pfadtests mit gemocktem Fetch, Rot/Grün-Nachweis; bestehende komplette Web-/Browsergates.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige CI 43565869811](https://github.com/muk4li/configureMe/actions/runs/43565869811) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 

@@ -194,3 +194,7 @@ Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verif
 ## Legacy-Wizard-UX (CM-039)
 
 Geschützter Wizard zeigt CPython-Vollinstaller und die hashgebundene unsigned-7-Zip-MSI-Ausnahme korrekt. Leere/HTML/trunkierte Fehler liefern verständliche HTTP-Meldungen; unerwartete Erfolgsausgaben werden nicht als ZIP gespeichert. ZIP-Headerprüfung ist keine Herkunfts-/Signaturprüfung. Auth, öffentliche Distribution und Installerprüfungen bleiben unverändert; CM-008s OAuth-State-Frage bleibt offen.
+
+## OAuth-State-Fehlergrenze (CM-040)
+
+Der bestehende Callback prüft UTF8-Bytelängen vor timingSafeEqual, statt ungleiche Buffer mit identischer JavaScript-Zeichenlänge vergleichen zu lassen. Synthetische GET-Tests prüfen Fehlerredirect, State-Cookie-Löschung, keine Upstreamaufrufe bei ungültigem State und unveränderte Session-/Allowlistkontrollen. Kein neues Authsystem oder echte Credentials.
