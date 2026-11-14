@@ -1,6 +1,7 @@
 import ast
 import json
 import pathlib
+import sys
 import unittest
 
 import fake_host
@@ -382,16 +383,18 @@ class StaticSafetyTests(unittest.TestCase):
 
     def test_only_standard_library_imports(self):
         allowed_local = {path.stem for path in pathlib.Path(LINUX_DIR).glob("*.py")}
-        import sys
-
         for path in sorted(pathlib.Path(LINUX_DIR).glob("*.py")):
-            for line in path.read_text().splitlines():
-                stripped = line.strip()
-                if stripped.startswith("import ") or stripped.startswith("from "):
-                    module = stripped.split()[1].split(".")[0]
+            for node in ast.walk(ast.parse(path.read_text(), filename=path.name)):
+                if isinstance(node, ast.Import):
+                    modules = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom):
+                    modules = [node.module or ""]
+                else:
+                    continue
+                for module in modules:
+                    top = module.split(".")[0]
                     with self.subTest(file=path.name, module=module):
-                        self.assertTrue(module in sys.stdlib_module_names or module in allowed_local, module)
-
+                        self.assertTrue(top in sys.stdlib_module_names or top in allowed_local, module)
 
 if __name__ == "__main__":
     unittest.main()

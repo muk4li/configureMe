@@ -16,9 +16,13 @@ import datetime
 import os
 import pwd
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
 
 SAFE_PATH = "/usr/sbin:/usr/bin:/sbin:/bin"
 DEFAULT_TIMEOUT_SECONDS = 120
@@ -43,6 +47,8 @@ Host = collections.namedtuple(
         "ask",
         "show",
         "utc_now",
+        "fetch_https",
+        "make_dir",
     ],
 )
 
@@ -115,6 +121,48 @@ def write_file(path, data, mode):
         raise
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse every redirect, so the download can never move to another host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "Weiterleitung abgelehnt", headers, fp)
+
+
+def fetch_https(url, allowed_host, max_bytes, timeout=30):
+    """Download a small file over HTTPS with certificate and hostname checks.
+
+    Only https:// on exactly allowed_host is accepted; redirects are refused.
+    Raises OSError (including urllib errors) on any problem.
+    """
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" or parts.hostname != allowed_host or parts.port not in (None, 443):
+        raise OSError(f"URL nicht erlaubt: {url}")
+    context = ssl.create_default_context()  # verifies certificate and hostname
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), _NoRedirect)
+    request = urllib.request.Request(url, headers={"User-Agent": "configureMe-linux-runner"})
+    with opener.open(request, timeout=timeout) as response:
+        if response.status != 200:
+            raise OSError(f"HTTP {response.status}")
+        final = urllib.parse.urlsplit(response.geturl())
+        if final.scheme != "https" or final.hostname != allowed_host:
+            raise OSError("Antwort von unerwartetem Host")
+        data = response.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise OSError(f"Datei größer als {max_bytes} Byte")
+    return data
+
+
+def make_dir(path, mode):
+    """Create one directory with the given mode if it does not exist yet."""
+    try:
+        os.mkdir(path, mode)
+    except FileExistsError:
+        if not os.path.isdir(path) or os.path.islink(path):
+            raise
+        return
+    os.chmod(path, mode)  # mkdir mode is reduced by the umask
+
+
 def user_uid(name):
     """Return the UID of a local user, or None if the user does not exist."""
     try:
@@ -155,4 +203,6 @@ def real_host():
         ask=input,
         show=print,
         utc_now=utc_now,
+        fetch_https=fetch_https,
+        make_dir=make_dir,
     )

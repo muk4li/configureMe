@@ -82,6 +82,7 @@ def fresh_ubuntu(plan_fixture="valid-full.json"):
         repository={},
         failing_commands=set(),
         downloaded_key=GOOD_KEY,
+        dirs=set(),
     )
 
 
@@ -139,6 +140,17 @@ def make_host(state):
         state.written.append((path, mode))
         state.files[path] = bytes(data)
 
+    def fetch_https(url, allowed_host, max_bytes, timeout=30):
+        state.calls.append(["fetch_https", url])
+        assert url == trusted.DOCKER_KEY_URL and allowed_host == trusted.DOCKER_KEY_HOST
+        if state.downloaded_key is None:
+            raise OSError("synthetic network failure")
+        return state.downloaded_key
+
+    def make_dir(path, mode):
+        state.written.append((path, mode))
+        state.dirs.add(path)
+
     return host_module.Host(
         run=run,
         read_file=read_file,
@@ -154,6 +166,8 @@ def make_host(state):
         ask=lambda prompt: state.answers.pop(0) if state.answers else "",
         show=lambda text: state.shown.append(text),
         utc_now=lambda: "2026-11-14T12:00:00+00:00",
+        fetch_https=fetch_https,
+        make_dir=make_dir,
     )
 
 
@@ -184,15 +198,17 @@ def _gpg(state, argv, data):
 def _apt_get(state, argv, env):
     assert env.get("DEBIAN_FRONTEND") == "noninteractive"
     assert not any(item.startswith("--allow") or item.startswith("--force") for item in argv)
-    if argv[1:] == ["update"]:
+    assert argv[-2:] == ["-o", "DPkg::Lock::Timeout=300"] or "DPkg::Lock::Timeout=300" in argv, argv
+    if argv[1] == "update":
         return host_module.CommandResult(0, RAW_OUTPUT_MARKER, "")
     assert argv[1:3] == ["install", "--yes"], argv
-    for item in argv[3:]:
+    specs = [item for item in argv[3:] if item not in ("-o", "DPkg::Lock::Timeout=300")]
+    for item in specs:
         name, _, version = item.partition("=")
         available = state.repository.get(name)
         if available is None or (version and version != available):
             return host_module.CommandResult(100, "", RAW_OUTPUT_MARKER + f" E: no candidate {item}")
-    for item in argv[3:]:
+    for item in specs:
         name, _, version = item.partition("=")
         state.packages[name] = state.repository[name]
         if name == "docker-ce":

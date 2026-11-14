@@ -52,6 +52,14 @@ class RealPlanTests(unittest.TestCase):
         # Owner decision 3 (2026-11-14): no docker group for huu-server-01.
         self.assertIs(plan["options"]["addInvokingUserToDockerGroup"], False)
 
+    def test_real_catalog_has_verified_noble_pins(self):
+        # Values and their sources: docs/audits/linux-runner.md.
+        catalog = linux_plan.validate_catalog_bytes(REAL_CATALOG)
+        self.assertEqual(linux_plan.placeholder_pins(catalog), [])
+        for package in linux_plan.catalog_step(catalog, "docker-engine")["packages"]:
+            with self.subTest(package["name"]):
+                self.assertTrue(package["version"].endswith("~ubuntu.24.04~noble"))
+
     def test_plan_files_use_lf_only(self):
         for path in [LINUX_DIR / "catalog.json", *sorted((LINUX_DIR / "plans").glob("*.json"))]:
             with self.subTest(path.name):
