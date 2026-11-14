@@ -37,6 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
 
 ## CM-001
 
@@ -389,6 +390,17 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
 Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+
+## CM-041
+
+**Fehlende Docker-Checkoutdateien bereitstellen** — P1; Status: **In Progress**; Komponente: Entwicklungs-/Containerbuild-Voraussetzungen; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Tatsächlich referenzierten public-Ordner und sichere wertfreie Env-Vorlage versionieren; keine Container starten oder Authvorgaben lockern.
+- Technische Evidenz: Dockerfile COPY /app/public sowie dokumentiertes .env.example fehlten; Dockerinfo scheitert hier an Socketberechtigung.
+- Dateien/Module: public/.gitkeep; .env.example; .gitignore; Deploymentdokumentation.
+- Abhängigkeiten/Freigaben: Dockerdaemonzugriff und isolierter Clean-Checkout-Build/Health/API-Test fehlen; keine Gruppenzuordnung/Sudo-/Hoständerung als Umgehung.
+- Akzeptanzkriterien: Alle COPY-Quellen vorhanden; einzig explizite Env-Beispieldatei aus Ignore ausnehmen, echte Dateien weiter ignoriert; leere Authwerte; vollständigen Dockerbuild erst nach tatsächlichem Test als bestanden melden.
+- Verifikation: Git-/Datei-/Env-Struktur geprüft; bestehende Web-CI; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002 bleibt offen.
 
 ## Priorisierte nächste Arbeit
 
