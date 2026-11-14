@@ -460,6 +460,7 @@ function Invoke-QuickSetupPackageInstall {
   $temporaryDirectory = Join-Path $env:TEMP ("configureMe-" + [guid]::NewGuid().ToString("N"))
   Assert-QuickSetupSafePath -Path $temporaryDirectory
   New-Item -ItemType Directory -Path $temporaryDirectory -Force | Out-Null
+  $installerLock = $null
   try {
     $extension = switch ($Definition.InstallerType) { "msi" { ".msi" } "msix" { ".msix" } default { ".exe" } }
     $installerPath = if ($CachedInstallerPath) { $CachedInstallerPath } else { Join-Path $temporaryDirectory ("installer" + $extension) }
@@ -471,6 +472,13 @@ function Invoke-QuickSetupPackageInstall {
       Get-QuickSetupOfficialDownload -Uri $Definition.Uri -Destination $installerPath -AllowedHosts $Definition.AllowedHosts -ExpectedSha256 $Definition.Sha256 -ExpectedSha512 $Definition.Sha512 -DownloadProvider $DownloadProvider | Out-Null
       if ($ProgressCallback) { $null = & $ProgressCallback "download-completed" }
     }
+    # Keep the exact file read-locked before verification until the installer has
+    # exited. Windows denies concurrent writers and deletion/replacement while
+    # this handle is held. A repeated hash alone would leave another TOCTOU gap.
+    # This does not claim to protect mutable ancestor directories or same-user ACLs.
+    Assert-QuickSetupSafePath -Path $installerPath
+    $installerLock = [IO.File]::Open($installerPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    Assert-QuickSetupSafePath -Path $installerPath
     if ($ProgressCallback) { $null = & $ProgressCallback "verification-started" }
     Assert-QuickSetupDownloadedInstaller -Id $Id -Definition $Definition -Path $installerPath -SignatureProvider $SignatureProvider -MsiPlatformReader $MsiPlatformReader
     if ($Definition.InstallerType -eq "msix") {
@@ -495,6 +503,7 @@ function Invoke-QuickSetupPackageInstall {
     if ($ProgressCallback) { $null = & $ProgressCallback "installation-completed" }
     [pscustomobject]@{ ExitCode = $exitCode; RestartRequired = ($exitCode -in @(3010, 1641)) }
   } finally {
+    if ($installerLock) { $installerLock.Dispose() }
     Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
   }
 }

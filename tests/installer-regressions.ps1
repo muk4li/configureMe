@@ -192,6 +192,63 @@ try {
   . (Join-Path $root 'scripts/Start-SetupWithDiagnostics.ps1')
   Assert ((Get-SetupStartupFailureMessage -ExitCode -2146233082) -match 'CET' ) 'CoreCLR startup diagnostic lost.'
   Assert ((Get-SetupStartupFailureMessage -ExitCode 1) -notmatch 'CET-Inkompatibilitaet') 'Unrelated exit code misdiagnosed as CET.'
+  # Kernel sharing semantics are a Windows-only acceptance check. POSIX .NET
+  # advisory locks are not evidence of protection against arbitrary writers.
+  if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    $handoffPath = Join-Path $testRoot 'handoff fixture.exe'
+    [IO.File]::WriteAllBytes($handoffPath, $bytes)
+    $mutated = [byte[]]$bytes.Clone(); $mutated[255] = 42
+    $script:handoffProcessCalls = 0
+    $handoffSignature = {
+      [pscustomobject]@{ Status = [Management.Automation.SignatureStatus]::Valid; SignerCertificate = [pscustomobject]@{ Subject = 'CN=Microsoft Corporation' } }
+    }
+    # A reader remains compatible, and the existing exit/reboot result is kept.
+    $handoff = Invoke-QuickSetupPackageInstall vscode $vs -CachedInstallerPath $handoffPath -SignatureProvider $handoffSignature -ProcessRunner {
+      param($path, $arguments)
+      $script:handoffProcessCalls++
+      Assert ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -eq $hash256) 'Process handoff did not retain verified fixture bytes.'
+      return 3010
+    }
+    Assert ($handoff.ExitCode -eq 3010 -and $handoff.RestartRequired -and $script:handoffProcessCalls -eq 1) 'Locked unchanged installer did not preserve normal execution/reboot reporting.'
+    # A callback mutation must abort before the runner, never be ignored.
+    foreach ($blockedStage in @('verification-completed', 'installation-started')) {
+      [IO.File]::WriteAllBytes($handoffPath, $bytes)
+      $script:handoffProcessCalls = 0; $script:handoffMutationAttempted = $false
+      Reject {
+        Invoke-QuickSetupPackageInstall vscode $vs -CachedInstallerPath $handoffPath -SignatureProvider $handoffSignature -ProgressCallback {
+          param($stage)
+          if ($stage -eq $blockedStage) {
+            $script:handoffMutationAttempted = $true
+            [IO.File]::WriteAllBytes($handoffPath, $mutated)
+          }
+        } -ProcessRunner { $script:handoffProcessCalls++; return 0 }
+      } "A mutation at $blockedStage was not refused."
+      Assert $script:handoffMutationAttempted "Mutation stage $blockedStage was not exercised."
+      Assert ($script:handoffProcessCalls -eq 0) "An installer runner was called after attempted mutation at $blockedStage."
+      Assert ((Get-FileHash -LiteralPath $handoffPath -Algorithm SHA256).Hash -eq $hash256) 'The locked fixture was modified.'
+    }
+    # Existing writers prevent validation/start, rather than getting trusted later.
+    $script:handoffProcessCalls = 0
+    $writer = [IO.File]::Open($handoffPath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::ReadWrite)
+    try {
+      Reject {
+        Invoke-QuickSetupPackageInstall vscode $vs -CachedInstallerPath $handoffPath -SignatureProvider { throw 'Must not validate a writable handoff.' } -ProcessRunner { $script:handoffProcessCalls++; return 0 }
+      } 'An existing writer was accepted during installer handoff.'
+      Assert ($script:handoffProcessCalls -eq 0) 'Existing writer still reached the installer runner.'
+    } finally { $writer.Dispose() }
+    # Error and successful exits must both release the lock. Never delete a shared cache file.
+    Reject {
+      Invoke-QuickSetupPackageInstall vscode $badCache -CachedInstallerPath $handoffPath -SignatureProvider $handoffSignature -ProcessRunner { throw 'Hash failure reached process execution.' }
+    } 'The locked installer did not retain official metadata hash rejection.'
+    [IO.File]::WriteAllBytes($handoffPath, $mutated)
+    Assert ((Get-FileHash -LiteralPath $handoffPath -Algorithm SHA256).Hash -ne $hash256) 'Verification failure leaked the handoff lock.'
+    [IO.File]::WriteAllBytes($handoffPath, $bytes)
+    $handoff = Invoke-QuickSetupPackageInstall vscode $vs -CachedInstallerPath $handoffPath -SignatureProvider $handoffSignature -ProcessRunner { return 0 }
+    [IO.File]::WriteAllBytes($handoffPath, $mutated)
+    Assert ($handoff.ExitCode -eq 0 -and (Get-FileHash -LiteralPath $handoffPath -Algorithm SHA256).Hash -ne $hash256) 'Successful process exit leaked the handoff lock.'
+  } else {
+    Write-Host 'NOT EXECUTED: installer deny-write/delete handoff assertions require Windows kernel sharing semantics (run in Windows PS5.1 and PS7 CI).'
+  }
   "Installer regressions: $script:checks assertions passed."
 } finally {
   $env:TEMP = $oldTemp; $env:LOCALAPPDATA = $oldLocal

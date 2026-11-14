@@ -11,7 +11,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-003](#cm-003) | P1 | Ready | CM-3 | F-07-Vertrag mit Datenowner abstimmen |
 | [CM-004](#cm-004) | P1 | In Progress | CM-1 | Web-Qualitätsgates und echte Testzählung ergänzen |
 | [CM-005](#cm-005) | P1 | Blocked | CM-2 | Vollständige Windows-Server-2022-Abnahme belegen |
-| [CM-006](#cm-006) | P1 | Ready | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
+| [CM-006](#cm-006) | P1 | In Progress | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
 | [CM-007](#cm-007) | P2 | Ready | CM-1 | Session-Widerruf und Allowlist-Lebenszyklus entscheiden |
 | [CM-008](#cm-008) | P2 | Ready | CM-1 | Web-Fehlerfälle und OAuth-Byteprüfung korrigieren |
 | [CM-009](#cm-009) | P1 | Ready | CM-1 | Trust- und Installermodus in der UI korrekt benennen |
@@ -37,6 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-036](#cm-036) | P1 | In Progress | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
 
 ## CM-001
 
@@ -97,7 +98,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-006
 
-**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **Ready**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
+**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **In Progress**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Mock-Befund zwischen Prüfung und Prozessstart prüfen, Rechte-/ACL-/Reparse-/Cross-Process-Modell festlegen und kleinste sichere Handoff-Strategie testen.
 - Technische Evidenz: AF-006 Probable: Fixture kann nach verification-completed vor ProcessRunner geändert werden; privilegierter Windows-Exploit nicht getestet.
@@ -389,6 +390,17 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
 Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+
+## CM-036
+
+**Verifizierte Installerdatei bis zum Prozessende sperren** — P1; Status: **In Progress**; Komponente: Installer-Handoff/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestätigten Inhaltsaustausch nach Verifikation durch deny-write/delete Handle während Prüfung und Installerwait verhindern.
+- Technische Evidenz: AF-006 erneut mit synthetischem PE und Mockrunner reproduziert; Parent-Namespace/ACL-Risiken separat offen.
+- Dateien/Module: Installation.psm1; installer-regressions.ps1; docs/audits/installer-handoff-lock.md
+- Abhängigkeiten/Freigaben: Keine echten Installer; Windows-Kernel-Sharingtests in PS5.1/7 erforderlich. Vollständiger CM-006 bleibt offen.
+- Akzeptanzkriterien: Mutationsversuche und vorhandene Writer vor Runner verweigern; unveränderte Bytes/Exitcodes/Reboot erhalten; Handle in allen Pfaden freigeben; keine Securitychecks lockern.
+- Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow; keine Linux-Locks als Windowsbeleg.
 
 ## Priorisierte nächste Arbeit
 

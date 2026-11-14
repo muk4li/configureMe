@@ -170,3 +170,7 @@ Die Paket-UI verwendet `public-selection.ts`: Aktionen prüfen den aktuellen req
 ## Setup-Plan-v1-Erweiterung (2026-11-14)
 
 Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md), [Evidenz](docs/audits/setup-plan-v1.md): `src/lib/setup-plan.ts` exportiert nach vollständiger serverseitiger Neuplanung einen separaten nicht autorisierenden JSON-Plan. `schemas/setup-plan-v1.schema.json` und `contracts/setup-plan-v1.policy.json` werden von TS/.NET gemeinsam konsumiert. `SetupPlanContract`, `SetupPlanFile`, `SetupPlanDryRun` erweitern die vorhandene EXE um sicheren Snapshotimport und detect/plan-Dry-Run, nur Server 2022 x64 Desktop Experience. Legacyformat/Preview bleiben getrennt. Gemeinsame Fixtures in `tests/fixtures/setup-plan-v1`; native Tests verwenden isolierte Engine-/Reportroots. Kein Windows-11-Nativadapter, keine öffentliche Installerdistribution, keine produktive Datenquelle/Secrets/Authentifizierungsänderung.
+
+## Handoff-Teilsicherung (CM-036)
+
+Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verifikation bis zum Prozessende. [Evidenz und verbleibende Parent-/ACL-Grenzen](docs/audits/installer-handoff-lock.md). CM-006 bleibt umfassend offen. [Release-Vertrauensplan](docs/release-trust-plan.md) und [Zielsystemmatrix](docs/qa/windows-v1-acceptance.md) bereiten gesonderte Freigaben vor; keine Aktivierung importierter Installationen oder öffentliche Distribution.
