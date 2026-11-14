@@ -32,7 +32,6 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-024](#cm-024) | P1 | Blocked | CM-2 | Sichere öffentliche Setup-Downloadintegration |
 | [CM-025](#cm-025) | P1 | Blocked | CM-2 | Windows-Matrix und lokale Planübergabe nachweisen |
 | [CM-026](#cm-026) | P1 | Done | CM-1 | UX-Runde 1: Auswahl, Targetfilter und Layout konsistent machen |
-
 | [CM-027](#cm-027) | P0 | In Progress | CM-1 | ZIP-Determinismus und CI-Baseline |
 | [CM-028](#cm-028) | P1 | In Progress | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
 | [CM-029](#cm-029) | P1 | In Progress | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
