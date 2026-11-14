@@ -182,3 +182,7 @@ Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md),
 ## Snapshot-Vertragsvorbereitung (CM-035)
 
 [Entscheidungsvorlage](docs/integrations/public-snapshot-decision.md) und synthetische Consumer-Grenztests prüfen konkrete Unterschiede ohne Provider, Schemakopie oder Vertragsannahme. Öffentliche Laufzeitdaten bleiben lokale Fixtures. Centrality-/Datenownerfreigabe bleibt vor produktivem Snapshotimport nötig.
+
+## Handoff-Teilsicherung (CM-036)
+
+Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verifikation bis zum Prozessende. [Evidenz und verbleibende Parent-/ACL-Grenzen](docs/audits/installer-handoff-lock.md). CM-006 bleibt umfassend offen. [Release-Vertrauensplan](docs/release-trust-plan.md) und [Zielsystemmatrix](docs/qa/windows-v1-acceptance.md) bereiten gesonderte Freigaben vor; keine Aktivierung importierter Installationen oder öffentliche Distribution.

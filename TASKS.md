@@ -11,7 +11,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-003](#cm-003) | P1 | Ready | CM-3 | F-07-Vertrag mit Datenowner abstimmen |
 | [CM-004](#cm-004) | P1 | In Progress | CM-1 | Web-Qualitätsgates und echte Testzählung ergänzen |
 | [CM-005](#cm-005) | P1 | Blocked | CM-2 | Vollständige Windows-Server-2022-Abnahme belegen |
-| [CM-006](#cm-006) | P1 | Ready | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
+| [CM-006](#cm-006) | P1 | In Progress | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
 | [CM-007](#cm-007) | P2 | Ready | CM-1 | Session-Widerruf und Allowlist-Lebenszyklus entscheiden |
 | [CM-008](#cm-008) | P2 | Ready | CM-1 | Web-Fehlerfälle und OAuth-Byteprüfung korrigieren |
 | [CM-009](#cm-009) | P1 | Ready | CM-1 | Trust- und Installermodus in der UI korrekt benennen |
@@ -40,6 +40,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-033](#cm-033) | P1 | Done | CM-1 | Importierten Ausführungsvertrag ohne Aktivierung vorbereiten |
 | [CM-034](#cm-034) | P1 | Done | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
 | [CM-035](#cm-035) | P1 | Done | CM-1 | Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern |
+| [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
+| [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 
 ## CM-001
 
@@ -100,7 +102,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-006
 
-**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **Ready**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
+**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **In Progress**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Mock-Befund zwischen Prüfung und Prozessstart prüfen, Rechte-/ACL-/Reparse-/Cross-Process-Modell festlegen und kleinste sichere Handoff-Strategie testen.
 - Technische Evidenz: AF-006 Probable: Fixture kann nach verification-completed vor ProcessRunner geändert werden; privilegierter Windows-Exploit nicht getestet.
@@ -432,6 +434,28 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `c035c99`, [vollständige
 - Verifikation: Fünf gezielte Vitestfälle; Typecheck/Lint und vorhandene komplette Web-CI; keine Installer oder Secrets.
 
 Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `4848a0f`, [vollständige CI 43564368520](https://github.com/muk4li/configureMe/actions/runs/43564368520) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-036
+
+**Verifizierte Installerdatei bis zum Prozessende sperren** — P1; Status: **Done**; Komponente: Installer-Handoff/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestätigten Inhaltsaustausch nach Verifikation durch deny-write/delete Handle während Prüfung und Installerwait verhindern.
+- Technische Evidenz: AF-006 erneut mit synthetischem PE und Mockrunner reproduziert; Parent-Namespace/ACL-Risiken separat offen.
+- Dateien/Module: Installation.psm1; installer-regressions.ps1; docs/audits/installer-handoff-lock.md
+- Abhängigkeiten/Freigaben: Keine echten Installer; Windows-Kernel-Sharingtests in PS5.1/7 erforderlich. Vollständiger CM-006 bleibt offen.
+- Akzeptanzkriterien: Mutationsversuche und vorhandene Writer vor Runner verweigern; unveränderte Bytes/Exitcodes/Reboot erhalten; Handle in allen Pfaden freigeben; keine Securitychecks lockern.
+- Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow 43564614212 für d5c6a52 erfolgreich; keine Linux-Locks als Windowsbeleg.
+
+## CM-038
+
+**Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten** — P1; Status: **Done**; Komponente: Release/QA-Vorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Unabhängige Signer-/Provenienz-/Distributionsgates und reproduzierbare nichtinstallierende sowie getrennt zu autorisierende reale VM-Szenarien konkretisieren.
+- Technische Evidenz: Main f744d63 ist unsigned Entwicklungsartefakt; CI ersetzt keine Publisheridentität oder frische VM-Abnahme.
+- Dateien/Module: docs/release-trust-plan.md; docs/qa/windows-v1-acceptance.md
+- Abhängigkeiten/Freigaben: Signer-/Schlüsselentscheidung, VMbereitstellung und echte Installationsfreigabe bleiben extern; CM-001/005 nicht als abgeschlossen ausgeben.
+- Akzeptanzkriterien: Konkrete Quelle/Build/Signatur/Verifikation/Rotation/Freigabe-Kette; Matrix für OS/DPI/Rechte/Version/Architektur/Wiederholung/Fehler mit sicheren ausführbaren Befehlen; keine Releaseaktivierung.
+- Verifikation: Dokumentationslinks/Status/Scope und git diff --check; vorhandener kompletter Windows-CI-Lauf 43564614212, keine neue echte Zielsystemausführung behauptet.
 
 ## Priorisierte nächste Arbeit
 
