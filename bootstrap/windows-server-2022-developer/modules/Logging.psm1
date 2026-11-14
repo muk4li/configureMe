@@ -71,6 +71,7 @@ function New-QuickSetupPackageResult {
     ErrorCode = $null
     Phase = $null
     InstallerExitCode = $null
+    Provenance = $null
     Notes = $null
     RestartRequired = $false
   }

@@ -6,6 +6,29 @@ namespace ConfigureMe.Setup.Tests;
 public sealed class SetupRunReportTests
 {
     [Fact]
+    public void ArtifactProvenanceSurvivesWorkerFailureAndAggregateSerialization()
+    {
+        var root = Directory.CreateTempSubdirectory("configureme-report-provenance-").FullName;
+        try
+        {
+            var report = new SetupRunReport(root);
+            var failure = new WorkerEvent("package-installation-completed", "git", "Failed", "Mock failure",
+                JsonSerializer.SerializeToElement(new { Id = "git", Name = "Git", Status = "Failed", ErrorCode = "installer-error",
+                    Provenance = new { PackageId = "git", SourceKind = "cached", ObservedFinalUri = (string?)null,
+                        Artifact = new { Sha256 = new string('a', 64), SizeBytes = 256, Signature = new { Status = "Valid", Policy = "authenticode" } } } }));
+            report.Apply(failure);
+            report.RecordWorkerFailure("git", "Git", new PowerShellWorkerException(1, "install", ["git"], [failure], false));
+            report.Write(completed: true);
+            using var document = JsonDocument.Parse(File.ReadAllBytes(report.JsonPath));
+            var item = document.RootElement.GetProperty("Packages")[0];
+            Assert.Equal("Failed", item.GetProperty("Status").GetString());
+            Assert.Equal(new string('a', 64), item.GetProperty("Provenance").GetProperty("Artifact").GetProperty("Sha256").GetString());
+            Assert.Equal(JsonValueKind.Null, item.GetProperty("Provenance").GetProperty("ObservedFinalUri").ValueKind);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void DryRunHasExplicitSummaryAndNoPendingInstallations()
     {
         var root = Path.Combine(Path.GetTempPath(), "configureme-report-dryrun-" + Guid.NewGuid().ToString("N"));

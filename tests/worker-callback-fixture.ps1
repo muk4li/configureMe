@@ -60,7 +60,7 @@ $worker = Get-Module GuiWorker
     if ($env:CONFIGUREME_TEST_FAIL_STAGE -eq "verification") { throw "Mock SHA-256 hash mismatch." }
   }
   function Invoke-QuickSetupPackageInstall {
-    param([string]$Id, $Definition, [scriptblock]$ProgressCallback, [string]$CachedInstallerPath)
+    param([string]$Id, $Definition, [scriptblock]$ProgressCallback, [string]$CachedInstallerPath, [ref]$Provenance)
     foreach ($stage in @("download-started", "download-completed", "verification-started", "verification-completed", "installation-started")) {
       & $ProgressCallback $stage
       if ($env:CONFIGUREME_TEST_FAIL_STAGE -eq "verification" -and $env:CONFIGUREME_TEST_FAIL_ID -eq $Id -and $stage -eq "verification-started") {
