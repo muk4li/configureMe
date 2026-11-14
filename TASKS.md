@@ -37,7 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
-| [CM-039](#cm-039) | P1 | In Progress | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
+| [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
 
 ## CM-001
 
@@ -393,7 +393,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-039
 
-**Legacy-Downloadfehler und Installermodus verständlich anzeigen** — P1; Status: **In Progress**; Komponente: Geschütztes Wizard-UX; Phase: [CM-1](ROADMAP.md#cm-1).
+**Legacy-Downloadfehler und Installermodus verständlich anzeigen** — P1; Status: **Done**; Komponente: Geschütztes Wizard-UX; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Bestätigten leeren/HTML-/defekten JSON-Fehler benutzerverständlich behandeln; unerwartete Erfolgsausgaben nicht als ZIP herunterladen; Python/7-Zip-Anzeige an reale Modi anpassen.
 - Technische Evidenz: AF-009/011 und aktuelle setup-wizard.tsx: Pythonmanager/pauschal signed 7-Zip sowie ungeprüftes response.json bei Fehlern.
@@ -401,6 +401,8 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Abhängigkeiten/Freigaben: Keine Auth-/Katalog-/Installerpolicyänderung; ZIP-Headerprüfung ist nur UX, keine Signatur-/Herkunftszusage.
 - Akzeptanzkriterien: Leere/HTML/trunkierte Fehler ohne rohen Parsertext; korrekte JSON-Fehler begrenzt erhalten; tatsächliche ZIPbytes erhalten; kein Navigation/Selektionswechsel während laufendem Download.
 - Verifikation: Sechs Response-Regressionstests mit realem ZIP-Kontrollfall; vollständige bestehende Webgates/Browsergrenzen. OAuth-State-Sicherheitsfrage CM-008 bleibt separat offen.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `7742d44`, [vollständige CI 43565106502](https://github.com/muk4li/configureMe/actions/runs/43565106502) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 

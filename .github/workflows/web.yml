@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, fix/installer-mode-disclosures]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
