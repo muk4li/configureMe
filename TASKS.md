@@ -32,11 +32,11 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-024](#cm-024) | P1 | Blocked | CM-2 | Sichere öffentliche Setup-Downloadintegration |
 | [CM-025](#cm-025) | P1 | Blocked | CM-2 | Windows-Matrix und lokale Planübergabe nachweisen |
 | [CM-026](#cm-026) | P1 | Done | CM-1 | UX-Runde 1: Auswahl, Targetfilter und Layout konsistent machen |
-| [CM-027](#cm-027) | P0 | In Progress | CM-1 | ZIP-Determinismus und CI-Baseline |
-| [CM-028](#cm-028) | P1 | In Progress | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
-| [CM-029](#cm-029) | P1 | In Progress | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
-| [CM-030](#cm-030) | P1 | In Progress | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
-| [CM-031](#cm-031) | P1 | In Progress | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-027](#cm-027) | P0 | Done | CM-1 | ZIP-Determinismus und CI-Baseline |
+| [CM-028](#cm-028) | P1 | Done | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
+| [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
+| [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
+| [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 
 ## CM-001
 
@@ -327,7 +327,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-027
 
-**ZIP-Determinismus und CI-Baseline** — P0; Status: **In Progress**; Komponente: ZIP/CI; Phase: [CM-1](ROADMAP.md#cm-1).
+**ZIP-Determinismus und CI-Baseline** — P0; Status: **Done**; Komponente: ZIP/CI; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Vier implizite JSZip-Verzeichnisse enthielten aktuelle DOS-Zeiten; createFolders=false, feste Metadaten und vollständiger Bytevergleich bleiben.
 - Technische Evidenz: 96533c2, reproduzierte acht Zeitfeld-Differenzen und Rot/Grün-Regressionsnachweis.
@@ -336,9 +336,11 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Akzeptanzkriterien: Identische Archivbytes über DOS-Ticks und Zeitzonen; Manifest/Hash/Größe erhalten; alter UX-Trigger entfernt, CM-016 eindeutig.
 - Verifikation: Zwei ZIP-Tests, UTC/Los Angeles/Kiritimati; Linux-/Windows-Webgates; Ergebnis im Audit.
 
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
 ## CM-028
 
-**Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren** — P1; Status: **In Progress**; Komponente: TS/.NET/Schema; Phase: [CM-1](ROADMAP.md#cm-1).
+**Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren** — P1; Status: **Done**; Komponente: TS/.NET/Schema; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Eindeutige Identität, Version, Katalogbindung, Ziele, deklarative Roots/effektive Pakete, Erinnerungen und keine Ausführungsrechte.
 - Technische Evidenz: Expliziter Masterauftrag 2026-11-14; bestehendes Legacy-/Previewformat bewusst getrennt.
@@ -347,9 +349,11 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Akzeptanzkriterien: Gemeinsame strukturelle Quelle; unbekannte Versionen/Felder/Aktionen und manipulierte Closure fail-closed; deterministisch.
 - Verifikation: Gemeinsame TS/C#-Fixtures, Profile-/Inputreihenfolge, Kataloghash und Negativfälle.
 
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
 ## CM-029
 
-**Servervalidierten Setup-JSON-Export anbinden** — P1; Status: **In Progress**; Komponente: Web/API/UI; Phase: [CM-1](ROADMAP.md#cm-1).
+**Servervalidierten Setup-JSON-Export anbinden** — P1; Status: **Done**; Komponente: Web/API/UI; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Bestehende öffentliche Vollvalidierung vor getrenntem JSON-Download; Browser bleibt untrusted.
 - Technische Evidenz: Masterauftrag Phase C, bestehende PublicSelection/Resolver und Requestlimits wiederverwendet.
@@ -358,9 +362,11 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Akzeptanzkriterien: Ohne Login exportierbar; keine stillen Verluste, Secrets oder freien Aktionen; Preview/Plan/Releasestatus klar.
 - Verifikation: API-Grenzen, konfliktbehaftete/manipulierte Auswahl, gespeicherter Download und Schutz privater Routen.
 
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
 ## CM-030
 
-**Nativen Snapshotimport und sicheren Dry-Run ergänzen** — P1; Status: **In Progress**; Komponente: WinForms/Dateisicherheit/Worker; Phase: [CM-1](ROADMAP.md#cm-1).
+**Nativen Snapshotimport und sicheren Dry-Run ergänzen** — P1; Status: **Done**; Komponente: WinForms/Dateisicherheit/Worker; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Begrenzten lokalen Snapshot validieren, Pakete/Abhängigkeiten anzeigen und ausschließlich detect/offline plan ausführen.
 - Technische Evidenz: Masterauftrag Phase D; bestehende EXE und PowerShell-5.1-Engine wiederverwendet.
@@ -369,9 +375,11 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Akzeptanzkriterien: Keine Importwirkung vor Prüfung; keine Installation im importierten Modus; Snapshot/Schreibsperre/Reparse/Versions-/Target-/Closureprüfung; manuelle Bedienung erhalten.
 - Verifikation: Geteilte Bytefixtures, Windows-Dateisystem-/GUI-Tests, echte Offline-Workerplanung ohne Installer; keine Adminrechte nötig.
 
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
 ## CM-031
 
-**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **In Progress**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
+**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Blocked**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Webexport und nativer Import nutzen dieselben positiven/negativen Fixtures; vollständige vorhandene Workflows und Dokumentationsgrenzen prüfen.
 - Technische Evidenz: Masterauftrag Phase E; gemeinsamer valid-server-Export wird in TS byteinhaltlich und nativ vor Workerplanung geprüft.
@@ -379,6 +387,8 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Abhängigkeiten/Freigaben: CM-027..030; GitHub-API-Forbidden als PR-Blocker, keine Freigaben erfinden.
 - Akzeptanzkriterien: Alle ausführbaren Gates tatsächlich grün; OS-/Provenienz-/Releasegrenzen sichtbar; separater reviewfähiger PR, kein Merge.
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
 
 ## Priorisierte nächste Arbeit
 

@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/setup-plan-v1]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
