@@ -48,3 +48,4 @@ next-env.d.ts
 # browser test evidence (CI retains failures separately)
 /test-results/
 /playwright-report/
+!.env.example

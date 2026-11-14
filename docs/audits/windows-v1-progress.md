@@ -59,6 +59,7 @@ Kein neues Paket wird als öffentlich signiert/veröffentlicht dargestellt. Loka
 4. **Publisher-/Releaseidentität:** geschützte nicht exportierbare Signeridentität und unabhängig verifizierte Freigabekette wählen. Alternative ausschließlich unsignierte Entwicklungsartefakte behalten. Risiko Schlüsselverlust/kompromittierte Distribution; keine Secrets benutzt, Trustplan/Prüfmatrix fertig.
 
 GitHub-API-POST bleibt Forbidden; gepushte Reviewbranches und fertige PR-Beschreibungen/Comparelinks sind der ausdrücklich erlaubte Ersatz. Kein automatischer Merge oder Branch-Protection-Eingriff. Diese Entscheidungen betreffen konkrete reviewbare Ergebnisse, keine erfundenen globalen Freigaben.
+Bei der ursprünglichen Vorbereitung war GitHub-API-POST Forbidden; deshalb wurden gepushte Reviewbranches und fertige Beschreibungen/Comparelinks bereitgestellt. Nach Freigabe des API-Zugriffs und ausdrücklichem Folgeauftrag wurde der vollständige [PR #13](https://github.com/muk4li/configureMe/pull/13) gegen main erstellt. Kein automatischer Merge oder Branch-Protection-Eingriff. Diese Entscheidungen betreffen konkrete reviewbare Ergebnisse, keine erfundenen globalen Freigaben.
 
 ## Zusätzlicher gemeinsamer Integrationstest
 

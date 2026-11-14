@@ -1,3 +1,11 @@
+function ConvertTo-QuickSetupProvenanceUri {
+  param([uri]$Uri)
+  if (!$Uri -or !$Uri.IsAbsoluteUri -or $Uri.Scheme -ne "https") { return $null }
+  $safe = New-Object System.UriBuilder($Uri)
+  $safe.UserName = ""; $safe.Password = ""; $safe.Query = ""; $safe.Fragment = ""
+  return $safe.Uri.AbsoluteUri
+}
+
 function Assert-QuickSetupSafePath {
   param([Parameter(Mandatory = $true)][string]$Path)
   $current = [IO.Path]::GetFullPath($Path)
@@ -78,9 +86,11 @@ function Get-QuickSetupOfficialDownload {
     [Parameter(Mandatory = $true)][string[]]$AllowedHosts,
     [string]$ExpectedSha256,
     [string]$ExpectedSha512,
-    [scriptblock]$DownloadProvider
+    [scriptblock]$DownloadProvider,
+    [ref]$Provenance
   )
 
+  if ($Provenance) { $Provenance.Value = $null }
   if ($Uri.Scheme -ne "https" -or $Uri.UserInfo -or !$Uri.IsDefaultPort -or !(Test-QuickSetupAllowedHost -HostName $Uri.DnsSafeHost -AllowedHosts $AllowedHosts)) {
     throw "The download URL is not an allowed official HTTPS source."
   }
@@ -111,6 +121,13 @@ function Get-QuickSetupOfficialDownload {
         if ($ExpectedSha512 -notmatch "^[A-Fa-f0-9]{128}$") { throw "The trusted SHA-512 metadata is malformed." }
         $actualHash = (Get-FileHash -LiteralPath $Destination -Algorithm SHA512).Hash
         if ($actualHash -ine $ExpectedSha512) { throw "The installer SHA-512 does not match the official metadata." }
+      }
+      if ($Provenance) {
+        $Provenance.Value = [pscustomobject]@{
+          SourceKind = "downloaded"
+          ConfiguredUri = ConvertTo-QuickSetupProvenanceUri $Uri
+          ObservedFinalUri = ConvertTo-QuickSetupProvenanceUri $finalUri
+        }
       }
       return $Destination
     } catch {
@@ -321,4 +338,4 @@ function Test-QuickSetupAuthenticodePublisher {
   [pscustomobject]@{ IsValid = $true; Signer = $subject; Message = "Valid Authenticode signature from $ExpectedPublisher." }
 }
 
-Export-ModuleMember -Function Assert-QuickSetupSafePath, Invoke-QuickSetupOfficialRequest, Get-QuickSetupOfficialMetadata, Test-QuickSetupAllowedHost, Get-QuickSetupOfficialDownload, Test-QuickSetupMsixPackage, Test-QuickSetupInstallerFile, Test-QuickSetupAuthenticodePublisher
+Export-ModuleMember -Function ConvertTo-QuickSetupProvenanceUri, Assert-QuickSetupSafePath, Invoke-QuickSetupOfficialRequest, Get-QuickSetupOfficialMetadata, Test-QuickSetupAllowedHost, Get-QuickSetupOfficialDownload, Test-QuickSetupMsixPackage, Test-QuickSetupInstallerFile, Test-QuickSetupAuthenticodePublisher

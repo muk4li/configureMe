@@ -1,0 +1,13 @@
+# Windows 11 preview: unregistered adapter preparation
+
+2026-11-14; main f744d63. **Preparation implemented, native activation blocked.** This does not change `NativePlanTarget.Current`, nativeTarget policy, GUI import refusal, trusted catalog IDs/revision or PowerShell installation OS guards.
+
+The native Server engine is reused only as the source of reviewed detection mechanisms; its Server installer plan is not mislabeled as a Windows-11 WinGet plan. Generic `platforms.windows.supported` does not prove vendor Windows-11 support. Existing Windows-11 contract choices with fixed WinGet IDs: Git, GitHub CLI, VS Code, Node LTS, Python, PowerShell 7 and 7-Zip. .NET SDK/Firefox/OpenSSH lack that identifier in this contract and remain unavailable; no silent catalog/ID mapping or new installer strategy is added.
+
+`Windows11PreviewPreparation` owns and revalidates immutable JSON/catalog bytes, discriminates client/Windows-11 caption/build>=22000/x64 evidence, keeps every root/dependency and exposes explicit candidate/unsupported reasons. Only VS Code/Python/7-Zip have reviewed existing x64 binary detectors suitable as candidates. Other command-version detections remain unsupported pending stronger architecture/identity evidence. Candidate is not tested compatibility.
+
+The only observation seam accepts fixture observations, never a shell command, path, worker action or install process. Missing/unknown/failed detection is not silently converted to missing; x86 or invalid installed claims cannot become verified x64. Unknown/duplicate/extra IDs are refused. Returned rows preserve dependencies and are read-only. NativeActivationAllowed and InstallationAllowed remain false, and no GUI/engine registration exists.
+
+Tests: client/build/architecture discrimination; copied snapshots/catalog revision/unknown IDs; no dropped dependencies; unsupported/unclear/failed/x86 observations; original native Windows-11 refusal. Existing Windows/portable projects run these tests in CI. They exercise synthetic Windows-11 evidence on a hosted Server runner, **not actual Windows-11 acceptance**.
+
+Before native registration: run real Windows-11 platform/detection/Dry-Run tests on an explicitly authorized isolated host, verify package-specific sources/support/actual x64 detection, adapt the existing worker read-only strategy without substituting Server methods, and review rights/WinGet prerequisites. Before installation: separate execution/target authorization, existing download/signature/format/hash/architecture checks, explicit local consent, release trust and real vendor acceptance. The preparation alone does not satisfy those gates or claim a usable production adapter.

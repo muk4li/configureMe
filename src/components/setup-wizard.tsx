@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { catalog, type PackageDefinition } from "@/lib/catalog";
+import { readLegacyBundleResponse } from "@/lib/legacy-bundle-response";
 import type { Profile } from "@/lib/profiles";
 
 const steps = ["Target", "Packages", "Review"];
@@ -10,10 +11,10 @@ const serverQuickSetupLabels: Record<string, string> = {
   "github-cli": "Official signed MSI",
   vscode: "Official signed user setup",
   "nodejs-lts": "Active LTS MSI",
-  python: "Official Python install manager",
+  python: "Official CPython 3 x64 full installer",
   "dotnet-10-sdk": "Official signed SDK installer",
   "powershell-7": "Official signed MSI",
-  "seven-zip": "Official signed installer",
+  "seven-zip": "Pinned official x64 MSI · hash-bound unsigned exception",
   firefox: "Official signed MSI",
   "openssh-client": "Windows capability",
   "github-copilot-desktop": "Pinned signed silent installer",
@@ -81,11 +82,7 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
           packages: packageIds,
         }),
       });
-      if (!response.ok) {
-        const body: { error?: string } = await response.json();
-        throw new Error(body.error ?? "The bundle could not be created.");
-      }
-      const blob = await response.blob();
+      const blob = await readLegacyBundleResponse(response);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -164,7 +161,7 @@ export function SetupWizard({ profiles, initialProfileId }: { profiles: Profile[
         </ol>
         {stepContent}
         <div className="wizard-actions">
-          <button className="button button-quiet button-small" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))} disabled={step === 0}>Back</button>
+          <button className="button button-quiet button-small" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))} disabled={step === 0 || downloading}>Back</button>
           {step < 2 && <button className="button button-primary button-small" type="button" onClick={() => setStep((current) => Math.min(2, current + 1))} disabled={profile?.platform !== "windows" || (step === 1 && resolvedIds.length === 0)}>Continue →</button>}
         </div>
       </section>

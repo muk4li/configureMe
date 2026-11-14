@@ -174,3 +174,35 @@ Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md),
 ## Windows-v1-Baseline (2026-11-14)
 
 Main `f744d63c5d245f113e3104161abf04d9f5e900e1` enthält den gemergten PR #12. [Aktuelle Baseline](docs/audits/windows-v1-baseline.md): CM-031s damalige PR-Blockade ist erledigt. Die vorhandene Import-/Dry-Run-Funktion ist implementiert/getestet, keine öffentliche Releasefreigabe. Importierte Installation bleibt gesperrt. Folgearbeit B/D/E/F/G entsteht in separaten Review-Branches; keine zweite Engine/Repoaufteilung und keine privaten Daten-/Provisionierungsdienste.
+
+## Importierter Ausführungsvertrag (CM-033, Vorbereitung)
+
+[Vertrag](docs/imported-plan-execution-contract.md): unregistrierter Reviewzustand mit eigenen Snapshot-/Katalogbytes, deterministischer read-only Beobachtungsprüfung, Rechte-/Detection-/Modusklassifikation und terminalem Abbruch. Keine Installation-/Bestätigungs-API oder GUI-Aktivierung; vorhandene importierte Ausführung bleibt gesperrt. Paket C erfordert Vertragsannahme und ausdrückliche Phasenfreigabe.
+
+## Windows-11-Vorbereitung (CM-034)
+
+[Unregistrierte Previewvorbereitung](docs/windows11-preview-preparation.md) prüft eigene Katalog-/Plansnapshots und synthetische Host-/Detectionbeobachtungen. Keine zweite Engine, keine Serverstrategie als WinGet-Nachweis, keine native Registrierung. Windows-11-Import bleibt geschlossen bis zur echten Plattform-/Detection-/Dry-Run-Abnahme; Installation benötigt getrennte Freigabe.
+
+## Snapshot-Vertragsvorbereitung (CM-035)
+
+[Entscheidungsvorlage](docs/integrations/public-snapshot-decision.md) und synthetische Consumer-Grenztests prüfen konkrete Unterschiede ohne Provider, Schemakopie oder Vertragsannahme. Öffentliche Laufzeitdaten bleiben lokale Fixtures. Centrality-/Datenownerfreigabe bleibt vor produktivem Snapshotimport nötig.
+
+## Handoff-Teilsicherung (CM-036)
+
+Der Installer hält einen lesenden Handle ohne Schreib-/Löschfreigabe vor Verifikation bis zum Prozessende. [Evidenz und verbleibende Parent-/ACL-Grenzen](docs/audits/installer-handoff-lock.md). CM-006 bleibt umfassend offen. [Release-Vertrauensplan](docs/release-trust-plan.md) und [Zielsystemmatrix](docs/qa/windows-v1-acceptance.md) bereiten gesonderte Freigaben vor; keine Aktivierung importierter Installationen oder öffentliche Distribution.
+
+## Lokale Installer-Provenienz (CM-037, Review)
+
+[Additive Prüfevidenz](docs/audits/installer-provenance.md) erhält tatsächlichen SHA256/Größe, erwartete Hashes, denselben geprüften Signer/Policy, Paket-/Feedversion und redigierte konfigurierte/beobachtete Quelle bis Worker-/Aggregate-JSON, auch nach Prozessfehlern. Cached-Final-URI bleibt null. Erwartete Pfadhashes bleiben erhalten und werden gegen den gehaltenen Stream gebunden. Dies ist keine unabhängige Publisher-/Buildauthentifizierung; CM-010 bleibt für Build/Toolchain/finale Apparchitektur offen. Kontrollierte Branchabhängigkeit: zuerst Handoff-Teilsicherung.
+
+## Legacy-Wizard-UX (CM-039)
+
+Geschützter Wizard zeigt CPython-Vollinstaller und die hashgebundene unsigned-7-Zip-MSI-Ausnahme korrekt. Leere/HTML/trunkierte Fehler liefern verständliche HTTP-Meldungen; unerwartete Erfolgsausgaben werden nicht als ZIP gespeichert. ZIP-Headerprüfung ist keine Herkunfts-/Signaturprüfung. Auth, öffentliche Distribution und Installerprüfungen bleiben unverändert; CM-008s OAuth-State-Frage bleibt offen.
+
+## OAuth-State-Fehlergrenze (CM-040)
+
+Der bestehende Callback prüft UTF8-Bytelängen vor timingSafeEqual, statt ungleiche Buffer mit identischer JavaScript-Zeichenlänge vergleichen zu lassen. Synthetische GET-Tests prüfen Fehlerredirect, State-Cookie-Löschung, keine Upstreamaufrufe bei ungültigem State und unveränderte Session-/Allowlistkontrollen. Kein neues Authsystem oder echte Credentials.
+
+## Container-Checkoutvorbereitung (CM-041)
+
+Fehlender public-COPY-Eingang und eine leere sichere `.env.example` sind vorbereitet. Echte Envdateien bleiben ignoriert; keine Default-Credentials/Adminfreigabe. Docker-Socketzugriff fehlt hier, daher keine Container-/Health-/Deploymentabnahme und CM-002 weiter offen. [Grenzen](docs/deployment.md#clean-checkout-voraussetzungen-review-cm-041).
