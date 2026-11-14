@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { modeFor, optionNames, publicSnapshot, resolvePublicPlan,
   targetNames, targets, type OptionName, type PublicPlan, type PublicSelection, type WindowsTarget } from "@/lib/public-planning";
+import { validateSetupPlan } from "@/lib/setup-plan";
 import { freshSelection } from "@/lib/public-session";
 import { usePublicSelection } from "./use-public-selection";
 import { catalogGroupsFor, optionIsRelevant, optionNeedsResolution, preferenceHelp, setPackageSelected } from "@/lib/public-selection";
@@ -44,27 +45,36 @@ export function PublicConfigurator() {
     else options[key] = value === "true";
     update({ ...selection, options });
   }
-  async function validate(exportJson: boolean) {
+  async function validate(exportJson: boolean, setupPlan = false) {
     setBusy(true); setError(""); setServerPlan(undefined);
     const requestedRevision = revision.current;
     try {
-      const response = await fetch("/api/public/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(selection) });
+      const response = await fetch(setupPlan ? "/api/public/plan?export=setup-plan-v1" : "/api/public/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(selection) });
       if (!response.ok) throw new Error(`Plan validation failed (HTTP ${response.status}). Please retry after resolving the selection.`);
       if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("The server returned an unexpected response. Please retry.");
-      let verified: PublicPlan;
-      try { verified = await response.json(); }
+      let received: unknown;
+      try { received = await response.json(); }
       catch { throw new Error("The server returned invalid JSON. Please retry."); }
       if (requestedRevision !== revision.current) throw new Error("The selection changed. Validate the current selection again.");
+      if (setupPlan) {
+        const importedPlan = validateSetupPlan(received);
+        downloadJson(importedPlan, "configureme-setup-plan.v1.json");
+        return;
+      }
+      const verified = received as PublicPlan;
       if (!verified || verified.kind !== "configureme-preview" || verified.executable !== false || !verified.valid)
         throw new Error("The server refused this plan. Resolve the visible conflicts before exporting.");
       setServerPlan(verified);
       if (exportJson) {
-        const url = URL.createObjectURL(new Blob([JSON.stringify(verified, null, 2) + "\n"], { type: "application/json" }));
-        const link = document.createElement("a"); link.href = url; link.download = "configureme-preview.json";
-        link.click(); setTimeout(() => URL.revokeObjectURL(url), 1_000);
+        downloadJson(verified, "configureme-preview.json");
       }
     } catch (exception) { setError(exception instanceof Error ? exception.message : "The plan could not be checked."); }
     finally { setBusy(false); }
+  }
+  function downloadJson(value: unknown, filename: string) {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2) + "\n"], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = filename;
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1_000);
   }
   const profileNames = new Map(publicSnapshot.profiles.map(profile => [profile.id, profile.name]));
   const displaySource = (id: string) => id === "session" ? "Selected by you" : profileNames.get(id) ?? id;
@@ -165,7 +175,9 @@ export function PublicConfigurator() {
           <div className="preview-actions">
             <button className="button button-primary" type="button" disabled={busy || !plan.valid} onClick={() => void validate(false)}>{busy ? "Checking…" : "Validate plan on server"}</button>
             <button className="button button-quiet" type="button" disabled={busy || !plan.valid} onClick={() => void validate(true)}>Export preview JSON</button>
+            <button className="button button-quiet" type="button" disabled={busy || !plan.valid || !plan.packages.length} onClick={() => void validate(true, true)}>Export setup plan v1</button>
           </div>
+          <p className="config-hint">Setup plan v1 imports into the development Windows EXE for review and Dry-Run on Server 2022 x64. Windows 11 native import is not supported yet. JSON grants no installation permission; preview JSON is a different format.</p>
           {serverPlan && <p className="success-note" role="status">Server validated · {serverPlan.packages.length} packages. This is a non-executable preview.</p>}
           {error && <p className="error-note" role="alert">{error}</p>}
           <details><summary>Inspect the resolved preview</summary><pre className="plan-json">{JSON.stringify(serverPlan ?? plan, null, 2)}</pre></details>

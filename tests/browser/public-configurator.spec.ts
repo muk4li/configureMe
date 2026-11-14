@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { parseSetupPlan } from "../../src/lib/setup-plan";
 import { readFile } from "node:fs/promises";
 const sessionKey = "configureme:public-selection:v1";
 const externalRequests: string[] = [];
@@ -265,4 +266,24 @@ for (const width of [375, 768, 1280, 1440, 1920]) test(`layout remains usable at
   }
   await page.screenshot({ path: test.info().outputPath(`public-${width}-viewport.png`) });
   await page.screenshot({ path: test.info().outputPath(`public-${width}.png`), fullPage: true });
+});
+
+test("exports server-reviewed setup JSON as a separate native dry-run contract", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Clear this selection" }).click();
+  await page.locator("#windows-target").selectOption("windows-server-2022");
+  await page.getByRole("checkbox", { name: "GitHub CLI", exact: true }).check();
+  const responsePromise = page.waitForResponse(response => response.url().endsWith("/api/public/plan?export=setup-plan-v1"));
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export setup plan v1", exact: true }).click();
+  const response = await responsePromise;
+  expect(response.status()).toBe(200);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("configureme-setup-plan.v1.json");
+  const bytes = await readFile((await download.path())!);
+  const plan = parseSetupPlan(bytes);
+  expect(plan.authorization).toBe("none");
+  expect(plan.packages.map(item => item.id)).toEqual(["git", "github-cli"]);
+  expect(plan).toEqual(await response.json());
+  await expect(page.getByRole("button", { name: "Export preview JSON", exact: true })).toBeEnabled();
 });

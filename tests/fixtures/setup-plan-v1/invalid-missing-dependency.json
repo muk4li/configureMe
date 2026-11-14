@@ -1,0 +1,27 @@
+{
+  "formatId": "configureme/setup-plan",
+  "schemaVersion": 1,
+  "catalogRevision": "6601f3174f2ce113bbbf1a98a280ca6c16ba1245aac01448071b0970c294800b",
+  "status": "validated-plan",
+  "authorization": "none",
+  "target": {
+    "os": "windows-server-2022",
+    "architecture": "x64"
+  },
+  "planning": {
+    "requestedPackageIds": [
+      "github-cli"
+    ],
+    "profileIds": []
+  },
+  "packages": [
+    {
+      "id": "github-cli",
+      "mode": "automatic",
+      "dependsOn": [
+        "git"
+      ]
+    }
+  ],
+  "options": {}
+}

@@ -16,6 +16,9 @@ internal sealed class CatalogDocument
 
 internal sealed class PackageDefinition
 {
+    [JsonPropertyName("windowsPackageId")]
+    public string? WindowsPackageId { get; set; }
+
     [JsonPropertyName("id")]
     public string Id { get; set; } = "";
 

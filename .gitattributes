@@ -1,0 +1,4 @@
+# The v1 setup-plan compatibility revision binds these exact catalog bytes.
+bootstrap/windows-server-2022-developer/config/catalog.json text eol=lf
+# Shared byte fixtures must survive Windows autocrlf unchanged.
+tests/fixtures/setup-plan-v1/*.json text eol=lf

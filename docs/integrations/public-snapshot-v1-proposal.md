@@ -25,3 +25,13 @@ Spezifisch noch zu entscheiden: öffentlicher Dateisatz, Schema-/Adapter-IDs, ko
 configureMe CM-003/CM-023: Vertrag abstimmen; CM-011 erst danach Adapter/Importer. myConfigs-data nur als Vorschlag: Consumerbeschreibung aktualisieren, öffentlichen Exportumfang und gemeinsame synthetische Contractfixtures bestätigen. CM-012 wird kein Runtime-GitHub-Provider für die öffentliche Seite; ein optionaler manueller Read-only-Import benötigt eigene Rechtefreigabe. Editor, private Profile und Write-Tokens sind nicht Teil von A/B/C.
 
 Abnahme: echte commitgebundene Quellfixtures beider Formate, unbekannte Versionen/IDs/Aktionen, fehlende Referenzen, Kollisionen, falsche Hashes, übergroße/inkompatible Dateien, Linux/macOS/ARM, Optionskonflikte, Branchbewegung, wiederholte bytegleiche Imports, Offline-Start, Fehler ohne Teilaktivierung sowie explizite öffentliche Datenfreigabe. Kein Installer oder Secret im Contracttest.
+
+## Datenquellenvergleich, weiterhin Proposed (2026-11-14)
+
+| Variante | Trennung / Datenfreigabe | Wartung / Migration |
+| --- | --- | --- |
+| Explizit öffentlicher Snapshot aus bestehendem myConfigs-data | Aktuelle Produktentscheidung PD-002; Dateisatz muss ausdrücklich öffentlich freigegeben sein, kein ungefilterter Repoimport | Bestehende Datenpflege bleibt; versionierter Adapter für platform/platforms, Paket-IDs und Optionssemantik nötig |
+| Separates öffentliches Profilrepository | Starke organisatorische Grenze, verhindert allein aber keine versehentliche Secretveröffentlichung | Neue Quelle/Ownership und Migration aller Referenzen; nur Architekturidee, Centrality-Review erforderlich |
+| Geschützte private Profilquelle | Private Vorlagen erst nach Autorisierung lesen/ausliefern; keine Secrets im Standardplan | Späterer eigener Auth-/Datenvertrag, keine Voraussetzung der öffentlichen Grundinstallation |
+
+Der neue lokale [Setup-Plan-Vertrag](../setup-plan-contract.md) verbindet nur configureMe-Web und configureMe-EXE. Er nimmt diesen externen Snapshotvertrag nicht an und implementiert keinen fremden Datenimport. Repositorygrenzen bleiben unverändert; übergreifende Änderungen nur Proposed / Centrality-Review erforderlich.

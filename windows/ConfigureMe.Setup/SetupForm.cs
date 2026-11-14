@@ -38,6 +38,7 @@ internal sealed class SetupForm : Form
     private bool _isPreparingDownloads;
     private bool _operationInProgress;
     private readonly List<Button> _exclusiveButtons = [];
+    private readonly List<Button> _manualSelectionButtons = [];
     private SetupRunReport? _runReport;
     private WorkerEvent? _lastSystemEvent;
     private bool _reflowingPackages;
@@ -48,9 +49,13 @@ internal sealed class SetupForm : Form
     private FlowLayoutPanel? _mainActions;
     private bool _isAdministrator;
     private string? _lastFailureText;
+    private ValidatedSetupPlan? _importedPlan;
+    private byte[]? _importedSnapshot;
+    private readonly string? _reportRoot;
 
     public SetupForm(bool runStartupDetection = true, string? applicationDataRoot = null)
     {
+        _reportRoot = applicationDataRoot is null ? null : Path.Combine(applicationDataRoot, "Reports");
         _engine = EngineBundle.ExtractVerified(applicationDataRoot);
         _worker = new PowerShellWorkerClient(_engine);
         var catalog = JsonSerializer.Deserialize<CatalogDocument>(File.ReadAllText(_engine.CatalogPath), JsonOptions)
@@ -90,7 +95,7 @@ internal sealed class SetupForm : Form
         if (runStartupDetection) Shown += async (_, _) =>
         {
             await CheckSystemAsync();
-            LoadDeveloperProfileSelection();
+            if (_importedPlan is null) LoadDeveloperProfileSelection();
         };
     }
 
@@ -208,10 +213,13 @@ internal sealed class SetupForm : Form
         selectionActions.Controls.Add(CreateButton("Auswahl aufheben", (_, _) => SelectAll(false)));
         selectionActions.Controls.Add(CreateButton("Nur fehlende", (_, _) => SelectMissing()));
         selectionActions.Controls.Add(CreateButton("Developer-Profil", (_, _) => LoadDeveloperProfileSelection()));
+        _manualSelectionButtons.AddRange(selectionActions.Controls.OfType<Button>());
         actionPanel.Controls.Add(selectionActions, 0, 0);
 
         var mainActions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = false, WrapContents = true, Margin = new Padding(0) };
         mainActions.Controls.Add(CreateButton("System prüfen", async (_, _) => await CheckSystemAsync()));
+        selectionActions.Controls.Add(CreateButton("Setup-Plan importieren", (_, _) => ChooseSetupPlan()));
+        selectionActions.Controls.Add(CreateButton("Manuelle Auswahl", (_, _) => ClearImportedPlan()));
         mainActions.Controls.Add(CreateButton("Dry-Run", async (_, _) => await ShowDryRunAsync()));
         _installSelectedButton.Text = "Ausgewählte installieren";
         StyleButton(_installSelectedButton, primary: true);
@@ -693,9 +701,21 @@ internal sealed class SetupForm : Form
     private async Task ShowPlanAsync(IReadOnlyList<string> packageIds, bool dryRun)
     {
         if (_operationInProgress || _installQueue.IsBusy) return;
+        if (_importedPlan is not null && !dryRun)
+        {
+            MessageBox.Show(this, "Importierte Pläne sind in v1 nur für Prüfung und Dry-Run freigegeben. Für die bestehende manuelle Bedienung ausdrücklich zu 'Manuelle Auswahl' wechseln.",
+                "Keine Installationsfreigabe", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
         IReadOnlyList<string> ordered;
         try
         {
+            if (_importedSnapshot is not null)
+            {
+                _engine.VerifyUnchanged();
+                _importedPlan = SetupPlanContract.Validate(_importedSnapshot, File.ReadAllBytes(_engine.CatalogPath), NativePlanTarget.Current());
+                packageIds = _importedPlan.PackageIds;
+            }
             ordered = InstallPlanResolver.Resolve(packageIds, _packageById);
         }
         catch (Exception exception)
@@ -721,7 +741,9 @@ internal sealed class SetupForm : Form
         SetBusyState(true, "Installationsplan wird vorbereitet …", marquee: true);
         try
         {
-            var result = await _worker.RunAsync("plan", ordered, false, HandleWorkerEvent);
+            var result = _importedPlan is not null && dryRun
+                ? await SetupPlanDryRun.RunAsync(_importedPlan, (action, ids, confirmed) => _worker.RunAsync(action, ids, confirmed, HandleWorkerEvent))
+                : await _worker.RunAsync("plan", ordered, false, HandleWorkerEvent);
             var planEvent = result.Events.LastOrDefault(item => item.Type == "install-plan");
             if (planEvent?.Data.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Der Worker hat keinen gültigen Plan geliefert.");
             var summary = FormatPlan(planEvent.Data, ordered);
@@ -735,11 +757,19 @@ internal sealed class SetupForm : Form
                 item => PowerShellWorkerClient.ReadString(item, "id")!,
                 item => item.TryGetProperty("administratorAvailable", out var available) && available.ValueKind == JsonValueKind.True,
                 StringComparer.Ordinal);
-            _runReport = new SetupRunReport();
+            _runReport = new SetupRunReport(_reportRoot);
             _reportPath = _runReport.JsonPath;
             if (_lastSystemEvent is not null) _runReport.Apply(_lastSystemEvent);
             foreach (var id in ordered)
-                _runReport.Record(id, PackageName(id), _states[id].IsInstalled ? "Already installed" : dryRun ? "Dry run" : "Pending", detectedVersion: _states[id].DetectedVersion);
+            {
+                var state = _states[id];
+                var failedDetection = _importedPlan is not null && dryRun && state.Detection is
+                    PackageDetectionState.Unknown or PackageDetectionState.Checking or PackageDetectionState.Failed;
+                _runReport.Record(id, PackageName(id), failedDetection ? "Failed" : state.IsInstalled ? "Already installed" : dryRun ? "Dry run" : "Pending",
+                    notes: failedDetection ? state.Error ?? "Detection incomplete; no change is asserted." : null,
+                    detectedVersion: state.DetectedVersion, errorCode: failedDetection ? "detection-error" : null,
+                    phase: failedDetection ? "detection" : null);
+            }
             _runReport.Write(completed: dryRun);
             if (dryRun)
             {
@@ -1051,6 +1081,10 @@ internal sealed class SetupForm : Form
             {
                 detail += " (Administrator erforderlich; aktuell nicht erhöht)";
             }
+            if (_states.TryGetValue(id, out var state) && state.IsInstalled)
+                detail = "Bereits installiert — keine erneute Installation geplant";
+            else if (_importedPlan is not null && action == "install" && state?.Detection != PackageDetectionState.Missing)
+                detail = "Erkennung unvollständig — keine sichere Änderungszusage";
             lines.Add($"• {name}: {detail}");
         }
         return string.Join(Environment.NewLine, lines);
@@ -1118,8 +1152,69 @@ internal sealed class SetupForm : Form
         }
     }
 
+    private void ChooseSetupPlan()
+    {
+        if (_operationInProgress || _installQueue.IsBusy) return;
+        using var dialog = new OpenFileDialog { Title = "Setup-Plan v1 importieren", Filter = "JSON-Setup-Plan (*.json)|*.json", CheckFileExists = true, Multiselect = false };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { ImportPlanSnapshot(SetupPlanFile.ReadSnapshot(dialog.FileName)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
+        {
+            MessageBox.Show(this, "Der Setup-Plan wurde nicht übernommen. " + PowerShellWorkerException.SafeText(exception.Message),
+                "Ungültiger Setup-Plan", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    internal ValidatedSetupPlan ImportPlanSnapshot(ReadOnlyMemory<byte> snapshot, NativePlanTarget? target = null)
+    {
+        if (_operationInProgress || _installQueue.IsBusy) throw new InvalidOperationException("Ein Vorgang läuft bereits.");
+        _engine.VerifyUnchanged();
+        var plan = SetupPlanContract.Validate(snapshot, File.ReadAllBytes(_engine.CatalogPath), target ?? NativePlanTarget.Current());
+        _importedSnapshot = snapshot.ToArray();
+        _importedPlan = plan; // Atomic UI transition only after every check succeeds. No worker here.
+        foreach (var (id, checkBox) in _selection)
+        {
+            checkBox.Checked = plan.PackageIds.Contains(id, StringComparer.Ordinal);
+            checkBox.Enabled = false;
+            var parents = plan.RequiredBy.GetValueOrDefault(id) ?? [];
+            var reason = parents.Length == 0 ? "" : "Erforderlich für: " + string.Join(", ", parents.Select(PackageName));
+            checkBox.AccessibleDescription = reason;
+            _toolTip.SetToolTip(checkBox, reason);
+            var name = Controls.Find($"PackageName:{id}", true).OfType<Label>().Single();
+            name.Text = PackageName(id) + (parents.Length == 0 ? "" : " (Abhängigkeit)");
+            UpdatePackageRow(id);
+        }
+        _installSelectedButton.Enabled = false;
+        foreach (var button in _manualSelectionButtons) button.Enabled = false;
+        AppendLog("Setup-Plan v1 importiert: " + string.Join(", ", plan.PackageIds) + ". Nur Prüfung/Dry-Run; keine Installation gestartet.");
+        foreach (var reminder in plan.Reminders.OrderBy(item => item.Key))
+            AppendLog($"Planhinweis {reminder.Key}: {reminder.Value}. Keine Konfigurations- oder Anmeldeaktion.");
+        _currentActionLabel.Text = "Importierter Plan · nur Dry-Run · keine Installationsfreigabe";
+        return plan;
+    }
+
+    internal void ClearImportedPlan()
+    {
+        if (_operationInProgress || _installQueue.IsBusy) return;
+        _importedPlan = null;
+        _importedSnapshot = null;
+        foreach (var (id, checkBox) in _selection)
+        {
+            checkBox.Enabled = true;
+            checkBox.AccessibleDescription = "";
+            _toolTip.SetToolTip(checkBox, "");
+            Controls.Find($"PackageName:{id}", true).OfType<Label>().Single().Text = PackageName(id);
+            UpdatePackageRow(id);
+        }
+        LoadDeveloperProfileSelection(); // Deliberate return to the preexisting manual profile, not imported authorization.
+        _installSelectedButton.Enabled = true;
+        foreach (var button in _manualSelectionButtons) button.Enabled = true;
+        _currentActionLabel.Text = "Manuelle Auswahl · bestehende Bestätigung vor Installation erforderlich";
+    }
+
     private void SelectAll(bool selected)
     {
+        if (_importedPlan is not null) return;
         foreach (var checkBox in _selection.Values)
         {
             checkBox.Checked = selected;
@@ -1128,6 +1223,7 @@ internal sealed class SetupForm : Form
 
     internal void SelectMissing()
     {
+        if (_importedPlan is not null) return;
         foreach (var (id, checkBox) in _selection)
         {
             checkBox.Checked = _states[id].Detection == PackageDetectionState.Missing &&
@@ -1137,6 +1233,7 @@ internal sealed class SetupForm : Form
 
     private void LoadDeveloperProfileSelection()
     {
+        if (_importedPlan is not null) return;
         foreach (var (id, checkBox) in _selection)
         {
             checkBox.Checked = _developerProfileIds.Contains(id) && !_states[id].IsInstalled;
@@ -1166,8 +1263,8 @@ internal sealed class SetupForm : Form
         var package = _packageById[id];
         _toolTip.SetToolTip(_statusLabels[id], state.Error ?? _statusLabels[id].Text);
         var busy = _operationInProgress || _installQueue.IsBusy;
-        _packageButtons[id].Enabled = !busy;
-        _selection[id].Enabled = !busy;
+        _packageButtons[id].Enabled = !busy && _importedPlan is null;
+        _selection[id].Enabled = !busy && _importedPlan is null;
         if (_packageButtons[id].Text == "Installieren" && state.IsInstalled)
         {
             _packageButtons[id].Enabled = false;
@@ -1233,7 +1330,8 @@ internal sealed class SetupForm : Form
     private void SetBusyState(bool busy, string message, bool marquee)
     {
         _currentActionLabel.Text = !busy && _lastFailureText is not null ?
-            _lastFailureText[..Math.Min(_lastFailureText.Length, 180)] : message;
+            _lastFailureText[..Math.Min(_lastFailureText.Length, 180)] : !busy && _importedPlan is not null
+                ? "Importierter Plan · nur Dry-Run · keine Installationsfreigabe" : message;
         _currentActionLabel.ForeColor = !busy && _lastFailureText is not null
             ? Color.FromArgb(255, 138, 138) : MutedColor;
         _progressBar.Visible = busy && marquee;
@@ -1243,6 +1341,8 @@ internal sealed class SetupForm : Form
         }
         var exclusive = _operationInProgress || _installQueue.IsBusy;
         foreach (var button in _exclusiveButtons) button.Enabled = !exclusive;
+        foreach (var button in _manualSelectionButtons) button.Enabled = !exclusive && _importedPlan is null;
+        _installSelectedButton.Enabled = !exclusive && _importedPlan is null;
         foreach (var id in _states.Keys) UpdatePackageRow(id);
         _cancelButton.Enabled = _downloadCancellation is not null || _installQueue.IsBusy;
     }

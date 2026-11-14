@@ -1,0 +1,6 @@
+{
+  "maxBytes": 65536,
+  "maxDepth": 12,
+  "nativeTarget": "windows-server-2022",
+  "optionSemantics": "reminders-only"
+}

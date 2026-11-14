@@ -28,6 +28,11 @@
     <EmbeddedResource Include="..\..\bootstrap\windows-server-2022-developer\assets\firefox-bookmarks.html" LogicalName="ConfigureMe.Engine.assets.firefox-bookmarks.html" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\schemas\setup-plan-v1.schema.json" LogicalName="ConfigureMe.Contract.schema.json" />
+    <EmbeddedResource Include="..\..\contracts\setup-plan-v1.policy.json" LogicalName="ConfigureMe.Contract.policy.json" />
+  </ItemGroup>
+
   <Target Name="GenerateEmbeddedEngineManifest" BeforeTargets="BeforeBuild">
     <Exec Command="&quot;$(PowerShellExecutable)&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\New-SetupEngineManifest.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)configureme-engine-manifest.json&quot;" />
     <ItemGroup>

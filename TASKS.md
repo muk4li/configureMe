@@ -1,6 +1,6 @@
 # Ausführbares lokales Backlog
 
-Stand: 2026-11-13. Stabile IDs, keine Umnummerierung. Status: **Backlog**, **Ready**, **In Progress**, **Blocked**, **Done**. Ready heißt ausführbar im beschriebenen Umfang, nicht freigegeben für echte Installationen/Secrets/Deployment. Blockierte Teilaufgaben nicht durch ungeprüfte Annahmen entsperren. Abhängigkeiten auf fremde Repos sind nur Vorschläge; dort wurden keine Backlogs verändert. Definition of Done: [AGENTS.md](AGENTS.md).
+Stand: 2026-11-14. Stabile IDs, keine Umnummerierung. Status: **Backlog**, **Ready**, **In Progress**, **Blocked**, **Done**. Ready heißt ausführbar im beschriebenen Umfang, nicht freigegeben für echte Installationen/Secrets/Deployment. Blockierte Teilaufgaben nicht durch ungeprüfte Annahmen entsperren. Abhängigkeiten auf fremde Repos sind nur Vorschläge; dort wurden keine Backlogs verändert. Definition of Done: [AGENTS.md](AGENTS.md).
 
 Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 wesentliche Stabilität/Nachweise; P2 kontrollierter Ausbau; P3 Zukunft. Kein P0 behauptet einen laufenden Angriff. Herkunft aller AF-Befunde: [Initialaudit](docs/audits/initial-audit.md). CM-011/012/013/014/023/024/025 bleiben hinter ihren Freigaben. PD-001..004 autorisieren A/B für öffentliche Planung; keine produktive Distribution.
 
@@ -21,9 +21,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-013](#cm-013) | P2 | Blocked | CM-4 | Eigenständigen Betriebs-/Integrationsvertrag vorbereiten |
 | [CM-014](#cm-014) | P3 | Blocked | CM-5 | Späteren Gerätezugangsvertrag nur als Vorschlag vorbereiten |
 | [CM-015](#cm-015) | P1 | Done | CM-0 | Engineering-Baseline und Initialaudit reviewfähig erstellen |
-| [CM-016](#cm-016) | P1 | Blocked | CM-1 | Engine-Cache-Publikation nebenläufigkeitssicher machen |
-
-| [CM-016](#cm-016) | P1 | In Progress | CM-1 | Reserviert: separater Engine-Cache-Fix, Review #8 |
+| [CM-016](#cm-016) | P1 | Done | CM-1 | Engine-Cache-Publikation nebenläufigkeitssicher machen |
 | [CM-017](#cm-017) | P1 | Done | CM-1 | Public-first-Produktvertrag und Architektur dokumentieren |
 | [CM-018](#cm-018) | P1 | Done | CM-1 | Öffentlicher Windows-Konfigurator und Katalog |
 | [CM-019](#cm-019) | P1 | Done | CM-1 | Deterministische Mehrprofil-/Abhängigkeitsauflösung |
@@ -34,6 +32,11 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-024](#cm-024) | P1 | Blocked | CM-2 | Sichere öffentliche Setup-Downloadintegration |
 | [CM-025](#cm-025) | P1 | Blocked | CM-2 | Windows-Matrix und lokale Planübergabe nachweisen |
 | [CM-026](#cm-026) | P1 | Done | CM-1 | UX-Runde 1: Auswahl, Targetfilter und Layout konsistent machen |
+| [CM-027](#cm-027) | P0 | Done | CM-1 | ZIP-Determinismus und CI-Baseline |
+| [CM-028](#cm-028) | P1 | Done | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
+| [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
+| [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
+| [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 
 ## CM-001
 
@@ -204,23 +207,14 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-016
 
-**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Blocked** (Korrektur, lokale Verifikation und Windows-CI bestanden; separater PR offen); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
+**Engine-Cache-Publikation nebenläufigkeitssicher machen** — P1; Status: **Done** (PR #8 gemergt, in main 5f878a7 geprüft); Komponente: Embedded Engine/GUI-Tests; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: konkurrierendes File.Move ohne Überschreiben sicher behandeln, jeden vorhandenen Gewinner erneut prüfen und GUI-/EXE-Self-Tests vom Benutzer-Cache isolieren.
 - Technische Evidenz: [AF-012](docs/audits/initial-audit.md#af-012); Windows-Lauf 43435533839 und deterministischer Zweithreadtest gegen ursprünglichen Code scheitern mit bereits vorhandenem Ziel.
 - Dateien/Module: EngineBundle.cs; SetupForm.cs; Program.cs; EngineBundleTests.cs; SetupFormLayoutTests.cs; TestApplicationData.cs; portable Testprojektverknüpfung; Windows-CI.
-- Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; GitHub-API derzeit 403, daher automatische PR-Erstellung nicht möglich. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden. Kein Merge als Ersatz.
+- Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; PR #8 nach Eigentümerreview gemergt. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden.
 - Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
-- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. Separater PR noch offen. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
-**Reserviert: separater Engine-Cache-Fix** — P1; Status: **In Progress**; Komponente: Engine/Windows-QA; Phase: [CM-1](ROADMAP.md#cm-1).
-
-- Beschreibung: Bleibt ausschließlich im bestehenden Fix-Branch a1ab0b5 und PR #8; in diesem Feature keine Engineänderung.
-- Technische Evidenz: Vorheriger Auftrag, grüner Windows-Lauf 43444854566 und aktueller offener PR #8.
-- Dateien/Module: Externe Engine-/GUI-Dateien des separaten PRs
-- Abhängigkeiten/Freigaben: Review/Merge nur durch Eigentümer; lokale Dokumentationskonflikte beim späteren Zusammenführen prüfen.
-- Akzeptanzkriterien: Separater Review des Fixes; keine Vermischung mit öffentlicher UI.
-- Verifikation: Bestehende Windows-CI-Belege im Fix-PR; hier keine neue Statusfreigabe dieser fremden Arbeit.
-
+- Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. PR #8 gemergt (e4a9ebc); geprüft am 2026-11-14. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
 ## CM-017
 
 **Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **Done**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
@@ -302,7 +296,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 **Sichere öffentliche Setup-Downloadintegration** — P1; Status: **Blocked**; Komponente: Distribution/Download-UX; Phase: [CM-2](ROADMAP.md#cm-2).
 
-- Beschreibung: JSON-Preview jetzt; ausführbaren ZIP-/GUI-Planadapter erst nach Releasefreigaben entwickeln.
+- Beschreibung: JSON-Preview und separat autorisierter lokaler JSON-Import/Dry-Run (CM-028..031); öffentliche ausführbare ZIP-/EXE-Distribution erst nach Releasefreigaben.
 - Technische Evidenz: PD-001 und unveränderte CM-001/005/006/010; Alternativenvergleich im Produktauftrag.
 - Dateien/Module: Öffentliche Download-UX; spätere lokale Adapter; bestehende Bootstrap-/Bundlemodule
 - Abhängigkeiten/Freigaben: Unabhängiger Release-Trust, Zielsystemnachweise, eigener D-Auftrag; keine Freischaltung per bloßem UI-/Envflag.
@@ -316,7 +310,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Beschreibung: Matrix zwischen Planbarkeit, vorhandenen Strategien und echter Installation pflegen; spätere native Planübergabe testen.
 - Technische Evidenz: docs/windows-platform-matrix.md trennt WinGet Windows11 und Servermodi; keine aktuelle reale Win11-Installerabnahme.
 - Dateien/Module: Kompatibilitätsmatrix; spätere Bootstrap-/GUI-Planadaptertests; Retestdokumentation
-- Abhängigkeiten/Freigaben: CM-024-Gates und eigene Autorisierung isolierter echter Tests; PR #8 separat reviewen.
+- Abhängigkeiten/Freigaben: CM-024-Gates und eigene Autorisierung isolierter echter Tests; PR #8 ist gemergt, lokaler JSON-Import/Dry-Run separat über CM-028..031 autorisiert.
 - Akzeptanzkriterien: x64-Ziele, keine Core-/ARM-Zusagen; Previewformat nicht direkt ausführbar; tatsächliche Version/Architektur, Rechte, Offline/Neustart/Idempotenz nachgewiesen.
 - Verifikation: Matrixreview jetzt; später freigegebene frische VMs mit Quell-/Artefakt-/Plan-/OSbindung und negativen Ziel-/Rechtefällen.
 
@@ -331,6 +325,71 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Akzeptanzkriterien: sichtbarer Zustand, gültiger Plan und Payload konsistent; gemeinsame Abhängigkeiten korrekt; Zielwechsel ohne stillen Verlust; normale Kategorien nur mit verfügbaren Einträgen; bestehende Hinweise ohne neue Wirkung verständlich; 375/768/1280/1440/1920 ohne Overflow/Überlappung, Desktop zweispaltig mit erreichbarer Übersicht; Icons lokal mit belegter Lizenz oder neutralem Fallback.
 - Verifikation: Typegen/Typecheck/Lint/Produktionsbuild bestanden; 51 Unit/API-Tests plus 1 expliziter Linux-Skip, 21 Browserfälle; Web-CI 43522606123 für bb651df erfolgreich. Screenshots, Asset-/Lizenz-/Hashprüfung und Scopeprüfung dokumentiert. PR-Erstellung durch API-Forbidden blockiert, Review-Branch gepusht; kein Merge. Done betrifft die implementierten UX-Kriterien, keine Release-/Deploymentfreigabe.
 
+## CM-027
+
+**ZIP-Determinismus und CI-Baseline** — P0; Status: **Done**; Komponente: ZIP/CI; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Vier implizite JSZip-Verzeichnisse enthielten aktuelle DOS-Zeiten; createFolders=false, feste Metadaten und vollständiger Bytevergleich bleiben.
+- Technische Evidenz: 96533c2, reproduzierte acht Zeitfeld-Differenzen und Rot/Grün-Regressionsnachweis.
+- Dateien/Module: server-bundle.ts; server-bundle.test.ts; Webworkflow; TASKS.md
+- Abhängigkeiten/Freigaben: Keine Installationsfreigabe; vollständige CI-Nachweise nötig.
+- Akzeptanzkriterien: Identische Archivbytes über DOS-Ticks und Zeitzonen; Manifest/Hash/Größe erhalten; alter UX-Trigger entfernt, CM-016 eindeutig.
+- Verifikation: Zwei ZIP-Tests, UTC/Los Angeles/Kiritimati; Linux-/Windows-Webgates; Ergebnis im Audit.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
+## CM-028
+
+**Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren** — P1; Status: **Done**; Komponente: TS/.NET/Schema; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Eindeutige Identität, Version, Katalogbindung, Ziele, deklarative Roots/effektive Pakete, Erinnerungen und keine Ausführungsrechte.
+- Technische Evidenz: Expliziter Masterauftrag 2026-11-14; bestehendes Legacy-/Previewformat bewusst getrennt.
+- Dateien/Module: schemas/setup-plan-v1.schema.json; contracts/; setup-plan.ts; SetupPlanContract.cs
+- Abhängigkeiten/Freigaben: Lokal autorisiert; keine Änderung externer Datenverträge/Repositorygrenzen.
+- Akzeptanzkriterien: Gemeinsame strukturelle Quelle; unbekannte Versionen/Felder/Aktionen und manipulierte Closure fail-closed; deterministisch.
+- Verifikation: Gemeinsame TS/C#-Fixtures, Profile-/Inputreihenfolge, Kataloghash und Negativfälle.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
+## CM-029
+
+**Servervalidierten Setup-JSON-Export anbinden** — P1; Status: **Done**; Komponente: Web/API/UI; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestehende öffentliche Vollvalidierung vor getrenntem JSON-Download; Browser bleibt untrusted.
+- Technische Evidenz: Masterauftrag Phase C, bestehende PublicSelection/Resolver und Requestlimits wiederverwendet.
+- Dateien/Module: öffentliche Planroute; public-configurator.tsx; API-/Browsertests
+- Abhängigkeiten/Freigaben: CM-028; keine anonyme ausführbare ZIP-/EXE-Distribution.
+- Akzeptanzkriterien: Ohne Login exportierbar; keine stillen Verluste, Secrets oder freien Aktionen; Preview/Plan/Releasestatus klar.
+- Verifikation: API-Grenzen, konfliktbehaftete/manipulierte Auswahl, gespeicherter Download und Schutz privater Routen.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
+## CM-030
+
+**Nativen Snapshotimport und sicheren Dry-Run ergänzen** — P1; Status: **Done**; Komponente: WinForms/Dateisicherheit/Worker; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Begrenzten lokalen Snapshot validieren, Pakete/Abhängigkeiten anzeigen und ausschließlich detect/offline plan ausführen.
+- Technische Evidenz: Masterauftrag Phase D; bestehende EXE und PowerShell-5.1-Engine wiederverwendet.
+- Dateien/Module: SetupPlanFile.cs; SetupPlanContract.cs; SetupPlanDryRun.cs; SetupForm.cs; native Tests
+- Abhängigkeiten/Freigaben: CM-028; Server 2022 x64 Desktop Experience; Windows 11 ausdrücklich nicht unterstützt.
+- Akzeptanzkriterien: Keine Importwirkung vor Prüfung; keine Installation im importierten Modus; Snapshot/Schreibsperre/Reparse/Versions-/Target-/Closureprüfung; manuelle Bedienung erhalten.
+- Verifikation: Geteilte Bytefixtures, Windows-Dateisystem-/GUI-Tests, echte Offline-Workerplanung ohne Installer; keine Adminrechte nötig.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Implementiert/Getestet im autorisierten lokalen Umfang, keine Release-/Distributionsfreigabe.
+
+## CM-031
+
+**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Blocked**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Webexport und nativer Import nutzen dieselben positiven/negativen Fixtures; vollständige vorhandene Workflows und Dokumentationsgrenzen prüfen.
+- Technische Evidenz: Masterauftrag Phase E; gemeinsamer valid-server-Export wird in TS byteinhaltlich und nativ vor Workerplanung geprüft.
+- Dateien/Module: tests/fixtures/setup-plan-v1; TS/API/Playwright-/C#-Tests; vorhandene CI; Architektur-/Auditdokumente
+- Abhängigkeiten/Freigaben: CM-027..030; GitHub-API-Forbidden als PR-Blocker, keine Freigaben erfinden.
+- Akzeptanzkriterien: Alle ausführbaren Gates tatsächlich grün; OS-/Provenienz-/Releasegrenzen sichtbar; separater reviewfähiger PR, kein Merge.
+- Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
+
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+
 ## Priorisierte nächste Arbeit
 
 1. **CM-001 / P0:** unabhängige Release-Vertrauensentscheidung und Distributionsgate vorbereiten; keine Signer-Credentials anfassen.
@@ -339,7 +398,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 4. **CM-004 / P1:** Webgates und echte plattformabhängige Testzählung ergänzen.
 5. **CM-003 / P1:** Proposed-Datenvertrag mit Datenowner reviewen; noch keinen GitHub-Provider bauen.
 
-Public-first A/B (CM-017..022) ist durch PD-001..004 zusätzlich autorisiert. C/D (CM-023/024/025) bleiben gesperrt. CM-016 gehört weiterhin zum separaten PR #8. Die obige Sicherheitspriorisierung bleibt bestehen; eine reine Vorschau benötigt keine ausführbare Releasefreigabe.
+Public-first A/B (CM-017..022) ist durch PD-001..004 zusätzlich autorisiert. Externer Datenimport/ausführbare Distribution/echte Zielsystemabnahme (CM-023/024/025) bleiben gesperrt; der Masterauftrag autorisiert separat CM-027..031 für JSON-Import/Dry-Run. CM-016 ist durch den gemergten separaten PR #8 abgeschlossen. Die obige Sicherheitspriorisierung bleibt bestehen; eine reine Vorschau benötigt keine ausführbare Releasefreigabe.
 
 CM-009 ist ein kleiner parallel ausführbarer lokaler Korrektur-PR; CM-005 bleibt bis zur Freigabe realer VM-Installationen blockiert. Eine Dokumentationsbaseline macht keine dieser Produktaufgaben automatisch Done.
 

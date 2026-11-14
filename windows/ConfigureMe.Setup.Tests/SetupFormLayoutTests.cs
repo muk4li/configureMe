@@ -7,6 +7,34 @@ namespace ConfigureMe.Setup.Tests;
 
 public sealed class SetupFormLayoutTests
 {
+    [Fact]
+    public Task ImportIsAtomicShowsDependenciesAndPreservesManualMode() => RunOnStaAsync(root =>
+    {
+        using var form = new SetupForm(runStartupDetection: false, applicationDataRoot: root);
+        form.Show(); Application.DoEvents();
+        var bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "PlanFixtures", "valid-server.json"));
+        var plan = form.ImportPlanSnapshot(bytes, new("windows-server-2022", "x64"));
+        var git = (CheckBox)form.Controls.Find("PackageSelection:git", true).Single();
+        var cli = (CheckBox)form.Controls.Find("PackageSelection:github-cli", true).Single();
+        Assert.True(git.Checked); Assert.True(cli.Checked); Assert.False(git.Enabled);
+        var cliAction = (Button)form.Controls.Find("PackageAction:github-cli", true).Single();
+        Assert.False(cliAction.Enabled);
+        Assert.Contains("GitHub CLI", git.AccessibleDescription);
+        Assert.Contains("Abhängigkeit", form.Controls.Find("PackageName:git", true).Single().Text);
+        Assert.Equal(new[] { "git", "github-cli" }, plan.PackageIds);
+        Assert.False(Directory.Exists(Path.Combine(root, "Reports"))); // Import starts no operation/report.
+        Assert.ThrowsAny<Exception>(() => form.ImportPlanSnapshot("{}"u8.ToArray(), new("windows-server-2022", "x64")));
+        Assert.True(cli.Checked); // Failed import cannot replace a previously valid selection.
+        form.ApplyWorkerEvent(new WorkerEvent("package-detected", "git", "installed", null,
+            JsonSerializer.SerializeToElement(new { detectedVersion = "2.50.0" })));
+        Assert.False(git.Enabled); // Detection/busy updates cannot unlock imported intent.
+        form.AssertButtonLayout(); form.AssertMainLayout();
+        form.ClearImportedPlan();
+        Assert.True(git.Enabled);
+        Assert.True(cliAction.Enabled);
+        Assert.DoesNotContain("Abhängigkeit", form.Controls.Find("PackageName:git", true).Single().Text);
+    });
+
     [Theory]
     [InlineData(1159, 709)]
     [InlineData(900, 700)]

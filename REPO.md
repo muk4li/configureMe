@@ -1,6 +1,6 @@
 # configureMe: technischer Repository-Leitfaden
 
-Stand: **2026-11-13**, Public-first A/B im Feature-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
+Stand: **2026-11-14**, Public-first A/B und UX #11 in main, Setup-Plan-v1 im Review-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
 
 ## Zweck und Grenzen
 
@@ -50,7 +50,7 @@ flowchart LR
 | Route | Verhalten / Grenze |
 | --- | --- |
 | `/` | öffentlicher Windows-Konfigurator ohne Login, zeigt auch optionale Auth-Fehlerhinweise |
-| `POST /api/public/plan` | begrenzte anonyme reine Previewberechnung; kein ZIP/EXE, keine Persistenz oder privaten Daten |
+| `POST /api/public/plan` | begrenzte anonyme Preview-/Setup-Plan-v1-JSON-Berechnung; kein ZIP/EXE, keine Persistenz oder privaten Daten |
 | `/api/health` | öffentliche statische Liveness `{status: ok}`; keine OAuth-/Deployment-Readiness-Zusage |
 | `/dashboard`, `/catalog`, `/profiles`, `/setup` | über `(portal)/layout.tsx` geschützt; ohne Session Redirect |
 | `GET /api/profiles` | Session erforderlich; liest alle lokalen Profile, kein Schreibendpunkt |
@@ -166,3 +166,7 @@ Aktuell keine produktive myConfigs-Quelle: fixtures/public/profiles.v1.json ist 
 ## UX-Runde 1
 
 Die Paket-UI verwendet `public-selection.ts`: Aktionen prüfen den aktuellen requiredBy-Graph desselben Planers, der auf dem Server validiert; erforderliche Pakete sind sichtbar gesperrt, direkte Auswahl bleibt getrennt. Targetfilter verstecken nur im Katalog, nie im gespeicherten Plan/Validierungsweg. Inkompatible bestehende Auswahl bleibt als Konflikt sichtbar. Bestehende globale boolesche Planhinweise haben kontextbezogene Erklärungen; sie starten keine Installer oder Anmeldung. Kategorien verwenden ein zusammenhängendes responsives Toolgrid, die Desktopübersicht einen begrenzten Stickybereich. Inline-Icons: drei belegte Brandassets plus neutrale Fallbacks ohne Runtimefetch. [Regeln, Präferenzsemantik, Lizenzen und Nachweise](docs/ux/feedback-round-1.md).
+
+## Setup-Plan-v1-Erweiterung (2026-11-14)
+
+Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md), [Evidenz](docs/audits/setup-plan-v1.md): `src/lib/setup-plan.ts` exportiert nach vollständiger serverseitiger Neuplanung einen separaten nicht autorisierenden JSON-Plan. `schemas/setup-plan-v1.schema.json` und `contracts/setup-plan-v1.policy.json` werden von TS/.NET gemeinsam konsumiert. `SetupPlanContract`, `SetupPlanFile`, `SetupPlanDryRun` erweitern die vorhandene EXE um sicheren Snapshotimport und detect/plan-Dry-Run, nur Server 2022 x64 Desktop Experience. Legacyformat/Preview bleiben getrennt. Gemeinsame Fixtures in `tests/fixtures/setup-plan-v1`; native Tests verwenden isolierte Engine-/Reportroots. Kein Windows-11-Nativadapter, keine öffentliche Installerdistribution, keine produktive Datenquelle/Secrets/Authentifizierungsänderung.

@@ -4,6 +4,7 @@ import { POST } from "../src/app/api/public/plan/route";
 import { POST as bootstrap } from "../src/app/api/bootstrap/route";
 import { GET as privateProfiles } from "../src/app/api/profiles/route";
 import { getSession } from "../src/lib/auth";
+import { validateSetupPlan } from "../src/lib/setup-plan";
 import { freshSelection } from "../src/lib/public-session";
 import { isPublicPlanRateLimited } from "../src/lib/public-rate-limit";
 import { PublicInputError, readPublicJson } from "../src/lib/public-request";
@@ -16,6 +17,22 @@ function request(body: unknown = freshSelection(), headers: Record<string, strin
 beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("APP_URL", "http://localhost:3000"); vi.mocked(isPublicPlanRateLimited).mockReturnValue(false); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("bounded anonymous preview API", () => {
+  it("exports a distinct server-resolved setup contract without auth or executable distribution", async () => {
+    const body = { ...freshSelection(), target: "windows-server-2022", profileIds: [], addedPackageIds: ["github-cli"] };
+    const exportRequest = (input: unknown) => new NextRequest(`${url}?export=setup-plan-v1`, {
+      method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json" }, body: JSON.stringify(input),
+    });
+    const response = await POST(exportRequest(body));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const plan = validateSetupPlan(await response.json());
+    expect(plan.authorization).toBe("none");
+    expect(plan.packages.map(item => item.id)).toEqual(["git", "github-cli"]);
+    expect(getSession).not.toHaveBeenCalled();
+    expect((await POST(exportRequest({ ...body, removedPackageIds: ["git"] }))).status).toBe(422);
+    expect((await POST(exportRequest({ ...body, command: "arbitrary" }))).status).toBe(400);
+    expect((await POST(exportRequest({ ...body, addedPackageIds: ["unknown"] }))).status).toBe(422);
+  });
   it("plans without cookies, OAuth or private provider access and never emits executable content", async () => {
     const response = await POST(request());
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
