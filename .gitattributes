@@ -6,3 +6,5 @@ tests/fixtures/setup-plan-v1/*.json text eol=lf
 linux/catalog.json text eol=lf
 linux/plans/*.json text eol=lf
 tests/fixtures/linux-plan-v1/* text eol=lf
+# Unmodified Ubuntu package files (provenance in the fixture README); keep bytes as shipped.
+tests/fixtures/linux-runner/*.noble text eol=lf -whitespace
