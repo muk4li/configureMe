@@ -1182,6 +1182,7 @@ internal sealed class SetupForm : Form
             _toolTip.SetToolTip(checkBox, reason);
             var name = Controls.Find($"PackageName:{id}", true).OfType<Label>().Single();
             name.Text = PackageName(id) + (parents.Length == 0 ? "" : " (Abhängigkeit)");
+            UpdatePackageRow(id);
         }
         _installSelectedButton.Enabled = false;
         foreach (var button in _manualSelectionButtons) button.Enabled = false;
@@ -1203,6 +1204,7 @@ internal sealed class SetupForm : Form
             checkBox.AccessibleDescription = "";
             _toolTip.SetToolTip(checkBox, "");
             Controls.Find($"PackageName:{id}", true).OfType<Label>().Single().Text = PackageName(id);
+            UpdatePackageRow(id);
         }
         LoadDeveloperProfileSelection(); // Deliberate return to the preexisting manual profile, not imported authorization.
         _installSelectedButton.Enabled = true;

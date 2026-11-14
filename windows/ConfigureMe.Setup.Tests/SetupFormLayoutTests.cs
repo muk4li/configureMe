@@ -17,6 +17,8 @@ public sealed class SetupFormLayoutTests
         var git = (CheckBox)form.Controls.Find("PackageSelection:git", true).Single();
         var cli = (CheckBox)form.Controls.Find("PackageSelection:github-cli", true).Single();
         Assert.True(git.Checked); Assert.True(cli.Checked); Assert.False(git.Enabled);
+        var cliAction = (Button)form.Controls.Find("PackageAction:github-cli", true).Single();
+        Assert.False(cliAction.Enabled);
         Assert.Contains("GitHub CLI", git.AccessibleDescription);
         Assert.Contains("Abhängigkeit", form.Controls.Find("PackageName:git", true).Single().Text);
         Assert.Equal(new[] { "git", "github-cli" }, plan.PackageIds);
@@ -29,6 +31,7 @@ public sealed class SetupFormLayoutTests
         form.AssertButtonLayout(); form.AssertMainLayout();
         form.ClearImportedPlan();
         Assert.True(git.Enabled);
+        Assert.True(cliAction.Enabled);
         Assert.DoesNotContain("Abhängigkeit", form.Controls.Find("PackageName:git", true).Single().Text);
     });
 
