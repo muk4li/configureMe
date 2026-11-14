@@ -198,3 +198,7 @@ Geschützter Wizard zeigt CPython-Vollinstaller und die hashgebundene unsigned-7
 ## OAuth-State-Fehlergrenze (CM-040)
 
 Der bestehende Callback prüft UTF8-Bytelängen vor timingSafeEqual, statt ungleiche Buffer mit identischer JavaScript-Zeichenlänge vergleichen zu lassen. Synthetische GET-Tests prüfen Fehlerredirect, State-Cookie-Löschung, keine Upstreamaufrufe bei ungültigem State und unveränderte Session-/Allowlistkontrollen. Kein neues Authsystem oder echte Credentials.
+
+## Container-Checkoutvorbereitung (CM-041)
+
+Fehlender public-COPY-Eingang und eine leere sichere `.env.example` sind vorbereitet. Echte Envdateien bleiben ignoriert; keine Default-Credentials/Adminfreigabe. Docker-Socketzugriff fehlt hier, daher keine Container-/Health-/Deploymentabnahme und CM-002 weiter offen. [Grenzen](docs/deployment.md#clean-checkout-voraussetzungen-review-cm-041).

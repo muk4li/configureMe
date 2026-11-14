@@ -45,6 +45,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 | [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
 | [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
+| [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
 
 ## CM-001
 
@@ -498,6 +499,17 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `7742d44`, [vollständige
 - Verifikation: Neun echte GET-Pfadtests mit gemocktem Fetch, Rot/Grün-Nachweis; bestehende komplette Web-/Browsergates.
 
 Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige CI 43565869811](https://github.com/muk4li/configureMe/actions/runs/43565869811) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-041
+
+**Fehlende Docker-Checkoutdateien bereitstellen** — P1; Status: **In Progress**; Komponente: Entwicklungs-/Containerbuild-Voraussetzungen; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Tatsächlich referenzierten public-Ordner und sichere wertfreie Env-Vorlage versionieren; keine Container starten oder Authvorgaben lockern.
+- Technische Evidenz: Dockerfile COPY /app/public sowie dokumentiertes .env.example fehlten; Dockerinfo scheitert hier an Socketberechtigung.
+- Dateien/Module: public/.gitkeep; .env.example; .gitignore; Deploymentdokumentation.
+- Abhängigkeiten/Freigaben: Dockerdaemonzugriff und isolierter Clean-Checkout-Build/Health/API-Test fehlen; keine Gruppenzuordnung/Sudo-/Hoständerung als Umgehung.
+- Akzeptanzkriterien: Alle COPY-Quellen vorhanden; einzig explizite Env-Beispieldatei aus Ignore ausnehmen, echte Dateien weiter ignoriert; leere Authwerte; vollständigen Dockerbuild erst nach tatsächlichem Test als bestanden melden.
+- Verifikation: Git-/Datei-/Env-Struktur geprüft; vollständige Web-CI 43566003380 für 73db0ef erfolgreich; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002/041 bleiben offen.
 
 ## Priorisierte nächste Arbeit
 
