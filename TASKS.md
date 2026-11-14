@@ -38,6 +38,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 | [CM-033](#cm-033) | P1 | Done | CM-1 | Importierten Ausführungsvertrag ohne Aktivierung vorbereiten |
+| [CM-034](#cm-034) | P1 | Done | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
 
 ## CM-001
 
@@ -216,6 +217,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; PR #8 nach Eigentümerreview gemergt. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden.
 - Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
 - Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. PR #8 gemergt (e4a9ebc); geprüft am 2026-11-14. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
+
 ## CM-017
 
 **Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **Done**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
@@ -403,6 +405,19 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Verifikation: 20 gezielte Fälle, portable/Windows-Komplettsuite und EXE-Selftests; kein realer Installer. Temporäre In-Process-Diagnose nur ergänzend, nicht als VSTest zählen.
 
 Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d2c8aba`, [vollständige CI 43564728870](https://github.com/muk4li/configureMe/actions/runs/43564728870) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-034
+
+**Windows-11-Previewadapter ohne Registrierung vorbereiten** — P1; Status: **Done**; Komponente: Native Plattformvorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Unabhängige Windows-11/x64-Kandidatenprüfung mit unveränderlichen Snapshots und begrenzten Fixturebeobachtungen implementieren; keine native Aktivierung.
+- Technische Evidenz: Main f744d63 modelliert Windows 11, verweigert nativen Import; generische Windowsmetadaten belegen keine Zielsystemunterstützung.
+- Dateien/Module: Windows11PreviewPreparation.cs; Tests; docs/windows11-preview-preparation.md
+- Abhängigkeiten/Freigaben: Echte Windows-11-Plattform-/Detection-/Dry-Run-Abnahme vor Registrierung; Installation separat. Katalog-/Import-/Worker-OS-Prüfungen bleiben unverändert.
+- Akzeptanzkriterien: Client/Build/x64 unterscheiden; alle Abhängigkeiten/unsupported erhalten; keine Serverstrategie als WinGet darstellen; falsche Architektur/unklare Beobachtungen verweigern; kein Installations-API.
+- Verifikation: 12 gezielte Fälle plus vorhandene Windows-/portable Komplettsuiten; synthetische Hostevidenz ist kein echter Windows-11-Nachweis.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `c035c99`, [vollständige CI 43564860415](https://github.com/muk4li/configureMe/actions/runs/43564860415) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 

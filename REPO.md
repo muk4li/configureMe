@@ -174,3 +174,7 @@ Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md),
 ## Importierter Ausführungsvertrag (CM-033, Vorbereitung)
 
 [Vertrag](docs/imported-plan-execution-contract.md): unregistrierter Reviewzustand mit eigenen Snapshot-/Katalogbytes, deterministischer read-only Beobachtungsprüfung, Rechte-/Detection-/Modusklassifikation und terminalem Abbruch. Keine Installation-/Bestätigungs-API oder GUI-Aktivierung; vorhandene importierte Ausführung bleibt gesperrt. Paket C erfordert Vertragsannahme und ausdrückliche Phasenfreigabe.
+
+## Windows-11-Vorbereitung (CM-034)
+
+[Unregistrierte Previewvorbereitung](docs/windows11-preview-preparation.md) prüft eigene Katalog-/Plansnapshots und synthetische Host-/Detectionbeobachtungen. Keine zweite Engine, keine Serverstrategie als WinGet-Nachweis, keine native Registrierung. Windows-11-Import bleibt geschlossen bis zur echten Plattform-/Detection-/Dry-Run-Abnahme; Installation benötigt getrennte Freigabe.

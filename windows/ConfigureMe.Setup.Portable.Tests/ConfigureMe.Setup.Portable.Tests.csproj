@@ -14,6 +14,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\Windows11PreviewPreparationTests.cs" Link="Tests\Windows11PreviewPreparationTests.cs" />
+    <Compile Include="..\ConfigureMe.Setup\Windows11PreviewPreparation.cs" Link="Source\Windows11PreviewPreparation.cs" />
     <Compile Include="..\ConfigureMe.Setup\EngineBundle.cs" Link="Source\EngineBundle.cs" />
     <Compile Include="..\ConfigureMe.Setup\InstallPlanResolver.cs" Link="Source\InstallPlanResolver.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanFile.cs" Link="Source\SetupPlanFile.cs" />
