@@ -89,5 +89,5 @@ Das Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quicks
 - [Sicherheitsmodell und Bedrohungen](docs/security.md)
 - [Self-Hosting und Deployment](docs/deployment.md)
 - [Windows-Bootstrap](docs/windows.md)
-- [Linux-Status](docs/linux.md)
+- [Linux-Status](docs/linux.md) (geplanter Ubuntu-Runner: [Vorschlag CM-042](docs/linux-plan-contract.md), nicht implementiert)
 - [macOS-Status](docs/macos.md)
