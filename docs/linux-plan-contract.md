@@ -130,7 +130,7 @@ Mitgliedschaft in `docker` ist faktisch root-gleich (Zugriff auf den Docker-Sock
 2. Schema/Policy/Katalog + Planvalidierung + Tests.
 3. Runner mit Dry-Run, Erkennung und Bericht (gemockt getestet).
 4. Installationsschritte inkl. Apply/Bestätigung, gepinnte Docker-Versionen mit Quellenbeleg.
-5. Doku: linux.md, REPO.md, README, Anleitung „Runner auf huu-server-01 ausführen“.
+5. Doku: linux.md, REPO.md, README, Anleitung „Runner auf huu-server-01 ausführen“ ([linux.md](linux.md#runner-auf-huu-server-01-ausführen)).
 
 ## Eigentümerentscheidungen 2026-11-14
 
