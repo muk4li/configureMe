@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/installer-provenance]
+    branches: [main]
     tags: ["quicksetup-v*"]
   workflow_dispatch:
 

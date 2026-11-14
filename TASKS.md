@@ -38,7 +38,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 | [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
-| [CM-037](#cm-037) | P1 | In Progress | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
+| [CM-037](#cm-037) | P1 | Done | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
 | [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 
 ## CM-001
@@ -406,7 +406,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-037
 
-**Geprüfte Installerbytes und Quellen im Bericht erhalten** — P1; Status: **In Progress**; Komponente: Installer-/Worker-/Report-Provenienz; Phase: [CM-1](ROADMAP.md#cm-1).
+**Geprüfte Installerbytes und Quellen im Bericht erhalten** — P1; Status: **Done**; Komponente: Installer-/Worker-/Report-Provenienz; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Additive lokale Prüfevidenz desselben Verifikationsvorgangs mit tatsächlichem Digest/Größe/Signatur und redigierter beobachteter Quelle erhalten, auch bei späterem Prozessfehler.
 - Technische Evidenz: CM-010: ursprüngliche Downloadfunktion verwirft finale validierte URI; Installresultat enthält nur Exit/Reboot. Kontrollierte Abhängigkeit auf Handoff-Branch ca290e3.
@@ -414,6 +414,8 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Abhängigkeiten/Freigaben: Zuerst Handoff-Reviewbranch übernehmen; keine Releaseauthentizität/Signierung. Build-/Toolchain-Provenienz und finale Apparchitektur bleiben CM-010 offen.
 - Akzeptanzkriterien: Bisherige Rückgaben/stdout erhalten; erwarteter Pfadhash weiter geprüft und gegen gehaltenen Stream gebunden; SignatureProvider exakt einmal; cached finale URI unbekannt lassen; userinfo/query/fragment entfernen; ungültige Signaturen nie als erfolgreich berichten.
 - Verifikation: 86 bestehende + 25 neue PS7-Fixtureassertions; Windows PS5.1/7, Worker-/Aggregate-Suiten und vollständiger Publishworkflow; Mismatch-Stream/Pfad vor Signer verweigert.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d8f79c9`, [vollständige CI 43565667258](https://github.com/muk4li/configureMe/actions/runs/43565667258) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## CM-038
 
