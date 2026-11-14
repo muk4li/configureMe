@@ -178,3 +178,7 @@ Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md),
 ## Windows-11-Vorbereitung (CM-034)
 
 [Unregistrierte Previewvorbereitung](docs/windows11-preview-preparation.md) prüft eigene Katalog-/Plansnapshots und synthetische Host-/Detectionbeobachtungen. Keine zweite Engine, keine Serverstrategie als WinGet-Nachweis, keine native Registrierung. Windows-11-Import bleibt geschlossen bis zur echten Plattform-/Detection-/Dry-Run-Abnahme; Installation benötigt getrennte Freigabe.
+
+## Snapshot-Vertragsvorbereitung (CM-035)
+
+[Entscheidungsvorlage](docs/integrations/public-snapshot-decision.md) und synthetische Consumer-Grenztests prüfen konkrete Unterschiede ohne Provider, Schemakopie oder Vertragsannahme. Öffentliche Laufzeitdaten bleiben lokale Fixtures. Centrality-/Datenownerfreigabe bleibt vor produktivem Snapshotimport nötig.

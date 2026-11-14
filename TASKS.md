@@ -39,6 +39,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
 | [CM-033](#cm-033) | P1 | Done | CM-1 | Importierten Ausführungsvertrag ohne Aktivierung vorbereiten |
 | [CM-034](#cm-034) | P1 | Done | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
+| [CM-035](#cm-035) | P1 | Done | CM-1 | Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern |
 
 ## CM-001
 
@@ -418,6 +419,19 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d2c8aba`, [vollständige
 - Verifikation: 12 gezielte Fälle plus vorhandene Windows-/portable Komplettsuiten; synthetische Hostevidenz ist kein echter Windows-11-Nachweis.
 
 Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `c035c99`, [vollständige CI 43564860415](https://github.com/muk4li/configureMe/actions/runs/43564860415) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-035
+
+**Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern** — P1; Status: **Done**; Komponente: Consumer-Contracttests/Datenentscheidung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Konkrete Producer-/Consumer-Abweichungen mit synthetischen Beispielen und echten Consumer-Validatoren testen; produktiven Import gesperrt lassen.
+- Technische Evidenz: Centrality 12776e9 und Datenquelle 75b91cf nur lesend geprüft; ADR-002/D-007 weiter Proposed; Reihenfolge, Limits, Zielworkflow und Identitäten unterscheiden sich.
+- Dateien/Module: docs/integrations/public-snapshot-decision.md; tests/public-profile-boundaries.test.ts; synthetische Fixturedateien.
+- Abhängigkeiten/Freigaben: Keine externe Schemaannahme oder produktive Providerfreigabe; CM-003/023 bleiben blockierend für echten Import.
+- Akzeptanzkriterien: Konkrete Entscheidungsvorlage; source-shaped Daten und unbekannte Versionen/Revisionen nicht implizit akzeptieren; keine Kürzung/Alias-/Targetkonvertierung; keine privaten Profile kopieren.
+- Verifikation: Fünf gezielte Vitestfälle; Typecheck/Lint und vorhandene komplette Web-CI; keine Installer oder Secrets.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `4848a0f`, [vollständige CI 43564368520](https://github.com/muk4li/configureMe/actions/runs/43564368520) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 

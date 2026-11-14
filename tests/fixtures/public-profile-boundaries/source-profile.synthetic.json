@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schemas/profile.schema.json",
+  "schemaVersion": 1,
+  "id": "synthetic-source-developer",
+  "name": "Synthetic source profile",
+  "description": "Invented compatibility probe, never imported from a private profile.",
+  "platforms": ["windows"],
+  "packages": ["git", "github-cli"],
+  "options": { "configureGit": true }
+}
