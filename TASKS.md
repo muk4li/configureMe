@@ -37,7 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
-| [CM-034](#cm-034) | P1 | In Progress | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
+| [CM-034](#cm-034) | P1 | Done | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
 
 ## CM-001
 
@@ -393,7 +393,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-034
 
-**Windows-11-Previewadapter ohne Registrierung vorbereiten** — P1; Status: **In Progress**; Komponente: Native Plattformvorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+**Windows-11-Previewadapter ohne Registrierung vorbereiten** — P1; Status: **Done**; Komponente: Native Plattformvorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Unabhängige Windows-11/x64-Kandidatenprüfung mit unveränderlichen Snapshots und begrenzten Fixturebeobachtungen implementieren; keine native Aktivierung.
 - Technische Evidenz: Main f744d63 modelliert Windows 11, verweigert nativen Import; generische Windowsmetadaten belegen keine Zielsystemunterstützung.
@@ -401,6 +401,8 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Abhängigkeiten/Freigaben: Echte Windows-11-Plattform-/Detection-/Dry-Run-Abnahme vor Registrierung; Installation separat. Katalog-/Import-/Worker-OS-Prüfungen bleiben unverändert.
 - Akzeptanzkriterien: Client/Build/x64 unterscheiden; alle Abhängigkeiten/unsupported erhalten; keine Serverstrategie als WinGet darstellen; falsche Architektur/unklare Beobachtungen verweigern; kein Installations-API.
 - Verifikation: 12 gezielte Fälle plus vorhandene Windows-/portable Komplettsuiten; synthetische Hostevidenz ist kein echter Windows-11-Nachweis.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `c035c99`, [vollständige CI 43564860415](https://github.com/muk4li/configureMe/actions/runs/43564860415) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
 
 ## Priorisierte nächste Arbeit
 
