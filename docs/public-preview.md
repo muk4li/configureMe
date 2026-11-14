@@ -18,7 +18,7 @@ npm run preview
 
 Direkt im Repo sind `npm ci` und `npm run preview` ebenfalls möglich, erzeugen dort aber Build-/Dependencydateien. Der temporäre Checkout ist für maximale Trennung empfohlen. Ohne Git kann ein sauberer Source-Download in ein neues Verzeichnis entpackt werden; eine CI-EXE startet nicht diese Webvorschau.
 
-UX-Runde 1 ist mit PR #11 gemergt. Für den noch nicht gemergten Setup-Plan-Reviewstand im Clonebefehl `feature/setup-plan-v1` statt `main` wählen. Geänderte Katalogfilter, bestehende Planhinweise und Screenshotnachweise: [UX-Runde 1](ux/feedback-round-1.md).
+UX-Runde 1 und Setup-Plan v1 sind mit PR #11/#12 gemergt; der Clone von main enthält beides. Geänderte Katalogfilter, bestehende Planhinweise und Screenshotnachweise: [UX-Runde 1](ux/feedback-round-1.md).
 
 ## Nachvollziehbare Schreibzugriffe
 

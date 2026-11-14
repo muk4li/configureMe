@@ -1,6 +1,6 @@
 # Setup-plan contract v1
 
-Status 2026-11-14: implemented for review; validation evidence in [the audit](audits/setup-plan-v1.md). Not a release/distribution approval. The native runner remains the existing EXE in this repository, not a new engine or per-user build.
+Status 2026-11-14: implemented/tested, merged in PR #12 (main f744d63); validation evidence in [the audit](audits/setup-plan-v1.md). Not a release/distribution approval. The native runner remains the existing EXE in this repository, not a new engine or per-user build.
 
 ## Formats and authority
 

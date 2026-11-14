@@ -85,3 +85,9 @@ UX-Runde 1 / CM-026: Dependency-Zustände und Targetkatalog konsistent machen, D
 ## Masterauftrag Setup-Plan v1 (2026-11-14)
 
 Der aktuelle Auftrag autorisiert den lokalen JSON-Vertrag, öffentlichen JSON-Export und sicheren Import/Dry-Run in der bestehenden EXE (CM-027..031), unabhängig von der weiterhin gesperrten ausführbaren Distribution. Keine Auslagerung/zweite Engine. Reihenfolge: ZIP-Ursache/Regression, gemeinsamer Vertrag, Export, Import, Integration/CI. Windows 11 wird modelliert, hat aber noch keinen nativen Adapter. CM-001/005/006/010 und öffentliche Distribution bleiben separate Releasegates; externer Profilimport (CM-023) bleibt Proposed/blockiert. Private Vorlagen und geschützte Provisionierung sind spätere getrennte Bereiche ohne Agenten-/Infrastrukturpflicht für die Grundinstallation.
+
+## Folgeauftrag Windows-v1 nach PR #12
+
+Baseline main f744d63, CM-027..031 implementiert/getestet und gemergt; [erneute Prüfung](docs/audits/windows-v1-baseline.md). Nächster sicherer Schritt ist ein expliziter Ausführungsvertrag mit negativ getesteten Zustandsgrenzen, noch keine Aktivierung importierter Installationen. Windows-11-Adaptervorbereitung nur mit sichtbaren Fähigkeitsgrenzen; Registrierung erst nach echten Plattform-/Detection-/Dry-Run-Nachweisen. Externe Snapshotintegration bleibt Proposed, reale Zielsystemtests und Releases bleiben gesondert freizugeben. Unabhängige Handoff-/Provenienz-/UX-Korrekturen erfolgen separat ohne Systeminstallationen.
+
+CM-033..041 sind in getrennten Reviews umgesetzt beziehungsweise vorbereitet; [Ergebnisse/Gates](docs/audits/windows-v1-progress.md). Die sicheren unabhängigen Teile wurden getestet, importierte Ausführung, echte Windows-11-Registrierung, Datenquellenannahme, Containerabnahme und öffentliche Signer-/Releasefreigabe bleiben getrennt. Kein Reviewstatus ist eine globale Freigabe.

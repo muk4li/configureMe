@@ -1,6 +1,6 @@
 # configureMe: technischer Repository-Leitfaden
 
-Stand: **2026-11-14**, Public-first A/B und UX #11 in main, Setup-Plan-v1 im Review-Branch; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
+Stand: **2026-11-14**, Public-first A/B, UX #11 und Setup-Plan v1 #12 in main; ursprüngliche geprüfte Implementierung `23fdea3b1dec546fbf73ab930096078ba73419e1` auf dem Default-Branch `main`. Dieses Dokument beschreibt Code und Prüfgrenzen, keine Produktionsfreigabe. Einstieg für Änderungen: [AGENTS.md](AGENTS.md), [TASKS.md](TASKS.md), [lokale Roadmap](ROADMAP.md), [Initialaudit](docs/audits/initial-audit.md).
 
 ## Zweck und Grenzen
 
@@ -170,6 +170,10 @@ Die Paket-UI verwendet `public-selection.ts`: Aktionen prüfen den aktuellen req
 ## Setup-Plan-v1-Erweiterung (2026-11-14)
 
 Basis main 5f878a7 mit PR #8/#9/#10/#11. [Vertrag](docs/setup-plan-contract.md), [Evidenz](docs/audits/setup-plan-v1.md): `src/lib/setup-plan.ts` exportiert nach vollständiger serverseitiger Neuplanung einen separaten nicht autorisierenden JSON-Plan. `schemas/setup-plan-v1.schema.json` und `contracts/setup-plan-v1.policy.json` werden von TS/.NET gemeinsam konsumiert. `SetupPlanContract`, `SetupPlanFile`, `SetupPlanDryRun` erweitern die vorhandene EXE um sicheren Snapshotimport und detect/plan-Dry-Run, nur Server 2022 x64 Desktop Experience. Legacyformat/Preview bleiben getrennt. Gemeinsame Fixtures in `tests/fixtures/setup-plan-v1`; native Tests verwenden isolierte Engine-/Reportroots. Kein Windows-11-Nativadapter, keine öffentliche Installerdistribution, keine produktive Datenquelle/Secrets/Authentifizierungsänderung.
+
+## Windows-v1-Baseline (2026-11-14)
+
+Main `f744d63c5d245f113e3104161abf04d9f5e900e1` enthält den gemergten PR #12. [Aktuelle Baseline](docs/audits/windows-v1-baseline.md): CM-031s damalige PR-Blockade ist erledigt. Die vorhandene Import-/Dry-Run-Funktion ist implementiert/getestet, keine öffentliche Releasefreigabe. Importierte Installation bleibt gesperrt. Folgearbeit B/D/E/F/G entsteht in separaten Review-Branches; keine zweite Engine/Repoaufteilung und keine privaten Daten-/Provisionierungsdienste.
 
 ## Importierter Ausführungsvertrag (CM-033, Vorbereitung)
 
