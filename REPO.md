@@ -6,7 +6,7 @@ Stand: **2026-11-14**, Public-first A/B, UX #11 und Setup-Plan v1 #12 in main; u
 
 configureMe erstellt nachvollziehbare Softwareauswahlen und lokale Windows-Setup-Pakete. Das Portal installiert nicht im Browser und besitzt keinen Geräte-Agenten. Die lokale Engine führt erst nach Bestätigung kontrollierte Installationsdefinitionen aus. Webportal und native EXE sind unabhängig nutzbare Einstiege; die EXE benötigt weder Portal noch Git, Node, WinGet oder globales .NET.
 
-Implementiert sind der öffentliche Windows-Konfigurator mit synthetischen Fixtures, Mehrprofil-/Sitzungsplanung und nicht ausführbarem servervalidiertem JSON-Export sowie das weiterhin geschützte Portal, GitHub-OAuth mit Allowlist, signierte Sessions, lokaler Profilprovider, Paketkatalog, Abhängigkeitsauflösung, Windows-ZIP-Erzeugung sowie ein selbstständiges Windows-Server-2022-Setup mit WinForms, Worker und Berichten. Kein implementierter GitHub-Konfigurationsprovider, Profil-Webeditor, dauerhafte Datenbank, zentrale Session-Widerrufsdatenbank, OIDC-/Hub- oder VPN-Integration. Linux/macOS sind Planungsbezeichnungen; im aktuellen Katalog sind dafür keine installierbaren Pakete freigegeben. Ein lokaler Ubuntu-Runner ist als [Vertrag](docs/linux-plan-contract.md) (CM-042, Accepted 2026-11-14) beschrieben, nicht implementiert.
+Implementiert sind der öffentliche Windows-Konfigurator mit synthetischen Fixtures, Mehrprofil-/Sitzungsplanung und nicht ausführbarem servervalidiertem JSON-Export sowie das weiterhin geschützte Portal, GitHub-OAuth mit Allowlist, signierte Sessions, lokaler Profilprovider, Paketkatalog, Abhängigkeitsauflösung, Windows-ZIP-Erzeugung sowie ein selbstständiges Windows-Server-2022-Setup mit WinForms, Worker und Berichten. Kein implementierter GitHub-Konfigurationsprovider, Profil-Webeditor, dauerhafte Datenbank, zentrale Session-Widerrufsdatenbank, OIDC-/Hub- oder VPN-Integration. Linux/macOS sind im Portal Planungsbezeichnungen; im Web-Katalog sind dafür keine installierbaren Pakete freigegeben. Getrennt davon gibt es einen lokalen Ubuntu-Server-24.04-Runner (`linux/`, CM-042, [Vertrag](docs/linux-plan-contract.md) Accepted 2026-11-14): implementiert und mit Mocks getestet, **nicht** auf einem Zielsystem betrieben ([Linux](docs/linux.md)).
 
 ## Stack und Verzeichnisse
 
@@ -24,6 +24,9 @@ Implementiert sind der öffentliche Windows-Konfigurator mit synthetischen Fixtu
 | `windows/ConfigureMe.Setup.Tests/`, `windows/ConfigureMe.Setup.Portable.Tests/` | Windows-GUI-/Controller-Tests und portable Teilmenge |
 | `tests/`, `scripts/` | Vitest, PowerShell-Fixtures, Manifest-/ZIP-Erzeugung, optionale Diagnose-/Codex-Helfer |
 | `.github/workflows/windows-quicksetup.yml` | Windows-CI mit Mocks, Self-Tests und kurzlebigen unsignierten Artefakten |
+| `linux/` | lokaler Ubuntu-24.04-Runner (Python-3.12-Standardbibliothek): `runner.py` (CLI, Dry-Run/Apply), `linux_plan.py` (Validator), `trusted.py` (feste Quellen, Fingerprint), `detect.py`, `steps.py`, `report.py`, `host.py` (einzige Stelle mit `subprocess`/Netz); `catalog.json`, `plans/` |
+| `schemas/linux-plan-v1.schema.json`, `contracts/linux-plan-v1.policy.json` | Linux-Plan v1; Konstanten per Test mit Python abgeglichen |
+| `tests/linux/`, `.github/workflows/linux-runner.yml` | unittest mit synthetischem Host; CI auf `ubuntu-24.04` ohne Root/Installation |
 | `Dockerfile`, `compose.yaml` | vorgeschlagener eigenständiger Portalbetrieb; bekannte Reproduktionslücke siehe CM-002 |
 
 Werkzeuge: Node.js 22+, npm/Lockfile, TypeScript 5, Zod 4, JSZip, ESLint/Vitest; native GUI `net10.0-windows`, Windows PowerShell 5.1 und `win-x64` self-contained. Keine Produktabhängigkeit auf Centrality oder Nachbar-Repositories. Details: [Architektur](docs/architecture.md), [Windows-Setup](windows/ConfigureMe.Setup/README.md).
@@ -122,6 +125,8 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests\co
 # Produktionsmodell bauen, nicht auf dem Buildhost installieren
  dotnet publish windows\ConfigureMe.Setup\ConfigureMe.Setup.csproj --configuration Release -p:PublishProfile=win-x64 --output .\dist\configureMe-Setup
 ```
+
+Linux-Runner (CM-042), auf jedem System mit Python ≥ 3.12, ohne Root und ohne Systemänderung: `python3 -m unittest discover -s tests/linux`. Ein echter Dry-Run ist nur auf Ubuntu 24.04 amd64 aussagekräftig; `--apply` nur durch den Eigentümer auf dem Zielsystem ([Anleitung](docs/linux.md#runner-auf-huu-server-01-ausführen)).
 
 Unter Linux mit .NET 10 und PowerShell 7: `dotnet test windows/ConfigureMe.Setup.Portable.Tests/ConfigureMe.Setup.Portable.Tests.csproj --configuration Release`, sowie `pwsh -NoProfile -File tests/installer-regressions.ps1`, `tests/codex-desktop-script.ps1` und `tests/quicksetup-portable.ps1`. Windows-GUI/PS5.1 können dort nicht ausgeführt werden. Keine echten Installer in gewöhnlichen Tests. Die vollständige [manuelle Windows-Abnahme](docs/windows-setup-0.3.0-retest.md) verlangt separat freigegebene isolierte Testmaschinen.
 

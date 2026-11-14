@@ -21,7 +21,7 @@ configureMe ist ein öffentlicher Windows-Konfigurator ohne Loginpflicht für Pl
 - Lokaler Dry-Run, Bestätigungsabfrage, Erkennung vorhandener Software und kontrolliertes Fehlerreporting
 - Dockerfile, Compose, Healthcheck und deutschsprachige Deployment-/Sicherheitsdokumentation
 
-GitHub-Konfigurationsprovider, Profil-Editor, Linux/macOS-Adapter, authenticode-/kryptografisch signierte Bootstrap-Artefakte, Paketversions-Pinning, dauerhafte Datenbank und Mehrbenutzerverwaltung sind nicht enthalten. Siehe [Sicherheitsmodell](docs/security.md) und [Deployment](docs/deployment.md).
+GitHub-Konfigurationsprovider, Profil-Editor, Linux/macOS-Adapter im Portal, authenticode-/kryptografisch signierte Bootstrap-Artefakte, Paketversions-Pinning, dauerhafte Datenbank und Mehrbenutzerverwaltung sind nicht enthalten. Siehe [Sicherheitsmodell](docs/security.md) und [Deployment](docs/deployment.md).
 
 ## Voraussetzungen
 
@@ -89,5 +89,5 @@ Das Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quicks
 - [Sicherheitsmodell und Bedrohungen](docs/security.md)
 - [Self-Hosting und Deployment](docs/deployment.md)
 - [Windows-Bootstrap](docs/windows.md)
-- [Linux-Status](docs/linux.md) (geplanter Ubuntu-Runner: [Vorschlag CM-042](docs/linux-plan-contract.md), nicht implementiert)
+- [Linux](docs/linux.md): lokaler Runner für Ubuntu Server 24.04 (CM-042, [Vertrag](docs/linux-plan-contract.md)); implementiert und mit Mocks getestet, noch nicht auf `huu-server-01` betrieben; Anleitung „Runner auf huu-server-01 ausführen“ dort
 - [macOS-Status](docs/macos.md)
