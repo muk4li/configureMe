@@ -37,6 +37,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-040](#cm-040) | P1 | In Progress | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 
 ## CM-001
 
@@ -389,6 +390,17 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
 Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+
+## CM-040
+
+**OAuth-Statevergleich gegen UTF8-Längenfehler härten** — P1; Status: **In Progress**; Komponente: Bestehender OAuth-Callback; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Gleiche UTF16-Zeichenlängen mit unterschiedlichen UTF8-Bytelängen sicher ablehnen, ohne RangeError/500 und ohne Authentifizierungsumbau.
+- Technische Evidenz: Original main: zwei Unicode-GET-Fälle reproduzieren RangeError; sieben Kontrollfälle bestehen. Fix vergleicht Bufferlängen vor timingSafeEqual.
+- Dateien/Module: src/app/api/auth/github/callback/route.ts; tests/oauth-callback.test.ts
+- Abhängigkeiten/Freigaben: Nur bestehende Fehlergrenze; keine echten OAuth-Credentials oder Upstreamrequests, keine Allowlist-/Sessionlockerung.
+- Akzeptanzkriterien: Unpassender State führt zu sicherem Redirect und Cookie-Löschung ohne Upstream; gültiger ASCII-State durchläuft konfigurierte synthetische Session-/Allowlistkontrolle unverändert.
+- Verifikation: Neun echte GET-Pfadtests mit gemocktem Fetch, Rot/Grün-Nachweis; bestehende komplette Web-/Browsergates.
 
 ## Priorisierte nächste Arbeit
 

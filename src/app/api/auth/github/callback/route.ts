@@ -24,12 +24,12 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const expectedState = request.cookies.get(STATE_COOKIE)?.value;
-  if (!code || code.length > 512 || !state || !expectedState || state.length !== expectedState.length) {
+  if (!code || code.length > 512 || !state || !expectedState) {
     return authFailure(request);
   }
   const actualState = Buffer.from(state);
   const savedState = Buffer.from(expectedState);
-  if (!timingSafeEqual(actualState, savedState)) return authFailure(request);
+  if (actualState.length !== savedState.length || !timingSafeEqual(actualState, savedState)) return authFailure(request);
 
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
