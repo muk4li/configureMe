@@ -1,0 +1,19 @@
+{
+  "formatId": "configureme/linux-plan",
+  "schemaVersion": 1,
+  "catalogRevision": "0000000000000000000000000000000000000000000000000000000000000000",
+  "authorization": "none",
+  "target": {
+    "os": "ubuntu-24.04",
+    "architecture": "amd64"
+  },
+  "steps": [
+    "base-tools",
+    "docker-apt-repository",
+    "docker-engine",
+    "unattended-upgrades"
+  ],
+  "options": {
+    "addInvokingUserToDockerGroup": false
+  }
+}

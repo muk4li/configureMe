@@ -49,3 +49,8 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 !.env.example
+
+# Linux runner (CM-042)
+__pycache__/
+linux-runner-report.json
+linux-runner-report.txt
