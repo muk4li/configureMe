@@ -89,3 +89,5 @@ Der aktuelle Auftrag autorisiert den lokalen JSON-Vertrag, öffentlichen JSON-Ex
 ## Folgeauftrag Windows-v1 nach PR #12
 
 Baseline main f744d63, CM-027..031 implementiert/getestet und gemergt; [erneute Prüfung](docs/audits/windows-v1-baseline.md). Nächster sicherer Schritt ist ein expliziter Ausführungsvertrag mit negativ getesteten Zustandsgrenzen, noch keine Aktivierung importierter Installationen. Windows-11-Adaptervorbereitung nur mit sichtbaren Fähigkeitsgrenzen; Registrierung erst nach echten Plattform-/Detection-/Dry-Run-Nachweisen. Externe Snapshotintegration bleibt Proposed, reale Zielsystemtests und Releases bleiben gesondert freizugeben. Unabhängige Handoff-/Provenienz-/UX-Korrekturen erfolgen separat ohne Systeminstallationen.
+
+CM-033..041 sind in getrennten Reviews umgesetzt beziehungsweise vorbereitet; [Ergebnisse/Gates](docs/audits/windows-v1-progress.md). Die sicheren unabhängigen Teile wurden getestet, importierte Ausführung, echte Windows-11-Registrierung, Datenquellenannahme, Containerabnahme und öffentliche Signer-/Releasefreigabe bleiben getrennt. Kein Reviewstatus ist eine globale Freigabe.
