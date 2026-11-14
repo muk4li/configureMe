@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, test/windows-v1-review-integration]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
