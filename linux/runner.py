@@ -8,9 +8,19 @@ The default is a dry-run: it needs no root rights and changes nothing. It
 validates plan and catalog, checks the system and lists every step as
 "already satisfied" or "would change", with a reason.
 
-Exit codes: 0 = dry-run finished (changes may be pending),
-            1 = validation, preflight or detection failed,
-            2 = refused (wrong usage or missing preconditions).
+    sudo python3 linux/runner.py --plan linux/plans/huu-server-01.json --apply
+
+--apply only works as root (started with sudo; the runner never elevates
+itself) and only on an interactive terminal. It repeats the dry-run, asks
+for the hostname as confirmation, then runs the steps one after another.
+After each step the real state is detected again; only that counts as
+success. After a failure the remaining steps are skipped. There is no
+rollback and no reboot.
+
+Exit codes: 0 = dry-run finished (changes may be pending) / apply succeeded,
+            1 = validation, preflight, detection or a step failed,
+            2 = refused or aborted (wrong usage, no root, no terminal,
+                hostname not confirmed); nothing was changed.
 """
 
 import sys
@@ -26,6 +36,7 @@ import detect
 import host as host_module
 import linux_plan
 import report as report_module
+import steps
 
 LINUX_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(LINUX_DIR)
@@ -49,7 +60,11 @@ def parse_args(argv):
         default=".",
         help="Verzeichnis für linux-runner-report.json und .txt (Standard: aktuelles Verzeichnis)",
     )
-    parser.add_argument("--apply", action="store_true", help="Änderungen ausführen (noch nicht implementiert)")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Änderungen ausführen (nur als root per sudo, nur im interaktiven Terminal, mit Hostname-Bestätigung)",
+    )
     return parser.parse_args(argv)
 
 
@@ -163,13 +178,93 @@ def finish(host, args, report, result):
         host.show(f"Bericht konnte nicht geschrieben werden: {error.strerror}")
 
 
+def apply(host, args, catalog_path, repo_root):
+    """--apply: checks, fresh dry-run, hostname confirmation, then serial steps."""
+    if host.geteuid() != 0:
+        host.show("--apply braucht Root-Rechte. Bitte mit sudo starten; der Runner erhöht sich nicht selbst.")
+        return EXIT_REFUSED
+    if not host.stdio_is_tty():
+        host.show("--apply braucht ein interaktives Terminal für die Bestätigung. Abgebrochen, nichts geändert.")
+        return EXIT_REFUSED
+
+    # 1. Fresh dry-run, shown to the operator.
+    preview, plan, catalog, ok = prepare(host, args, catalog_path, repo_root, "dry-run")
+    if ok and not run_dry_run(host, plan, catalog, preview):
+        ok = False
+    preview["result"] = "failed" if not ok else None
+    if not ok:
+        finish(host, args, preview, "failed")
+        host.show("Dry-Run zeigt Fehler. Apply abgebrochen, nichts geändert.")
+        return EXIT_FAILED
+    pending = [step["id"] for step in preview["steps"] if step["status"] == report_module.WOULD_CHANGE]
+    if not pending:
+        finish(host, args, preview, "no-changes")
+        host.show("Alle Schritte sind bereits erfüllt. Nichts zu tun.")
+        return EXIT_OK
+    preview["result"] = "changes-pending"
+    host.show(report_module.to_text(preview))
+
+    # 2. Confirmation by typing the hostname of this machine.
+    hostname = host.hostname()
+    host.show(f"Es werden {len(pending)} Schritt(e) als root ausgeführt: {', '.join(pending)}.")
+    try:
+        answer = host.ask("Zur Bestätigung den Hostnamen dieses Systems eingeben: ")
+    except EOFError:
+        answer = ""
+    if answer.strip() != hostname:
+        host.show("Hostname stimmt nicht. Abgebrochen, nichts geändert.")
+        return EXIT_REFUSED
+
+    # 3. Serial execution with detection after every step.
+    report = report_module.new_report(
+        "apply", host, preview["plan"]["file"], preview["plan"]["sha256"], preview["catalog"]["sha256"], preview["runner"]["commit"]
+    )
+    report["preflight"] = preview["preflight"]
+    report["options"] = preview["options"]
+    report["warnings"] = preview["warnings"]
+    group_user = None
+    if DOCKER_GROUP_STEP in planned_steps(plan):
+        group_user, _ = detect.docker_group_user(host)
+
+    failed = False
+    for planned in preview["steps"]:
+        step_id = planned["id"]
+        title = planned["title"]
+        if failed:
+            report_module.add_step(report, step_id, title, report_module.SKIPPED, "vorheriger Schritt fehlgeschlagen", before=planned["before"])
+            continue
+        if planned["status"] == report_module.ALREADY_SATISFIED:
+            report_module.add_step(report, step_id, title, report_module.ALREADY_SATISFIED, planned["reason"], before=planned["before"], after=planned["before"])
+            continue
+        host.show(f"→ {step_id} …")
+        try:
+            steps.apply_step(host, catalog, step_id, docker_group_user=group_user)
+        except (steps.StepError, detect.DetectionError, OSError) as error:
+            after = detect_any(host, catalog, step_id)["before"]
+            report_module.add_step(report, step_id, title, report_module.FAILED, str(error), before=planned["before"], after=after)
+            failed = True
+            continue
+        check = detect_any(host, catalog, step_id)
+        if check["state"] == detect.SATISFIED:
+            report_module.add_step(report, step_id, title, report_module.SUCCEEDED, check["reason"], before=planned["before"], after=check["before"])
+        else:
+            report_module.add_step(
+                report, step_id, title, report_module.FAILED, f"Nachprüfung: {check['reason']}", before=planned["before"], after=check["before"]
+            )
+            failed = True
+
+    finish(host, args, report, "failed" if failed else "succeeded")
+    if any(step["id"] == DOCKER_GROUP_STEP and step["status"] == report_module.SUCCEEDED for step in report["steps"]):
+        host.show("Hinweis: Die Gruppenmitgliedschaft gilt erst nach erneutem Anmelden.")
+    return EXIT_FAILED if failed else EXIT_OK
+
+
 def main(argv=None, host=None, catalog_path=CATALOG_PATH, repo_root=REPO_ROOT):
     host = host or host_module.real_host()
     args = parse_args(argv)
 
     if args.apply:
-        host.show("--apply ist in dieser Version noch nicht implementiert. Nur Dry-Run möglich.")
-        return EXIT_REFUSED
+        return apply(host, args, catalog_path, repo_root)
 
     report, plan, catalog, ok = prepare(host, args, catalog_path, repo_root, "dry-run")
     if not ok:

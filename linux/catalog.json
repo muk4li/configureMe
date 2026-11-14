@@ -47,11 +47,11 @@
       "title": "Docker Engine und Compose-Plugin in exakten Versionen",
       "dependsOn": ["docker-apt-repository"],
       "packages": [
-        { "name": "docker-ce", "version": "UNVERIFIED-PLACEHOLDER" },
-        { "name": "docker-ce-cli", "version": "UNVERIFIED-PLACEHOLDER" },
-        { "name": "containerd.io", "version": "UNVERIFIED-PLACEHOLDER" },
-        { "name": "docker-buildx-plugin", "version": "UNVERIFIED-PLACEHOLDER" },
-        { "name": "docker-compose-plugin", "version": "UNVERIFIED-PLACEHOLDER" }
+        { "name": "docker-ce", "version": "5:29.9.3-1~ubuntu.24.04~noble" },
+        { "name": "docker-ce-cli", "version": "5:29.9.3-1~ubuntu.24.04~noble" },
+        { "name": "containerd.io", "version": "2.4.2-4~ubuntu.24.04~noble" },
+        { "name": "docker-buildx-plugin", "version": "0.39.0-1~ubuntu.24.04~noble" },
+        { "name": "docker-compose-plugin", "version": "5.7.1-1~ubuntu.24.04~noble" }
       ]
     },
     {
