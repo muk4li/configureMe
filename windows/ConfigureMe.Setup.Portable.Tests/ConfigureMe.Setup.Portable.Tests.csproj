@@ -17,6 +17,8 @@
     <Compile Include="..\ConfigureMe.Setup\EngineBundle.cs" Link="Source\EngineBundle.cs" />
     <Compile Include="..\ConfigureMe.Setup\InstallPlanResolver.cs" Link="Source\InstallPlanResolver.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanFile.cs" Link="Source\SetupPlanFile.cs" />
+    <Compile Include="..\ConfigureMe.Setup\ImportedPlanExecutionReview.cs" Link="Source\ImportedPlanExecutionReview.cs" />
+    <Compile Include="..\ConfigureMe.Setup.Tests\ImportedPlanExecutionReviewTests.cs" Link="Tests\ImportedPlanExecutionReviewTests.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanDryRun.cs" Link="Source\SetupPlanDryRun.cs" />
     <Compile Include="..\ConfigureMe.Setup\SetupPlanContract.cs" Link="Source\SetupPlanContract.cs" />
     <Compile Include="..\ConfigureMe.Setup\Models.cs" Link="Source\Models.cs" />
