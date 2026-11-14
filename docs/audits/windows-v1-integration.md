@@ -16,3 +16,5 @@ Open gates remain: contract acceptance/phase C and activation permission, actual
 ## Consolidated PR requested after integration testing
 
 On 2026-11-14 the owner explicitly requested one complete PR. `feature/windows-v1-complete-review` therefore carries the already combined, tested implementation as a consolidated review against main, with the later documentation evidence included. The earlier test-only description above records the original validation strategy; it is not a current prohibition on this requested PR. Creating the PR does not merge main, accept proposed contracts, activate imported installations/Windows-11 registration, or approve release/distribution.
+
+The consolidated review is now open as [PR #13](https://github.com/muk4li/configureMe/pull/13); API access was restored in the replacement environment. Ordinary PR workflows rerun against its current head. Prior successful results above remain bound to their original tested SHA. No merge or activation has occurred.
