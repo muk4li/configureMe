@@ -1,10 +1,31 @@
 # Linux-Plan v1 und lokaler Runner (CM-042) – Vertrag
 
-- Status: **Vertrag Accepted (Eigentümerentscheidung 2026-11-14), nicht implementiert.** Entscheidungen 1–4 siehe [Eigentümerentscheidungen](#eigentümerentscheidungen-2026-11-14). Nichts davon ist implementiert, getestet oder betrieben; eine reale Installation führt nur der Eigentümer nach eigener Freigabe aus.
+- Status: **Vertrag Accepted; vorhandene Implementierung aus PR #19–22 im Integrationsreview.** Entscheidungen 1–4 siehe [Eigentümerentscheidungen](#eigentümerentscheidungen-2026-11-14). Python-Implementierung/Mocktests werden übernommen; keine echte VM-/Installationsabnahme. Eine reale Installation führt nur der Eigentümer nach eigener Freigabe aus.
 - Ursprünglicher Vorschlag: Proposed (2026-11-14), PR #17 (gemergt in `main` als `c458d11`).
 - Auftrag: [CM-042](../TASKS.md#cm-042); Centrality [ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), O-024/O-025 (Accepted), geprüft in Centrality `6fee069`.
 - Basis: configureMe `main` `b17968b`.
 - Erster Einsatz: `huu-server-01` (Ubuntu Server 24.04 LTS, amd64), Runner wird vom Eigentümer per SSH lokal gestartet.
+
+## Umsetzungsstand
+
+Getrennt nach implementiert, getestet und betrieben. Nur was hier steht, ist umgesetzt.
+
+| Teil | Implementiert | Getestet | Betrieben |
+| --- | --- | --- | --- |
+| Schema `schemas/linux-plan-v1.schema.json`, Policy `contracts/linux-plan-v1.policy.json` (16 KiB, Tiefe 4) | ja | Konstanten-Abgleich Schema/Policy/Python (`tests/linux/test_contract_constants.py`) | – |
+| Katalog `linux/catalog.json`, feste Quellen `linux/trusted.py` | ja; Docker-Pins gesetzt und belegt in [Prüfprotokoll](audits/linux-runner.md) (2026-11-14) | Katalogvalidierung (unbekannte Felder, feste Quellen, Paketnamen, Pins, Abhängigkeiten) | – |
+| Plan `linux/plans/huu-server-01.json` | ja (`addInvokingUserToDockerGroup: false`) | validiert gegen echten Katalog | – |
+| Validator `linux/linux_plan.py` | ja | `python3 -m unittest discover -s tests/linux` mit synthetischen Fixtures `tests/fixtures/linux-plan-v1/` | – |
+| Runner Dry-Run `linux/runner.py` (+ `detect.py`, `report.py`, `host.py`) | ja; lehnt Platzhalter-Pins ab | Mock-Tests mit synthetischem Host (`tests/linux/fake_host.py`, `test_runner_dry_run.py`); zusätzlich ein lesender Dry-Run auf einem Ubuntu-24.04-Entwicklungscontainer mit nicht eingechecktem Katalog (siehe PR) | nein |
+| Runner Apply `--apply` (+ `steps.py`) | ja | Mock-Tests `test_runner_apply.py` (Idempotenz, Fingerprint-Abweichung, kein Root, kein TTY, falscher Hostname, Fehler in Schritt 2); real nur Ablehnung ohne Terminal im Entwicklungscontainer | **nein** – reale Installation nur durch den Eigentümer |
+
+Dry-Run (Standard, ohne Root, ohne Änderung): prüft Python ≥ 3.12, `/etc/os-release` (`ID=ubuntu`, `VERSION_ID=24.04`, `VERSION_CODENAME=noble`), `dpkg --print-architecture` = `amd64`, Plan und Katalog. Erkennung über den tatsächlichen Zustand: `dpkg-query` (nur Status `ii` zählt), Fingerprint der Schlüsseldatei per `gpg --show-keys --with-colons` (Schlüssel über stdin, leeres temporäres `--homedir`, genau ein Primärschlüssel), byte-gleiche `docker.sources`/`20auto-upgrades`, `getent group docker`, `systemctl is-active docker.service`. Als Fehler (nicht automatisch behoben): Konfliktpakete laut Docker-Doku (`docker.io`, `docker-compose`, `docker-compose-v2`, `docker-doc`, `docker-buildx`, `podman-docker`, `containerd`, `runc`), fremder Schlüssel unter `docker.asc`, Alt-Datei `docker.list`, Docker-Version neuer als Pin, inaktiver Docker-Dienst, `unattended-upgrades`-Konfiguration mit `-updates`/`-proposed`/`-backports`, `Origins-Pattern` oder `Automatic-Reboot`. Jeder Schritt wird als `already-satisfied`, `would-change` (mit geplanten Aktionen), `failed` oder `skipped` mit Begründung ausgegeben. Exit-Code 0 = Dry-Run fertig, 1 = Fehler, 2 = abgelehnt.
+
+Bericht `linux-runner-report.json` + `.txt` (Format `configureme/linux-runner-report` v1) im `--report-dir` (Standard: aktuelles Verzeichnis): Runner-Commit (aus `.git` gelesen, ohne `git` auszuführen), Plan-Dateiname und SHA-256, Katalog-SHA-256, Hostname, Vorprüfung, Optionen, Warnungen, je Schritt Status, Begründung, Versionen vorher/nachher. Keine Umgebungsvariablen, kein Roh-Output von Befehlen, keine Secrets.
+
+Apply (`sudo python3 linux/runner.py --plan … --apply`): nur mit `euid 0` (keine Selbst-Elevation) und interaktivem Terminal; erneuter Dry-Run, bei Fehlern Abbruch ohne Änderung; bei offenen Änderungen Bestätigung durch Eingabe des Hostnamens. Danach seriell; nach jedem Schritt erneute Erkennung als Erfolgsnachweis (Exit-Code allein zählt nicht). Bei Fehler Folgeschritte `skipped`, kein Rollback, kein Neustart. `apt-get` nur mit festen Argumenten (`update` bzw. `install --yes`, `-o DPkg::Lock::Timeout=300`), `DEBIAN_FRONTEND=noninteractive`, ohne `--allow-*`/`--force-*`; Docker-Pakete als `name=version`. Schlüssel über `urllib` mit TLS-Prüfung, nur `https://download.docker.com`, keine Weiterleitungen, max. 64 KiB; Fingerprint per `gpg --show-keys --with-colons` geprüft, **bevor** Schlüssel oder `docker.sources` geschrieben werden. Dateien atomar (temporäre Datei + `rename`), Modus 0644, `/etc/apt/keyrings` 0755. `50unattended-upgrades` wird nie geschrieben. Docker-Gruppe nur über `SUDO_USER` (`usermod --append --groups docker`), `root`/UID 0 abgelehnt. Fehlerzeilen von Befehlen erscheinen nur im Terminal, nie im Bericht.
+
+Validator-Regeln: Größe ≤ 16 384 Byte, Verschachtelungstiefe ≤ 4 (vor dem Parsen geprüft), UTF-8 ohne BOM, doppelte Schlüssel (`object_pairs_hook`), `NaN`/`Infinity`, unbekannte und fehlende Felder, exakte Typen (`true` ist keine `1`), `catalogRevision` = SHA-256 der Katalogdatei, Schritte nur aus dem Katalog, eindeutig, in Katalogreihenfolge, Abhängigkeiten aus dem Katalog geprüft und nie ergänzt, Docker-Gruppe nur mit `docker-engine`. Der Katalog muss die festen Quellen aus `linux/trusted.py` exakt wiederholen und darf keine Pakete ergänzen; Platzhalter-Pins werden erkannt (`placeholder_pins`), der spätere Runner lehnt sie ab.
 
 ## Problem
 
@@ -109,7 +130,7 @@ Mitgliedschaft in `docker` ist faktisch root-gleich (Zugriff auf den Docker-Sock
 2. Schema/Policy/Katalog + Planvalidierung + Tests.
 3. Runner mit Dry-Run, Erkennung und Bericht (gemockt getestet).
 4. Installationsschritte inkl. Apply/Bestätigung, gepinnte Docker-Versionen mit Quellenbeleg.
-5. Doku: linux.md, REPO.md, README, Anleitung „Runner auf huu-server-01 ausführen“.
+5. Doku: linux.md, REPO.md, README, Anleitung „Runner auf huu-server-01 ausführen“ ([linux.md](linux.md#runner-auf-huu-server-01-ausführen)).
 
 ## Eigentümerentscheidungen 2026-11-14
 
@@ -130,3 +151,7 @@ Zusätzlich vom Eigentümer festgelegt:
 - Nicht im Umfang bleiben Firewall/ufw, Isolation, Caddy/Apps, Hyper-V, VPN und Secrets.
 
 Offene Fragen: **keine**. Der Hinweis zur Firewall-Zeile in ADR-004 bleibt bestehen; Centrality wird in CM-042 nicht geändert.
+
+## Integrationsprüfung dieses Auftrags
+
+Basis main e2646fa; getesteten Code aus cm-042-5-docs (2780ec8) gezielt übernommen, keine alten Dokumentationsstände über neuere CM-043/044-Planung kopiert. 93 lokale Standardbibliotheks-Unittests bestanden, inklusive begrenzter Eingabedateien und kontrollierter Lesefehler. Pins unverändert mit dem früheren Prüfprotokoll; erneuter offizieller Metadatenabruf hier HTTP 403, keine frische Verifikation behauptet. ADR-004 in Centrality main 1526c77 ordnet Firewall/Isolation inzwischen eindeutig myHome-Lab zu; der frühere Abweichungshinweis ist historisch erledigt. Reale Zielabnahme bleibt ausstehend.

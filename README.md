@@ -21,7 +21,7 @@ configureMe ist ein öffentlicher Windows-Konfigurator ohne Loginpflicht für Pl
 - Lokaler Dry-Run, Bestätigungsabfrage, Erkennung vorhandener Software und kontrolliertes Fehlerreporting
 - Dockerfile, Compose, Healthcheck und deutschsprachige Deployment-/Sicherheitsdokumentation
 
-GitHub-Konfigurationsprovider, Profil-Editor, Linux/macOS-Adapter, authenticode-/kryptografisch signierte Bootstrap-Artefakte, Paketversions-Pinning, dauerhafte Datenbank und Mehrbenutzerverwaltung sind nicht enthalten. Siehe [Sicherheitsmodell](docs/security.md) und [Deployment](docs/deployment.md).
+GitHub-Konfigurationsprovider, Profil-Editor, macOS-Adapter, authenticode-/kryptografisch signierte Bootstrap-Artefakte, Paketversions-Pinning, dauerhafte Datenbank und Mehrbenutzerverwaltung sind nicht enthalten. Siehe [Sicherheitsmodell](docs/security.md) und [Deployment](docs/deployment.md).
 
 ## Voraussetzungen
 
@@ -89,5 +89,9 @@ Das Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quicks
 - [Sicherheitsmodell und Bedrohungen](docs/security.md)
 - [Self-Hosting und Deployment](docs/deployment.md)
 - [Windows-Bootstrap](docs/windows.md)
-- [Linux-Status](docs/linux.md) (geplanter Ubuntu-Runner: [Vorschlag CM-042](docs/linux-plan-contract.md), nicht implementiert)
+- [Linux-Runner](docs/linux.md) · [akzeptierter Linux-Plan](docs/linux-plan-contract.md)
 - [macOS-Status](docs/macos.md)
+
+## Lokaler Ubuntu-Runner (Integrationsreview)
+
+Der vorhandene Python-3.12+-Standardbibliotheksrunner wird aus den gestapelten CM-042-PRs übernommen. Er läuft ausschließlich auf Ubuntu 24.04/amd64: `python3 linux/runner.py --plan linux/plans/huu-server-01.json` ist ein Dry-Run ohne Root. Kein Webprozess führt APT/SSH/Hyper-V aus. Apply benötigt lokal Root, ein Terminal und die Hostname-Bestätigung; keine echte Installation in diesem Auftrag. [Anleitung und Grenzen](docs/linux.md).

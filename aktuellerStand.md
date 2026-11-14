@@ -18,3 +18,7 @@ Technischer Leitfaden: [REPO.md](REPO.md). Prüfprotokolle: [docs/audits/](docs/
 - 2026-11-14: Repo-Doku-Standard ergänzt (`CLAUDE.md`, diese Datei); CM-042 für den Linux-Weg im Backlog angelegt. Nur Doku.
 - 2026-11-14: Windows-v1-Handoff, Berichte und Review-Grenzen gehärtet (PR #13, `c8009d3`).
 - Ältere Schritte: Statusspalte und Abschlussnachweise in [TASKS.md](TASKS.md).
+
+## Linux-Integrationsreview (aktueller Auftrag)
+
+Main e2646fa enthält nur die Verträge; gestapelte PRs #19–22 landeten auf Feature-Basen, nicht auf main. Implementierung aus 2780ec8 gezielt wiederverwendet. Lokal 93 Python-Mocktests bestanden, Eingaben zusätzlich begrenzt. Keine reale Installation/VM-Ausführung. CM-042 bleibt bis vollständigen Nachweisen offen; offizielle Metadaten hier erneut HTTP 403, vorhandenes Pin-Protokoll erhalten.

@@ -1,0 +1,13 @@
+{
+  "formatId": "configureme/linux-plan",
+  "schemaVersion": 1,
+  "maxBytes": 16384,
+  "maxDepth": 4,
+  "target": {
+    "os": "ubuntu-24.04",
+    "architecture": "amd64"
+  },
+  "catalogPath": "linux/catalog.json",
+  "stepOrder": "catalog",
+  "dependencies": "checked-not-added"
+}
