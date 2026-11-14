@@ -1,6 +1,7 @@
-# Linux-Plan v1 und lokaler Runner (CM-042) – Vorschlag
+# Linux-Plan v1 und lokaler Runner (CM-042) – Vertrag
 
-- Status: **Proposed (2026-11-14)**. Nichts davon ist implementiert, getestet oder freigegeben. Keine Eigentümerentscheidung liegt vor.
+- Status: **Vertrag Accepted (Eigentümerentscheidung 2026-11-14), nicht implementiert.** Entscheidungen 1–4 siehe [Eigentümerentscheidungen](#eigentümerentscheidungen-2026-11-14). Nichts davon ist implementiert, getestet oder betrieben; eine reale Installation führt nur der Eigentümer nach eigener Freigabe aus.
+- Ursprünglicher Vorschlag: Proposed (2026-11-14), PR #17 (gemergt in `main` als `c458d11`).
 - Auftrag: [CM-042](../TASKS.md#cm-042); Centrality [ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), O-024/O-025 (Accepted), geprüft in Centrality `6fee069`.
 - Basis: configureMe `main` `b17968b`.
 - Erster Einsatz: `huu-server-01` (Ubuntu Server 24.04 LTS, amd64), Runner wird vom Eigentümer per SSH lokal gestartet.
@@ -21,7 +22,7 @@ ADR-004 weist die Servereinrichtung nach der Ubuntu-Grundinstallation einem conf
 
 **Hinweis zu ADR-004:** Dort steht in der Zuständigkeitstabelle bei configureMe noch „Firewall“, in der Zeile darunter „Ubuntu-Firewall“ bei myHome-Lab. Dieser Vorschlag folgt deiner Vorgabe (Firewall gehört zu myHome-Lab). In Centrality wurde nichts geändert, weil Cross-Repo-Schreibzugriffe eine eigene Freigabe brauchen. Vorschlag: die Zeile in ADR-004 bei Gelegenheit bereinigen.
 
-## Entscheidung 1: Setup-Plan v1 erweitern oder eigener Linux-Plan?
+## Entscheidung 1: Setup-Plan v1 erweitern oder eigener Linux-Plan? (Accepted: B)
 
 | Kriterium | A: `configureme/setup-plan` v1 erweitern | B: eigenes Format `configureme/linux-plan` v1 (**empfohlen**) |
 | --- | --- | --- |
@@ -34,7 +35,7 @@ ADR-004 weist die Servereinrichtung nach der Ubuntu-Grundinstallation einem conf
 
 Begründung für B: Der Windows-Vertrag ist gemergt und getestet, seine Felder (Modi, Katalog-Hash, Zielmatrix, Optionen) sind Windows-spezifisch. Eine Erweiterung würde ohne Nutzen zwei Konsumenten und alle Fixtures berühren. B übernimmt die bewährten Muster (feste `formatId`/`schemaVersion`, `catalogRevision` als SHA-256, `authorization: none`, strikte Ablehnung unbekannter Felder, Größen- und Tiefenlimit), ohne den bestehenden Vertrag zu ändern. Eine spätere Zusammenführung bleibt als explizite v2 möglich.
 
-## Entscheidung 2: Runner-Technik
+## Entscheidung 2: Runner-Technik (Accepted: Python 3.12+ Standardbibliothek)
 
 | Option | Bewertung |
 | --- | --- |
@@ -78,7 +79,7 @@ Beispiel (synthetisch, nicht ausführbar, enthält keine Secrets):
 | `unattended-upgrades` | Ubuntu-Archiv-Paket, Konfiguration `/etc/apt/apt.conf.d/20auto-upgrades` mit festem Inhalt | Paketversion + Dateiinhalt |
 | Docker-Gruppe (Option) | `usermod -aG docker <SUDO_USER>` | `getent group docker` |
 
-- Schlüssel: Download über HTTPS (curl mit TLS-Prüfung, keine Redirects auf fremde Hosts), dann Fingerprint-Prüfung mit `gpg --show-keys` **vor** dem Ablegen. Abweichung = Abbruch ohne Änderung.
+- Schlüssel: Download über HTTPS (Python `urllib` mit TLS-Prüfung, keine Redirects auf fremde Hosts), dann Fingerprint-Prüfung mit `gpg --show-keys` **vor** dem Ablegen. Abweichung = Abbruch ohne Änderung.
 - Versions-Pins: Docker-Paketversionen stehen im Katalog (z. B. `5:<version>-1~ubuntu.24.04~noble`). Die konkreten Werte werden erst im PR „Installationsschritte“ gegen das aktuelle Docker-Repo ermittelt und in dessen Prüfprotokoll belegt; hier bewusst noch keine Zahl, damit kein ungeprüfter Wert entsteht. Ubuntu-Archivpakete werden nicht gepinnt (Sicherheitsupdates sollen greifen), ihre Version wird nur berichtet.
 - `apt-get` immer mit festen Argumentlisten, `DEBIAN_FRONTEND=noninteractive`, ohne `--allow-unauthenticated`/`--force-*`.
 
@@ -92,11 +93,11 @@ Beispiel (synthetisch, nicht ausführbar, enthält keine Secrets):
 
 Bericht (`linux-runner-report.json` + Textzusammenfassung): Runner-Commit, Katalog-Hash, Plan-Hash, Ziel, je Schritt `succeeded` / `already-satisfied` / `skipped` / `failed` mit erkannter Version vorher/nachher. Keine Umgebungsvariablen, kein Rohoutput von apt, keine Secrets.
 
-## Docker-Gruppe (bewusste Entscheidung nötig)
+## Docker-Gruppe (Accepted: `false` für huu-server-01)
 
 Mitgliedschaft in `docker` ist faktisch root-gleich (Zugriff auf den Docker-Socket). Empfehlung für den ersten Durchlauf: `false`. Compose-Befehle laufen dann mit `sudo docker compose …`. Wer `true` setzt, muss das im Plan sichtbar tun; der Bericht weist darauf hin. Rootless Docker ist nicht Teil von CM-042.
 
-## Tests (geplant)
+## Tests (geplant, noch nicht ausgeführt)
 
 - `python3 -m unittest` unter `tests/linux/`: Planvalidierung (positive/negative Fixtures), Katalog-Hash, Abhängigkeitsprüfung, Dry-Run/Apply-Logik mit gemocktem Befehlsausführer (Fixtures für `dpkg-query`, `gpg`, `os-release`), Idempotenz (zweiter Lauf → keine Aktion), Fingerprint-Abweichung → Abbruch, fehlendes Root → Ablehnung, kein `shell=True`.
 - Neuer CI-Job im Web-Workflow oder eigener kleiner Workflow; bestehende Web- und Windows-Gates bleiben unverändert.
@@ -104,15 +105,28 @@ Mitgliedschaft in `docker` ist faktisch root-gleich (Zugriff auf den Docker-Sock
 
 ## PR-Schnitt
 
-1. **Dieser PR:** Vorschlag (Proposed), CM-042 angepasst, Doku-Status. Kein Code.
-2. Schema/Policy/Katalog + Planvalidierung + Tests (nach Annahme).
+1. Vorschlag (Proposed), PR #17, gemergt. Danach: Eigentümerentscheidungen als Accepted eingetragen (dieses Dokument). Kein Code.
+2. Schema/Policy/Katalog + Planvalidierung + Tests.
 3. Runner mit Dry-Run, Erkennung und Bericht (gemockt getestet).
 4. Installationsschritte inkl. Apply/Bestätigung, gepinnte Docker-Versionen mit Quellenbeleg.
 5. Doku: linux.md, REPO.md, README, Anleitung „Runner auf huu-server-01 ausführen“.
 
-## Offene Fragen an den Eigentümer
+## Eigentümerentscheidungen 2026-11-14
 
-1. Format B (eigener Linux-Plan) annehmen?
-2. Runner in Python-Standardbibliothek annehmen?
-3. Docker-Gruppe im Plan für `huu-server-01` auf `false`?
-4. Dürfen Ubuntu-Archivpakete ungepinnt bleiben (nur Docker-Pakete gepinnt)?
+Alle vier offenen Fragen des Vorschlags sind am **2026-11-14** vom Eigentümer entschieden (**Accepted**). Damit ist der Vertrag angenommen; Implementierung, Tests und Betrieb folgen getrennt in eigenen PRs.
+
+| Nr. | Frage | Entscheidung (Accepted, 2026-11-14) |
+| --- | --- | --- |
+| 1 | Planformat | Eigenes Format `configureme/linux-plan` v1 (Option B). `configureme/setup-plan` v1 und seine Konsumenten (TypeScript-Exporter, .NET-Importer, gemeinsame Fixtures) bleiben unverändert. |
+| 2 | Runner-Technik | Python 3 **Standardbibliothek**, Mindestversion **3.12**. Keine Drittpakete, kein `pip`. `subprocess` nie mit `shell=True`, nur feste Argumentlisten. Code bewusst einfach und lesbar: kleine Module, Funktionen statt Klassenhierarchien. |
+| 3 | Docker-Gruppe | Plan für `huu-server-01`: `addInvokingUserToDockerGroup: false`. Die Option bleibt im Format; der Bericht warnt bei `true`, weil die Gruppe `docker` faktisch root-gleich ist. |
+| 4 | Versions-Pins | Pakete aus dem Ubuntu-Archiv werden **nicht** gepinnt, ihre installierte Version wird nur berichtet. Docker-Pakete (`docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin`, `docker-compose-plugin`) werden **exakt** gepinnt; die Werte werden gegen die offiziellen Docker-Quellen geprüft und im Prüfprotokoll belegt. |
+
+Zusätzlich vom Eigentümer festgelegt:
+
+- `unattended-upgrades`: nur Sicherheitsupdates, kein automatischer Neustart; `/etc/apt/apt.conf.d/50unattended-upgrades` wird nicht überschrieben (der Ubuntu-Standard aktiviert nur `-security` und `Automatic-Reboot` ist dort aus). Der Runner schreibt nur `20auto-upgrades` mit festem Inhalt.
+- Docker-Gruppe nur über `SUDO_USER`; `root` oder fehlender `SUDO_USER` wird abgelehnt.
+- Konfliktpakete laut Docker-Doku werden erkannt und als Fehler gemeldet, nicht automatisch entfernt.
+- Nicht im Umfang bleiben Firewall/ufw, Isolation, Caddy/Apps, Hyper-V, VPN und Secrets.
+
+Offene Fragen: **keine**. Der Hinweis zur Firewall-Zeile in ADR-004 bleibt bestehen; Centrality wird in CM-042 nicht geändert.
