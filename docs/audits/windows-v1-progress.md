@@ -59,3 +59,7 @@ Kein neues Paket wird als öffentlich signiert/veröffentlicht dargestellt. Loka
 4. **Publisher-/Releaseidentität:** geschützte nicht exportierbare Signeridentität und unabhängig verifizierte Freigabekette wählen. Alternative ausschließlich unsignierte Entwicklungsartefakte behalten. Risiko Schlüsselverlust/kompromittierte Distribution; keine Secrets benutzt, Trustplan/Prüfmatrix fertig.
 
 GitHub-API-POST bleibt Forbidden; gepushte Reviewbranches und fertige PR-Beschreibungen/Comparelinks sind der ausdrücklich erlaubte Ersatz. Kein automatischer Merge oder Branch-Protection-Eingriff. Diese Entscheidungen betreffen konkrete reviewbare Ergebnisse, keine erfundenen globalen Freigaben.
+
+## Zusätzlicher gemeinsamer Integrationstest
+
+Alle Reviewpakete wurden nur auf `test/windows-v1-review-integration` zusammengeführt, nicht auf main und nicht als riesiger Produkt-PR. Code `9775d28baee0d32cd34ecb2820dc0546ca654022`: [Web-CI 43585849918](https://github.com/muk4li/configureMe/actions/runs/43585849918) und [Windows-CI 43585849765](https://github.com/muk4li/configureMe/actions/runs/43585849765) erfolgreich; lokal 115 Tests + 1 expliziter Linux-Skip, Typecheck/Lint und beide .NET-Crossbuilds grün. Alle 41 stabilen Task-IDs und Compileeinträge erhalten. Temporäre Testtrigger danach entfernt; Ausführungs-/Releasegrenzen unverändert. Dieser gemeinsame Test belegt das Zusammenwirken, ersetzt aber keine echten Zielsystem-/Hersteller-/Signierungsfreigaben.
