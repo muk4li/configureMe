@@ -47,6 +47,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
 | [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 | [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
+| [CM-042](#cm-042) | P1 | Backlog | CM-6 | Linux-/Ubuntu-Provisionierung über lokalen Runner (huu-server-01) |
 
 ## CM-001
 
@@ -522,6 +523,16 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Abhängigkeiten/Freigaben: Dockerdaemonzugriff und isolierter Clean-Checkout-Build/Health/API-Test fehlen; keine Gruppenzuordnung/Sudo-/Hoständerung als Umgehung.
 - Akzeptanzkriterien: Alle COPY-Quellen vorhanden; einzig explizite Env-Beispieldatei aus Ignore ausnehmen, echte Dateien weiter ignoriert; leere Authwerte; vollständigen Dockerbuild erst nach tatsächlichem Test als bestanden melden.
 - Verifikation: Git-/Datei-/Env-Struktur geprüft; vollständige Web-CI 43566003380 für 73db0ef erfolgreich; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002/041 bleiben offen.
+
+## CM-042
+
+**Linux-/Ubuntu-Provisionierung über lokalen Runner** — P1; Status: **Backlog**; Komponente: Katalog, Setup-Plan, neuer Linux-Runner; Phase: CM-6 (neu, siehe Centrality).
+
+- Beschreibung: Erster Linux-Weg für configureMe. Ein deklarativer, versionierter Plan richtet eine frisch per Autoinstall installierte Ubuntu-Server-24.04-VM ein (Docker Engine + Compose-Plugin, Firewall, unbeaufsichtigte Updates, Basiswerkzeuge). Ausgeführt durch einen **lokalen Runner auf der VM**, den der Eigentümer per SSH startet; das Webportal führt nichts aus.
+- Auftrag/Quelle: Centrality [ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), O-024/O-025. Erster Einsatz: `huu-server-01`.
+- Grenzen: keine frei definierbaren Shell-Befehle aus Webdaten; nur vertrauenswürdig aufgelöste Paketquellen (Ubuntu-Archiv, offizielles Docker-APT-Repo mit festem Schlüssel-Fingerprint); Dry-Run/Planmodus; ausdrückliche Bestätigung vor Root-Aktionen; idempotent; keine Secrets im Plan; kein Remote-Agent, kein VPN-Enrollment.
+- Abgrenzung: Autoinstall/cloud-init (myHome-Lab) übernimmt Platte, Benutzer, SSH-Key, Locale, openssh. Caddy und Apps kommen danach per Compose, nicht über configureMe.
+- Akzeptanzkriterien: Plan validiert gegen ein Linux-Schema; Dry-Run zeigt alle Schritte; zweiter Lauf ändert nichts; Erkennung prüft tatsächliche Versionen; Bericht trennt erfolgreich/übersprungen/fehlgeschlagen; Tests ohne echte Installation.
 
 ## Priorisierte nächste Arbeit
 
