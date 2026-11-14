@@ -213,6 +213,7 @@ function Invoke-QuickSetupGuiWorker {
     $name = [string]$catalogPackage.name
     $result = New-QuickSetupPackageResult -Id $id -Name $name -RequestedVersion "latest stable"
     $progressState = @{ Phase = "detection" }
+    $artifactProvenance = $null
     try {
       $detectedVersion = Get-QuickSetupDetectedVersion -Id $id
       $result.DetectedVersion = $detectedVersion
@@ -273,7 +274,7 @@ function Invoke-QuickSetupGuiWorker {
             Get-QuickSetupInstallerCachePath -Id $id -Definition $installer
           } else { $null }
           $cachedInstaller = if ($cachePath -and (Test-Path -LiteralPath $cachePath -PathType Leaf)) { $cachePath } else { $null }
-          $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $installer -ProgressCallback $progressCallback -CachedInstallerPath $cachedInstaller
+          $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $installer -ProgressCallback $progressCallback -CachedInstallerPath $cachedInstaller -Provenance ([ref]$artifactProvenance)
           $result.InstallerExitCode = [int]$installResult.ExitCode
           if ($installResult.ExitCode -notin @(0, 3010, 1641)) {
             $result.Status = "Failed"
@@ -318,6 +319,7 @@ function Invoke-QuickSetupGuiWorker {
       $errors.Add("$name`: $diagnostic")
       if ($integrityRefused) { $manualSteps.Add("$name was not run because verification refused the installer. Review the official source manually: $($catalogPackage.website)") }
     }
+    if ($artifactProvenance) { $result.Provenance = $artifactProvenance }
     if ($result.Status -in @("Installed", "Already installed")) {
       if ($id -eq "vscode") {
         try {

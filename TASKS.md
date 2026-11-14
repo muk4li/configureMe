@@ -11,11 +11,11 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-003](#cm-003) | P1 | Ready | CM-3 | F-07-Vertrag mit Datenowner abstimmen |
 | [CM-004](#cm-004) | P1 | In Progress | CM-1 | Web-Qualitätsgates und echte Testzählung ergänzen |
 | [CM-005](#cm-005) | P1 | Blocked | CM-2 | Vollständige Windows-Server-2022-Abnahme belegen |
-| [CM-006](#cm-006) | P1 | Ready | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
+| [CM-006](#cm-006) | P1 | In Progress | CM-1 | Dateihandoff und lokale Angreifergrenze härten |
 | [CM-007](#cm-007) | P2 | Ready | CM-1 | Session-Widerruf und Allowlist-Lebenszyklus entscheiden |
 | [CM-008](#cm-008) | P2 | Ready | CM-1 | Web-Fehlerfälle und OAuth-Byteprüfung korrigieren |
 | [CM-009](#cm-009) | P1 | Ready | CM-1 | Trust- und Installermodus in der UI korrekt benennen |
-| [CM-010](#cm-010) | P1 | Ready | CM-2 | Aufgelöste Installer- und Build-Provenienz erfassen |
+| [CM-010](#cm-010) | P1 | In Progress | CM-2 | Aufgelöste Installer- und Build-Provenienz erfassen |
 | [CM-011](#cm-011) | P2 | Blocked | CM-3 | Versionierten Profiladapter implementieren |
 | [CM-012](#cm-012) | P2 | Blocked | CM-3 | Read-only GitHub-Provider erst nach Vertrag bauen |
 | [CM-013](#cm-013) | P2 | Blocked | CM-4 | Eigenständigen Betriebs-/Integrationsvertrag vorbereiten |
@@ -36,7 +36,17 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-028](#cm-028) | P1 | Done | CM-1 | Gemeinsamen lokalen Setup-Plan-Vertrag v1 implementieren |
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
-| [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-031](#cm-031) | P1 | Done | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
+| [CM-032](#cm-032) | P1 | Done | CM-1 | Windows-v1-Baseline nach PR #12 synchronisieren |
+| [CM-033](#cm-033) | P1 | Done | CM-1 | Importierten Ausführungsvertrag ohne Aktivierung vorbereiten |
+| [CM-034](#cm-034) | P1 | Done | CM-1 | Windows-11-Previewadapter ohne Registrierung vorbereiten |
+| [CM-035](#cm-035) | P1 | Done | CM-1 | Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern |
+| [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
+| [CM-037](#cm-037) | P1 | Done | CM-1 | Geprüfte Installerbytes und Quellen im Bericht erhalten |
+| [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
+| [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
+| [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
+| [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
 
 ## CM-001
 
@@ -97,7 +107,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-006
 
-**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **Ready**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
+**Dateihandoff und lokale Angreifergrenze härten** — P1; Status: **In Progress**; Komponente: Windows/Supply Chain; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Mock-Befund zwischen Prüfung und Prozessstart prüfen, Rechte-/ACL-/Reparse-/Cross-Process-Modell festlegen und kleinste sichere Handoff-Strategie testen.
 - Technische Evidenz: AF-006 Probable: Fixture kann nach verification-completed vor ProcessRunner geändert werden; privilegierter Windows-Exploit nicht getestet.
@@ -141,7 +151,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 
 ## CM-010
 
-**Aufgelöste Installer- und Build-Provenienz erfassen** — P1; Status: **Ready**; Komponente: Windows/Reporting/Release; Phase: [CM-2](ROADMAP.md#cm-2).
+**Aufgelöste Installer- und Build-Provenienz erfassen** — P1; Status: **In Progress**; Komponente: Windows/Reporting/Release; Phase: [CM-2](ROADMAP.md#cm-2).
 
 - Beschreibung: Quellrevision, tatsächliche Download-/Final-URI, erwartete/ist Digests, Signer und exakte Toolchain/Versionen reproduzierbar berichten, ohne Query-Secrets zu protokollieren.
 - Technische Evidenz: AF-010: Paketbericht hat Source/Version/Status, aber keinen vollständigen Binary-Digest-/Signerbeleg; dynamische Feeds und Versionsbereiche verhindern Gleichsetzung von Code-SHA und Installerbytes.
@@ -215,6 +225,7 @@ A/B-Fortschritt: Linux-/Windows-Webgates und tatsächlicher Windows-Parser jetzt
 - Abhängigkeiten/Freigaben: keine echten Installationen oder Adminrechte; PR #8 nach Eigentümerreview gemergt. Vollständiger Windows-Lauf 43444044357 auf dem Fix-Branch bestanden.
 - Akzeptanzkriterien: gültiger konkurrierender Gewinner akzeptiert; beschädigtes/zu kurzes Ziel oder Verzeichnis verweigert und erhalten; keine fremden Dateien überschrieben/gelöscht; Hash/Größe/Pfad/Reparse-Prüfungen erhalten; Testcache bereinigt; drei vollständige Windows-GUI-Testläufe und gesamter Windows-Workflow erfolgreich; separater PR.
 - Verifikation: [Folgeprüfung](docs/audits/engine-cache-race.md) mit Red/Green-Nachweis, drei portablen Läufen, Windows-Crossbuild/Single-File-Publish und erfolgreichem dreifachen Windows-Testlauf plus vollständigem CI-Workflow 43444044357 für 8e02da3. PR #8 gemergt (e4a9ebc); geprüft am 2026-11-14. CM-006 bleibt separat offen: kein umfassender adversarialer Handoff-/ACL-Nachweis.
+
 ## CM-017
 
 **Public-first-Produktvertrag und Architektur dokumentieren** — P1; Status: **Done**; Komponente: Architektur/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
@@ -379,7 +390,7 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-031
 
-**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Blocked**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
+**Gemeinsame Contractfixtures und Integrationsnachweise** — P1; Status: **Done**; Komponente: QA/Dokumentation; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Webexport und nativer Import nutzen dieselben positiven/negativen Fixtures; vollständige vorhandene Workflows und Dokumentationsgrenzen prüfen.
 - Technische Evidenz: Masterauftrag Phase E; gemeinsamer valid-server-Export wird in TS byteinhaltlich und nativ vor Workerplanung geprüft.
@@ -388,7 +399,129 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 - Akzeptanzkriterien: Alle ausführbaren Gates tatsächlich grün; OS-/Provenienz-/Releasegrenzen sichtbar; separater reviewfähiger PR, kein Merge.
 - Verifikation: Kommandos und tatsächliche CI-Links im Setup-Plan-Audit; echte VM-/DPI-/Installationsabnahme nicht als bestanden ausgeben.
 
-Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Nur die tatsächliche PR-Erstellung bleibt durch API-Forbidden blockiert; Review-Branch und Beschreibung bereit, kein Merge.
+Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 43561655099 und vollständige Windows-CI 43561655089 erfolgreich. Die damalige PR-Erstellungsblockade ist durch den Eigentümer gemergten PR #12 erledigt (f744d63). Erneut geprüft: main-Web-CI 43562422332 und Windows-CI 43562422337 erfolgreich. Keine öffentliche Releasefreigabe.
+
+## CM-032
+
+**Windows-v1-Baseline nach PR #12 synchronisieren** — P1; Status: **Done**; Komponente: Dokumentation/Audit; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: gemergten Stand, CI-/Vertragsstatus und tatsächliche Folgefreigaben synchronisieren; historische Audits erhalten.
+- Technische Evidenz: main f744d63; PR #12 merged; Web-CI 43562422332 und Windows-CI 43562422337 erfolgreich; Centrality 12776e9, Datenmodell 75b91cf nur lesend geprüft.
+- Dateien/Module: REPO.md; ROADMAP.md; TASKS.md; Setup-Plan-/Vorschau-/Auditdokumentation.
+- Abhängigkeiten/Freigaben: nur lokale Dokumentationspflege; keine fremden Änderungen oder Release-/Installationsfreigabe.
+- Akzeptanzkriterien: CM-031 nicht fälschlich blockiert; Import/Dry-Run versus Installation/Release klar; stabile eindeutige IDs; reviewfähiger Branch/PR-Beschreibung bei API-Sperre.
+- Verifikation: lokale Links/Anker, Task-IDs/Status und git diff --check; Produktcode unverändert; aktuelle Nachweise im Baseline-Audit.
+
+## CM-033
+
+**Importierten Ausführungsvertrag ohne Aktivierung vorbereiten** — P1; Status: **Done**; Komponente: Nativer Reviewzustand/Sicherheitsvertrag; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Snapshot-/Katalog-/Ziel-gebundene read-only Reviewzustände und klare spätere Bestätigungsgrenze schaffen; keine Installationsfunktion registrieren.
+- Technische Evidenz: Masterauftrag B; main f744d63 hat bewusst gesperrte importierte Installation. Vorhandenes detect/offline plan wird wiederverwendet.
+- Dateien/Module: ImportedPlanExecutionReview.cs; zugehörige portable/Windows-Tests; docs/imported-plan-execution-contract.md
+- Abhängigkeiten/Freigaben: Ausführungsvertrag bleibt Proposed; Paket C und reale importierte Installation benötigen eigene Annahme/Phasenfreigabe. Keine zweite Engine.
+- Akzeptanzkriterien: Eigene unveränderliche Bytes; erneut validierte Katalog-/Zielbindung; vollständige eindeutige Beobachtungen; fehlende/unklare Detection, Rechte und Modi sichtbar; Abbruch/late results geschlossen; kein Execute-/Authorize-API.
+- Verifikation: 20 gezielte Fälle, portable/Windows-Komplettsuite und EXE-Selftests; kein realer Installer. Temporäre In-Process-Diagnose nur ergänzend, nicht als VSTest zählen.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d2c8aba`, [vollständige CI 43564728870](https://github.com/muk4li/configureMe/actions/runs/43564728870) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-034
+
+**Windows-11-Previewadapter ohne Registrierung vorbereiten** — P1; Status: **Done**; Komponente: Native Plattformvorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Unabhängige Windows-11/x64-Kandidatenprüfung mit unveränderlichen Snapshots und begrenzten Fixturebeobachtungen implementieren; keine native Aktivierung.
+- Technische Evidenz: Main f744d63 modelliert Windows 11, verweigert nativen Import; generische Windowsmetadaten belegen keine Zielsystemunterstützung.
+- Dateien/Module: Windows11PreviewPreparation.cs; Tests; docs/windows11-preview-preparation.md
+- Abhängigkeiten/Freigaben: Echte Windows-11-Plattform-/Detection-/Dry-Run-Abnahme vor Registrierung; Installation separat. Katalog-/Import-/Worker-OS-Prüfungen bleiben unverändert.
+- Akzeptanzkriterien: Client/Build/x64 unterscheiden; alle Abhängigkeiten/unsupported erhalten; keine Serverstrategie als WinGet darstellen; falsche Architektur/unklare Beobachtungen verweigern; kein Installations-API.
+- Verifikation: 12 gezielte Fälle plus vorhandene Windows-/portable Komplettsuiten; synthetische Hostevidenz ist kein echter Windows-11-Nachweis.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `c035c99`, [vollständige CI 43564860415](https://github.com/muk4li/configureMe/actions/runs/43564860415) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-035
+
+**Öffentliche Snapshot-Vertragsgrenzen synthetisch absichern** — P1; Status: **Done**; Komponente: Consumer-Contracttests/Datenentscheidung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Konkrete Producer-/Consumer-Abweichungen mit synthetischen Beispielen und echten Consumer-Validatoren testen; produktiven Import gesperrt lassen.
+- Technische Evidenz: Centrality 12776e9 und Datenquelle 75b91cf nur lesend geprüft; ADR-002/D-007 weiter Proposed; Reihenfolge, Limits, Zielworkflow und Identitäten unterscheiden sich.
+- Dateien/Module: docs/integrations/public-snapshot-decision.md; tests/public-profile-boundaries.test.ts; synthetische Fixturedateien.
+- Abhängigkeiten/Freigaben: Keine externe Schemaannahme oder produktive Providerfreigabe; CM-003/023 bleiben blockierend für echten Import.
+- Akzeptanzkriterien: Konkrete Entscheidungsvorlage; source-shaped Daten und unbekannte Versionen/Revisionen nicht implizit akzeptieren; keine Kürzung/Alias-/Targetkonvertierung; keine privaten Profile kopieren.
+- Verifikation: Fünf gezielte Vitestfälle; Typecheck/Lint und vorhandene komplette Web-CI; keine Installer oder Secrets.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `4848a0f`, [vollständige CI 43564368520](https://github.com/muk4li/configureMe/actions/runs/43564368520) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-036
+
+**Verifizierte Installerdatei bis zum Prozessende sperren** — P1; Status: **Done**; Komponente: Installer-Handoff/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestätigten Inhaltsaustausch nach Verifikation durch deny-write/delete Handle während Prüfung und Installerwait verhindern.
+- Technische Evidenz: AF-006 erneut mit synthetischem PE und Mockrunner reproduziert; Parent-Namespace/ACL-Risiken separat offen.
+- Dateien/Module: Installation.psm1; installer-regressions.ps1; docs/audits/installer-handoff-lock.md
+- Abhängigkeiten/Freigaben: Keine echten Installer; Windows-Kernel-Sharingtests in PS5.1/7 erforderlich. Vollständiger CM-006 bleibt offen.
+- Akzeptanzkriterien: Mutationsversuche und vorhandene Writer vor Runner verweigern; unveränderte Bytes/Exitcodes/Reboot erhalten; Handle in allen Pfaden freigeben; keine Securitychecks lockern.
+- Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow 43564614212 für d5c6a52 erfolgreich; keine Linux-Locks als Windowsbeleg.
+
+## CM-037
+
+**Geprüfte Installerbytes und Quellen im Bericht erhalten** — P1; Status: **Done**; Komponente: Installer-/Worker-/Report-Provenienz; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Additive lokale Prüfevidenz desselben Verifikationsvorgangs mit tatsächlichem Digest/Größe/Signatur und redigierter beobachteter Quelle erhalten, auch bei späterem Prozessfehler.
+- Technische Evidenz: CM-010: ursprüngliche Downloadfunktion verwirft finale validierte URI; Installresultat enthält nur Exit/Reboot. Kontrollierte Abhängigkeit auf Handoff-Branch ca290e3.
+- Dateien/Module: Downloads/Installation/GuiWorker/Logging/bootstrap; installer-provenance.ps1; Aggregate-Reporttest; docs/audits/installer-provenance.md
+- Abhängigkeiten/Freigaben: Zuerst Handoff-Reviewbranch übernehmen; keine Releaseauthentizität/Signierung. Build-/Toolchain-Provenienz und finale Apparchitektur bleiben CM-010 offen.
+- Akzeptanzkriterien: Bisherige Rückgaben/stdout erhalten; erwarteter Pfadhash weiter geprüft und gegen gehaltenen Stream gebunden; SignatureProvider exakt einmal; cached finale URI unbekannt lassen; userinfo/query/fragment entfernen; ungültige Signaturen nie als erfolgreich berichten.
+- Verifikation: 86 bestehende + 25 neue PS7-Fixtureassertions; Windows PS5.1/7, Worker-/Aggregate-Suiten und vollständiger Publishworkflow; Mismatch-Stream/Pfad vor Signer verweigert.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `d8f79c9`, [vollständige CI 43565667258](https://github.com/muk4li/configureMe/actions/runs/43565667258) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-038
+
+**Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten** — P1; Status: **Done**; Komponente: Release/QA-Vorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Unabhängige Signer-/Provenienz-/Distributionsgates und reproduzierbare nichtinstallierende sowie getrennt zu autorisierende reale VM-Szenarien konkretisieren.
+- Technische Evidenz: Main f744d63 ist unsigned Entwicklungsartefakt; CI ersetzt keine Publisheridentität oder frische VM-Abnahme.
+- Dateien/Module: docs/release-trust-plan.md; docs/qa/windows-v1-acceptance.md
+- Abhängigkeiten/Freigaben: Signer-/Schlüsselentscheidung, VMbereitstellung und echte Installationsfreigabe bleiben extern; CM-001/005 nicht als abgeschlossen ausgeben.
+- Akzeptanzkriterien: Konkrete Quelle/Build/Signatur/Verifikation/Rotation/Freigabe-Kette; Matrix für OS/DPI/Rechte/Version/Architektur/Wiederholung/Fehler mit sicheren ausführbaren Befehlen; keine Releaseaktivierung.
+- Verifikation: Dokumentationslinks/Status/Scope und git diff --check; vorhandener kompletter Windows-CI-Lauf 43564614212, keine neue echte Zielsystemausführung behauptet.
+
+## CM-039
+
+**Legacy-Downloadfehler und Installermodus verständlich anzeigen** — P1; Status: **Done**; Komponente: Geschütztes Wizard-UX; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Bestätigten leeren/HTML-/defekten JSON-Fehler benutzerverständlich behandeln; unerwartete Erfolgsausgaben nicht als ZIP herunterladen; Python/7-Zip-Anzeige an reale Modi anpassen.
+- Technische Evidenz: AF-009/011 und aktuelle setup-wizard.tsx: Pythonmanager/pauschal signed 7-Zip sowie ungeprüftes response.json bei Fehlern.
+- Dateien/Module: setup-wizard.tsx; legacy-bundle-response.ts; gezielte Antworttests.
+- Abhängigkeiten/Freigaben: Keine Auth-/Katalog-/Installerpolicyänderung; ZIP-Headerprüfung ist nur UX, keine Signatur-/Herkunftszusage.
+- Akzeptanzkriterien: Leere/HTML/trunkierte Fehler ohne rohen Parsertext; korrekte JSON-Fehler begrenzt erhalten; tatsächliche ZIPbytes erhalten; kein Navigation/Selektionswechsel während laufendem Download.
+- Verifikation: Sechs Response-Regressionstests mit realem ZIP-Kontrollfall; vollständige bestehende Webgates/Browsergrenzen. OAuth-State-Sicherheitsfrage CM-008 bleibt separat offen.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `7742d44`, [vollständige CI 43565106502](https://github.com/muk4li/configureMe/actions/runs/43565106502) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-040
+
+**OAuth-Statevergleich gegen UTF8-Längenfehler härten** — P1; Status: **Done**; Komponente: Bestehender OAuth-Callback; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Gleiche UTF16-Zeichenlängen mit unterschiedlichen UTF8-Bytelängen sicher ablehnen, ohne RangeError/500 und ohne Authentifizierungsumbau.
+- Technische Evidenz: Original main: zwei Unicode-GET-Fälle reproduzieren RangeError; sieben Kontrollfälle bestehen. Fix vergleicht Bufferlängen vor timingSafeEqual.
+- Dateien/Module: src/app/api/auth/github/callback/route.ts; tests/oauth-callback.test.ts
+- Abhängigkeiten/Freigaben: Nur bestehende Fehlergrenze; keine echten OAuth-Credentials oder Upstreamrequests, keine Allowlist-/Sessionlockerung.
+- Akzeptanzkriterien: Unpassender State führt zu sicherem Redirect und Cookie-Löschung ohne Upstream; gültiger ASCII-State durchläuft konfigurierte synthetische Session-/Allowlistkontrolle unverändert.
+- Verifikation: Neun echte GET-Pfadtests mit gemocktem Fetch, Rot/Grün-Nachweis; bestehende komplette Web-/Browsergates.
+
+Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige CI 43565869811](https://github.com/muk4li/configureMe/actions/runs/43565869811) erfolgreich. Temporärer Branchtrigger danach entfernt; Folgecommit nur Nachweise/Triggerbereinigung. Kein Main-Merge, keine Aktivierungs-/Release-/Zielsystemfreigabe.
+
+## CM-041
+
+**Fehlende Docker-Checkoutdateien bereitstellen** — P1; Status: **In Progress**; Komponente: Entwicklungs-/Containerbuild-Voraussetzungen; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Tatsächlich referenzierten public-Ordner und sichere wertfreie Env-Vorlage versionieren; keine Container starten oder Authvorgaben lockern.
+- Technische Evidenz: Dockerfile COPY /app/public sowie dokumentiertes .env.example fehlten; Dockerinfo scheitert hier an Socketberechtigung.
+- Dateien/Module: public/.gitkeep; .env.example; .gitignore; Deploymentdokumentation.
+- Abhängigkeiten/Freigaben: Dockerdaemonzugriff und isolierter Clean-Checkout-Build/Health/API-Test fehlen; keine Gruppenzuordnung/Sudo-/Hoständerung als Umgehung.
+- Akzeptanzkriterien: Alle COPY-Quellen vorhanden; einzig explizite Env-Beispieldatei aus Ignore ausnehmen, echte Dateien weiter ignoriert; leere Authwerte; vollständigen Dockerbuild erst nach tatsächlichem Test als bestanden melden.
+- Verifikation: Git-/Datei-/Env-Struktur geprüft; vollständige Web-CI 43566003380 für 73db0ef erfolgreich; Dockerbuild/-start ausdrücklich nicht durchgeführt, CM-002/041 bleiben offen.
 
 ## Priorisierte nächste Arbeit
 

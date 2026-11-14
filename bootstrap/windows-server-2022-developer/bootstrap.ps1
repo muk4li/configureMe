@@ -258,6 +258,7 @@ if ($DryRun) {
     foreach ($planned in $plannedInstallations) {
       $result = $planned.Result
       $id = $planned.Id
+      $artifactProvenance = $null
       try {
         $definition = $planned.Definition
         $result.RequestedVersion = $definition.Version
@@ -265,7 +266,7 @@ if ($DryRun) {
         $result.InstallerType = $definition.InstallerType
         $result.RequiresAdministrator = [bool]$definition.RequiresAdministrator
         $result.Method = $definition.Method
-        $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $definition
+        $installResult = Invoke-QuickSetupPackageInstall -Id $id -Definition $definition -Provenance ([ref]$artifactProvenance)
         $result.InstallerExitCode = [int]$installResult.ExitCode
         if ($installResult.ExitCode -notin @(0, 3010, 1641)) {
           $result.Status = "Failed"
@@ -304,6 +305,7 @@ if ($DryRun) {
         $result.Notes = $message
         Write-QuickSetupLog -Level "ERROR" -Message "$($result.Name): $message"
       }
+      if ($artifactProvenance) { $result.Provenance = $artifactProvenance }
     }
   }
 }
