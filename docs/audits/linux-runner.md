@@ -67,3 +67,17 @@ unsigned and explicitly not release-approved. Build tracing checked: no `.git`,
 `.env` or test source in Linux route trace. Vitest excludes generated `.next` files
 so a prior build cannot duplicate tests with incorrect mock resolution. Real
 Ubuntu/Windows-host LAN and Apply are not tested. PR #24 Linux/Web/Windows CI passed.
+
+### CM-044 software boundary, 2026-11-14
+
+Reviewed Centrality main `1526c77408815337831408417d679e461b3fa17e` CE-103
+Accepted service contract and ADR-004; myHome-Lab main
+`c1e6b592bfd8f668feba933c566c1b774f593102`. Network/host approval is still external.
+No cross-repository writes. Added a planning-only LAN launcher, default validation
+without listening, exact assigned private IPv4/client/host/origin/path policy,
+no forwarded headers, auth or executable transport. Policy tested only with
+explicitly synthetic addresses. No actual LAN listener, firewall, VM, installer,
+SSH, Hyper-V, Docker socket or host administration was used. Local 180 Vitest tests
+passed (one Windows-only skip), TypeScript/ESLint/production build passed. PR #25
+Linux/Web (Ubuntu and Windows)/Windows validation-and-package CI passed. SERVICE.md
+summarizes the actual interfaces; real deployment/restore are not claimed.

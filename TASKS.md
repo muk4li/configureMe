@@ -559,7 +559,8 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Abhängigkeiten: HL-011/015/016 sowie HL-012/013, gemeinsame Regeln mit HL-018. Host-Firewallkonfiguration ist myHome-Lab-Verantwortung; configureMe dokumentiert App-Bindung und sicherheitsrelevante Endpunkte.
 - Akzeptanz: nach expliziter Host-Freigabe erlaubter VM-Zugriff; unerlaubte LAN-, externe und Admin-/Downloadzugriffe negativ getestet. Kein `0.0.0.0`-/Origin-Bypass als pauschale Lösung; ohne vertrauenswürdigen LAN-Transport nur unabhängig verifiziertes Offline-Handoff.
 - Tests: synthetische Origin-/ACL-/Downloadfälle, danach reale LAN-Positiv-/Negativtests in gemeinsamer Session.
-- Vertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
+- Softwareseitig vorbereitet: `preview:lan` validiert konkrete Bind-/Client-IP und Port; `--start` separat erforderlich. HTTP nur Linux-Planung/JSON, kein Login/Bundle. Synthetische ACL-Tests; kein realer LAN-Start.
+- Vertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md), [SERVICE.md](SERVICE.md).
 
 ## Priorisierte nächste Arbeit
 

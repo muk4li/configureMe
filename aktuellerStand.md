@@ -30,3 +30,9 @@ aktivierten privaten Loopback-Entwicklungsdownload. Reproduzierbares ZIP aus sau
 Git-Checkout; unabhängiger Python-Verifier prüft Inventar/Hashes/Katalog/Plan.
 Unsigned, kein Release und keine echte VM- oder Apply-Abnahme. CM-042/043 bleiben
 In Progress; CM-044-End-to-End bleibt von myHome-Lab/Betreiberfreigabe abhängig.
+
+CM-044: Softwareseitiger LAN-Planungslauncher mit exakter Bind-IP/Client-/Host-/
+Origin-/Pfadallowlist und reinem Validierungsstandard ergänzt. Standard-npm-Listener
+explizit Loopback. Keine Auth/Installerdistribution über HTTP-LAN, keine Secrets im
+Launcher. Kein tatsächlicher LAN-Start, keine Firewall-/Systemänderung und keine
+VM-Abnahme. SERVICE.md nach akzeptiertem CE-103 ergänzt. CM-044 bleibt Blocked.

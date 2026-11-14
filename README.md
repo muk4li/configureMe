@@ -103,3 +103,8 @@ servervalidierter Plan exportieren. Linux-ZIP-Downloads sind separat gesperrt,
 privat authentifiziert und nur für Loopback-Entwicklung vorgesehen; **keine
 Releasefreigabe oder Signierung**. Prüfanleitung, sauberer Git-Checkout und
 unabhängiger Herkunftsnachweis: [Linux](docs/linux.md). Echte VM-Abnahme offen.
+
+Der vorbereitete LAN-Entwicklungsmodus startet nur nach expliziten Angaben und
+`--start`; HTTP bietet ausschließlich Linux-Planung, keine Auth oder Bundles.
+Reale Netzwerkfreigabe bleibt offen: [Runbook](docs/deployment.md),
+[Dienstvertrag](SERVICE.md), [VM-Schritte](docs/huu-local-portal-handoff.md).

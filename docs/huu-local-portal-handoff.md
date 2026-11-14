@@ -38,3 +38,30 @@
 ## Implementierungsstand im Review
 
 CM-043: `/linux` und öffentlicher Planexport implementiert; ZIP nur separat aktivierter, privat authentifizierter Loopback-Entwicklungsdownload. Kein Release. Sauberer Git-Checkout und unabhängiger Herkunftsnachweis erforderlich, siehe [Prüfanleitung](linux.md). Der direkte feste Git-Commit bleibt der Offline-Fallback. Echte VM-/LAN-Abnahme offen; historische Planabschnitte oben beschreiben das Gesamtziel, keinen heutigen Betriebsnachweis.
+
+## CM-044: softwareseitige Grenze implementiert
+
+`npm run preview:lan` prüft explizite Host-/Client-IP und Port, ohne Listener zu
+starten. Erst `--start` würde binden; hier nicht ausgeführt. Die Socket-/Host-/
+Origin-/Pfadallowlist ist synthetisch getestet. HTTP-LAN bietet ausschließlich
+Linux-Planung/JSON, keine Anmeldung und keine ausführbaren Downloads. Details:
+[Deployment](deployment.md#kontrollierter-lan-planungsmodus-cm-044-noch-keine-betriebsfreigabe).
+Reale IPs/Adapter/Firewall/TLS und VM-E2E bleiben blockiert bei myHome-Lab und Betreiber.
+CM-044 bleibt **Blocked**. Dieser begrenzte Modus ist keine vollständige Abnahme des
+ursprünglich gewünschten direkten Bundle-Downloads von der VM.
+
+## Nach Provisionierung der VM
+
+1. Mit myHome-Lab Ubuntu 24.04/amd64, Python >=3.12, Host-/VM-IP, Adapter und
+   begrenzten Firewallpfad klären. configureMe nimmt diese Änderungen nicht vor.
+2. Die drei gestapelten PRs reviewen; geprüften festen Quellcommit verwenden.
+3. Loopback-Portal oder separat genehmigten LAN-Planungsmodus nutzen; Profile und
+   Docker-Gruppenentscheidung prüfen, JSON exportieren. Kein Apply über Browser.
+4. Bundle lokal authentifiziert erzeugen und unabhängig geprüft offline übertragen
+   oder direkt den geprüften Git-Commit auf die VM bringen. Zuerst unabhängigen
+   Archivhash/Quellcommit prüfen; Verifier nur aus vertrauenswürdigem Checkout starten.
+5. Als normaler VM-Benutzer Dry-Run ausführen, Plan/Katalog/Bericht prüfen. Pin- und
+   Docker-Schlüssel-Aktualität vor Apply erneut aus offiziellen Quellen verifizieren.
+6. Erst nach separater Eigentümerfreigabe interaktiv lokal mit Root `--apply`;
+   danach Dry-Run und Wiederholung/Erkennung prüfen. Caddy, Firewall und Homepage
+   sind nachfolgende myHome-Lab-Arbeit. Reale Ergebnisse getrennt dokumentieren.

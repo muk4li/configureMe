@@ -71,3 +71,16 @@ Ein Hash aus demselben Download ist keine Provenienz. Vor jeglicher Codeausführ
 ist ein unabhängig geprüfter Quellcheckout samt passendem Archivhash erforderlich.
 Unsigned Entwicklung ist keine CM-001-Releasefreigabe; invalid/untrusted wird nicht
 als vertrauenswürdig umgedeutet. Portal führt keine Installationsbefehle aus.
+
+## LAN-Planungsmodus
+
+Der optionale Entwicklerlauncher ist standardmäßig eine reine Konfigurationsprüfung.
+Er bindet erst mit `--start` an eine konkrete zugewiesene RFC1918-IPv4-Adresse und
+prüft den echten Socket-Peer gegen einzelne konfigurierte Clients. Host und optionaler
+Origin müssen exakt passen. Forwarded/X-Forwarded-* und Cross-Site werden abgewiesen.
+Die Pfadallowlist erlaubt nur Linux-UI, statische Assets und Linux-Plan-POST;
+Dotsegmente, Backslashes und kodierte Pfade werden vor Next abgelehnt. Keine Auth-
+oder ausführbaren Downloads im HTTP-LAN, keine WebSocket- oder Proxy-Umgehung.
+Geerbte Credentials werden entfernt, `.env`-Dateien verweigert. Dieser Modus ersetzt
+weder Firewall noch TLS noch unabhängige Artefaktprovenienz. Keine reale LAN-
+Exposition oder Betreiberabnahme wurde durchgeführt.
