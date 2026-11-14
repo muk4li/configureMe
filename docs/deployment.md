@@ -35,3 +35,13 @@ Vor Internetbetrieb sind ein öffentlich vertrauenswürdiges HTTPS-Zertifikat, e
 `public/.gitkeep` stellt die vom bestehenden Dockerfile kopierte Quelle bereit. `.env.example` enthält ausschließlich leere Authwerte und lokale Entwicklungsnamen; nur diese Beispieldatei ist von `.gitignore` ausgenommen, reale Envdateien bleiben ignoriert. Leere Werte aktivieren keinen Administrator und erlauben keinen privaten Login. Produktion benötigt weiterhin sichere Laufzeitwerte und eine bewusst gewählte HTTPS-Origin; das Entwicklungsbeispiel ist keine Produktionsfreigabe.
 
 In der Cloud scheitert bereits `docker info` an der Docker-Socketberechtigung. Es wurden keine Hostgruppen, Rechte, Dienste oder Container geändert. Clean-Checkout-Containerbuild, read-only Start, Health und öffentliche/private API-Fälle sind damit **nicht ausgeführt**. CM-002 bleibt offen. Nach separater Bereitstellung eines isolierten Dockerhosts: aus sauberem Reviewcheckout `docker build --tag configureme-review .`, dann ausschließlich einen ausdrücklich autorisierten Loopback-Test mit synthetischen Envwerten durchführen; nicht als produktives Deployment interpretieren. Web-CI ist kein Dockerbeleg.
+
+## Linux-Entwicklungsdownload
+
+`/linux` und `POST /api/public/linux-plan` benötigen keine Anmeldung. Der getrennte
+ZIP-Endpunkt ist standardmäßig deaktiviert und verlangt für lokale Tests eine
+explizite Loopback-APP_URL, `CONFIGUREME_LOCAL_LINUX_DOWNLOADS=1`, private Anmeldung,
+aktuelle Allowlist und einen unveränderten Git-Checkout. Git-loses standalone ist
+kein unterstützter Entwicklungsbundle-Produzent. Keine öffentliche/HTTP-LAN-
+Installerdistribution freigegeben. Keine neuen Secrets oder Auth-Callbacks nötig;
+existierende Auth-Konfiguration und Sicherheitsprüfungen bleiben maßgeblich.

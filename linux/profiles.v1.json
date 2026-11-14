@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    { "id": "ubuntu-base", "name": "Ubuntu basis", "description": "ca-certificates, curl, Git and GnuPG from the Ubuntu archive.", "steps": ["base-tools"] },
+    { "id": "container-host", "name": "Docker host", "description": "Official Docker APT repository, pinned Engine and Compose plugin. Requires the basis tools.", "steps": ["docker-engine"] },
+    { "id": "security-updates", "name": "Security updates", "description": "unattended-upgrades, security updates only, no automatic reboot.", "steps": ["unattended-upgrades"] }
+  ]
+}

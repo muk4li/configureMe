@@ -95,3 +95,11 @@ Das Standalone-Profil und das reproduzierbare ZIP-Packaging sind in [docs/quicks
 ## Lokaler Ubuntu-Runner (Integrationsreview)
 
 Der vorhandene Python-3.12+-Standardbibliotheksrunner wird aus den gestapelten CM-042-PRs übernommen. Er läuft ausschließlich auf Ubuntu 24.04/amd64: `python3 linux/runner.py --plan linux/plans/huu-server-01.json` ist ein Dry-Run ohne Root. Kein Webprozess führt APT/SSH/Hyper-V aus. Apply benötigt lokal Root, ein Terminal und die Hostname-Bestätigung; keine echte Installation in diesem Auftrag. [Anleitung und Grenzen](docs/linux.md).
+
+### Ubuntu-Planung und lokales Entwicklungsbundle
+
+Unter `/linux` lassen sich Ubuntu-24.04/amd64-Profile kombinieren und ein strikt
+servervalidierter Plan exportieren. Linux-ZIP-Downloads sind separat gesperrt,
+privat authentifiziert und nur für Loopback-Entwicklung vorgesehen; **keine
+Releasefreigabe oder Signierung**. Prüfanleitung, sauberer Git-Checkout und
+unabhängiger Herkunftsnachweis: [Linux](docs/linux.md). Echte VM-Abnahme offen.

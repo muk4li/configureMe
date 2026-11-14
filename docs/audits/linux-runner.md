@@ -56,3 +56,14 @@ Nicht ausgeführt: keine reale Installation, kein Lauf auf `huu-server-01`, kein
 ## Erneute Integration
 
 Vorhandener Quellstand 2780ec8 gegen main e2646fa geprüft und gezielt übernommen. 93 Standardbibliotheks-Mocktests lokal bestanden (ursprünglich 91 plus begrenzte Eingabe/Lesefehler). Erneuter Abruf von Docker-Schlüssel/InRelease/Packages in dieser Umgebung jeweils HTTP 403; historische Prüfung oben ist nicht als heutiger erfolgreicher Abruf umetikettiert. Keine Installation oder echte Ziel-VM. Der Test-/Bundleempfänger muss Pin-/Schlüsselherkunft vor Rootnutzung unabhängig bestätigen.
+
+### CM-043 software review, 2026-11-14
+
+Local: 156 Vitest tests passed, one Windows-only skip; 93 Python mock tests passed;
+TypeScript, ESLint, Next production build passed. Bundle integration uses an isolated
+clean Git repo and the independent Python verifier, rejecting corruption, missing
+files, traversal, symlink entries, catalog tampering and wrong hashes. Manifest is
+unsigned and explicitly not release-approved. Build tracing checked: no `.git`,
+`.env` or test source in Linux route trace. Vitest excludes generated `.next` files
+so a prior build cannot duplicate tests with incorrect mock resolution. Real
+Ubuntu/Windows-host LAN and Apply are not tested. PR #24 Linux/Web/Windows CI passed.

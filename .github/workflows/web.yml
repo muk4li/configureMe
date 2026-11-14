@@ -1,7 +1,7 @@
 name: Public web validation
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feature/linux-runner-integration, feature/linux-bundle-download]
   push:
     branches: [main]
   workflow_dispatch:

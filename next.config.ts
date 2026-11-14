@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingIncludes: { "/api/linux/bundle": ["./linux/*.py", "./linux/catalog.json", "./schemas/linux-plan-v1.schema.json", "./contracts/linux-plan-v1.policy.json"] },
   async headers() {
     return [
       {

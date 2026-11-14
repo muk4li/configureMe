@@ -287,3 +287,21 @@ test("exports server-reviewed setup JSON as a separate native dry-run contract",
   expect(plan).toEqual(await response.json());
   await expect(page.getByRole("button", { name: "Export preview JSON", exact: true })).toBeEnabled();
 });
+
+test("Ubuntu profiles export a separate validated plan while executable download defaults closed", async ({ page, request }) => {
+  await page.goto("/linux");
+  await expect(page.getByRole("heading", { name: "Ubuntu Server setup" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download development Linux bundle" })).toBeDisabled();
+  const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Linux plan JSON" }).click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe("configureme-linux-plan.v1.json");
+  const plan = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(plan).toMatchObject({ formatId: "configureme/linux-plan", authorization: "none", target: { os: "ubuntu-24.04", architecture: "amd64" }, options: { addInvokingUserToDockerGroup: false } });
+  expect(plan.steps).toEqual(["base-tools", "docker-apt-repository", "docker-engine", "unattended-upgrades"]);
+  expect((await request.post("/api/linux/bundle", { data: {}, headers: { origin: "http://127.0.0.1:3100" } })).status()).toBe(404);
+  await page.getByRole("checkbox", { name: "Docker host", exact: true }).uncheck();
+  await expect(page.getByRole("checkbox", { name: "Offizielles Docker-APT-Repository mit festem Schlüssel", exact: true })).not.toBeChecked();
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

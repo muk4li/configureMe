@@ -1,6 +1,6 @@
 # CM-043/044: lokales Linux-Bundle und Portal-Handoff für huu
 
-**Status:** Geplante Arbeitspakete, Eigentümer-Go 2026-11-14 für **Dokumentation**, keine Freigabe von Implementierung, Runner-`--apply`, Host-Firewall oder Portfreigabe. Referenzen: [CM-042](../TASKS.md#cm-042), [Linux-Planvertrag](linux-plan-contract.md), [Centrality ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), [myHome-Lab HL-012/013/017/018](https://github.com/muk4li/myHome-Lab/blob/main/TASKS.md).
+**Status:** Nachfolgender Eigentümerauftrag 2026-11-14 autorisiert die softwareseitige Implementierung CM-042/043/044. Runner und Bundle im gestapelten PR-Review; weiterhin keine Freigabe von realem Runner-`--apply`, Host-Firewall oder Portfreigabe. Referenzen: [CM-042](../TASKS.md#cm-042), [Linux-Planvertrag](linux-plan-contract.md), [Centrality ADR-004](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-004-HUU-FIRST-DEPLOY.md), [myHome-Lab HL-012/013/017/018](https://github.com/muk4li/myHome-Lab/blob/main/TASKS.md).
 
 ## Nutzerfluss (kein Remote Execution)
 
@@ -34,3 +34,7 @@
 - CM-044 benötigt HL-011/015/016-Hostinventur sowie HL-012/013-VM-Netz. Lokaler Gastzugang ist nicht gleich Produktions- oder Internetfreigabe.
 - Erst `HL-012/013 + CM-042 + CM-043/044` → echter Download/Dry-Run; erst Eigentümerfreigabe → Apply; danach `HL-017/018` → Caddy/Firewall; erst dann DNS/Internet-Gate.
 - Secrets, reale interne IPs, persönliche Profile und Hostinventur-Rohdaten bleiben außerhalb des Git-Repos.
+
+## Implementierungsstand im Review
+
+CM-043: `/linux` und öffentlicher Planexport implementiert; ZIP nur separat aktivierter, privat authentifizierter Loopback-Entwicklungsdownload. Kein Release. Sauberer Git-Checkout und unabhängiger Herkunftsnachweis erforderlich, siehe [Prüfanleitung](linux.md). Der direkte feste Git-Commit bleibt der Offline-Fallback. Echte VM-/LAN-Abnahme offen; historische Planabschnitte oben beschreiben das Gesamtziel, keinen heutigen Betriebsnachweis.

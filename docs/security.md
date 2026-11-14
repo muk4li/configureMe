@@ -57,3 +57,17 @@ Der Kataloghash ist Kompatibilitätsbindung, keine Herausgebersignatur. Ein Angr
 ## Reviewgrenzen des Windows-v1-Folgeauftrags
 
 [Getrennte Sicherheitsnachweise](audits/windows-v1-progress.md) unterscheiden getestete vorbereitende Zustände, Dateiinhaltslocks und lokale Prüfevidenz von tatsächlicher Ausführungsberechtigung. Importierte Installation/Windows-11-Registrierung bleiben gesperrt. Der Handoff-Review blockiert Schreiben/Löschen der gehaltenen Datei, löst aber nicht alle Parent-/ACL-/Privileg-TOCTOU-Fragen. Provenienz erhält ursprüngliche Pfadhashes plus Streambindung und denselben Signaturbefund, ohne ungültige Signaturen zu akzeptieren oder cached Redirects zu erfinden. Build/Releaseauthentizität, reale Zielsystemabnahme, Schlüssel/Signierung und private Quellen bleiben eigenständige Gates. Bestehende Authfehlerkorrektur ändert keine Session-/Allowlistberechtigung.
+
+## Linux-Entwicklungsbundle
+
+Öffentliche Linux-Planung exportiert deklaratives JSON, keine ausführbaren Downloads.
+`CONFIGUREME_LOCAL_LINUX_DOWNLOADS=1` aktiviert ausschließlich einen privaten,
+aktueller Allowlist unterliegenden Loopback-Entwicklungsendpunkt. Exakte Host-/
+Originprüfung, Größen-/Kapazitäts-/Ratelimits und saubere Git-Quellen sind Pflicht.
+ZIP-Inventar ist fest; Symlinks/Traversal, fehlende Dateien, falsche Größen/Hashes
+und fremde Kataloge verweigert der unabhängige Python-Verifier. Er überschreibt
+keine vorhandenen Extraktionsziele. Die Python-Planprüfung bleibt unabhängig.
+Ein Hash aus demselben Download ist keine Provenienz. Vor jeglicher Codeausführung
+ist ein unabhängig geprüfter Quellcheckout samt passendem Archivhash erforderlich.
+Unsigned Entwicklung ist keine CM-001-Releasefreigabe; invalid/untrusted wird nicht
+als vertrauenswürdig umgedeutet. Portal führt keine Installationsbefehle aus.

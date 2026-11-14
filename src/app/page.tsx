@@ -12,6 +12,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ a
   return <main className="landing public-landing">
     <header className="public-header">
       <Link className="brand" href="/"><span className="brand-mark">c</span><span>configure<span className="brand-muted">Me</span></span></Link>
+      <Link className="button button-quiet" href="/linux">Ubuntu Server 24.04</Link>
       <a className="button button-quiet" href="/api/auth/github">Private portal · optional sign-in</a>
     </header>
     {auth && authMessages[auth] && <p className="notice" role="status">{authMessages[auth]}</p>}

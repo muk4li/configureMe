@@ -22,3 +22,11 @@ Technischer Leitfaden: [REPO.md](REPO.md). Prüfprotokolle: [docs/audits/](docs/
 ## Linux-Integrationsreview (aktueller Auftrag)
 
 Main e2646fa enthält nur die Verträge; gestapelte PRs #19–22 landeten auf Feature-Basen, nicht auf main. Implementierung aus 2780ec8 gezielt wiederverwendet. Lokal 93 Python-Mocktests bestanden, Eingaben zusätzlich begrenzt. Keine reale Installation/VM-Ausführung. CM-042 bleibt bis vollständigen Nachweisen offen; offizielle Metadaten hier erneut HTTP 403, vorhandenes Pin-Protokoll erhalten.
+
+## 2026-11-14 – Linux-Bundle im gestapelten Review
+
+CM-043 ergänzt Ubuntu-Mehrprofile, servervalidiertes Linux-JSON und einen separat
+aktivierten privaten Loopback-Entwicklungsdownload. Reproduzierbares ZIP aus sauberem
+Git-Checkout; unabhängiger Python-Verifier prüft Inventar/Hashes/Katalog/Plan.
+Unsigned, kein Release und keine echte VM- oder Apply-Abnahme. CM-042/043 bleiben
+In Progress; CM-044-End-to-End bleibt von myHome-Lab/Betreiberfreigabe abhängig.

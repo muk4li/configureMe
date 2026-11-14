@@ -101,3 +101,37 @@ python3 -m unittest discover -s tests/linux -v
 ```
 
 Tests starten keine echten Systembefehle zum Ändern; alle Zustände kommen aus `tests/linux/fake_host.py`. Neue Docker-Versionen nur mit neuem Eintrag im [Prüfprotokoll](audits/linux-runner.md) und neuem `catalogRevision` in den Plänen.
+
+## Portal und unsigned Entwicklungsbundle (CM-043)
+
+`/linux` kombiniert die app-lokalen Profile für Ubuntu 24.04/amd64. Die öffentliche
+Route `POST /api/public/linux-plan` liefert ausschließlich deklaratives JSON.
+Abhängigkeiten und Katalogrevision werden serverseitig erneut geprüft; Windows-Pläne
+bleiben ein anderer Vertrag. Docker-Gruppenzugehörigkeit ist standardmäßig aus.
+
+Der ZIP-Download `POST /api/linux/bundle` ist **standardmäßig aus**. Nur im lokalen
+Entwicklungsbetrieb: `CONFIGUREME_LOCAL_LINUX_DOWNLOADS=1`, explizite Loopback-
+`APP_URL`, vorhandene private Anmeldung und aktuelle Allowlist. Host, Origin,
+Requestgröße, Parallelität und Rate bleiben begrenzt. Er benötigt einen sauberen
+Git-Checkout mit Git und den versionierten Quelldateien; ein Git-loses standalone
+Deployment verweigert diesen Entwicklungsdownload. Keine öffentliche Distribution.
+
+Das reproduzierbare ZIP enthält Runner, Plan, Katalog, Schema/Policy, Manifest,
+SHA256SUMS und README. Es ist **unsigniert und nicht releasefreigegeben**.
+Downloadheader und mitgelieferte Hashes sind kein unabhängiger Herkunftsnachweis.
+Vor **jeder** Ausführung heruntergeladenen Codes separat vertrauenswürdig den
+Quellcommit und Archivhash beschaffen, Code prüfen und einen passenden, unabhängig
+vertrauenswürdigen Git-Checkout verwenden. Dessen Verifier prüft auch den Katalog:
+
+```sh
+python3 linux/verify_bundle.py /path/to/bundle.zip \
+  --expected-sha256 <independently-verified-sha256> --extract-to /path/to/new-directory
+cd /path/to/new-directory
+python3 linux/runner.py --plan plan.json
+```
+
+Die Platzhalter sind vom Betreiber zu ersetzen. Das Zielverzeichnis darf noch
+nicht existieren. Ohne unabhängigen Nachweis nichts aus dem ZIP ausführen;
+stattdessen den geprüften festen Git-Commit direkt auf die VM übertragen.
+`--apply` bleibt eine spätere, eigenständige Betreiberentscheidung mit Root und
+interaktiver Hostnamenbestätigung. Kein Apply oder echter VM-Test wurde durchgeführt.
