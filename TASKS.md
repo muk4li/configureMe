@@ -37,7 +37,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-029](#cm-029) | P1 | Done | CM-1 | Servervalidierten Setup-JSON-Export anbinden |
 | [CM-030](#cm-030) | P1 | Done | CM-1 | Nativen Snapshotimport und sicheren Dry-Run ergänzen |
 | [CM-031](#cm-031) | P1 | Blocked | CM-1 | Gemeinsame Contractfixtures und Integrationsnachweise |
-| [CM-036](#cm-036) | P1 | In Progress | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
+| [CM-036](#cm-036) | P1 | Done | CM-1 | Verifizierte Installerdatei bis zum Prozessende sperren |
+| [CM-038](#cm-038) | P1 | Done | CM-1 | Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten |
 
 ## CM-001
 
@@ -393,14 +394,25 @@ Abschlussnachweis: [Audit](docs/audits/setup-plan-v1.md), Code 79bf3e1; Web-CI 4
 
 ## CM-036
 
-**Verifizierte Installerdatei bis zum Prozessende sperren** — P1; Status: **In Progress**; Komponente: Installer-Handoff/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
+**Verifizierte Installerdatei bis zum Prozessende sperren** — P1; Status: **Done**; Komponente: Installer-Handoff/Sicherheit; Phase: [CM-1](ROADMAP.md#cm-1).
 
 - Beschreibung: Bestätigten Inhaltsaustausch nach Verifikation durch deny-write/delete Handle während Prüfung und Installerwait verhindern.
 - Technische Evidenz: AF-006 erneut mit synthetischem PE und Mockrunner reproduziert; Parent-Namespace/ACL-Risiken separat offen.
 - Dateien/Module: Installation.psm1; installer-regressions.ps1; docs/audits/installer-handoff-lock.md
 - Abhängigkeiten/Freigaben: Keine echten Installer; Windows-Kernel-Sharingtests in PS5.1/7 erforderlich. Vollständiger CM-006 bleibt offen.
 - Akzeptanzkriterien: Mutationsversuche und vorhandene Writer vor Runner verweigern; unveränderte Bytes/Exitcodes/Reboot erhalten; Handle in allen Pfaden freigeben; keine Securitychecks lockern.
-- Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow; keine Linux-Locks als Windowsbeleg.
+- Verifikation: Bestehende 86 portable Assertions; neue deterministische Windowsfälle und vollständiger Windowsworkflow 43564614212 für d5c6a52 erfolgreich; keine Linux-Locks als Windowsbeleg.
+
+## CM-038
+
+**Release-Vertrauensplan und ausführbare Zielsystemmatrix vorbereiten** — P1; Status: **Done**; Komponente: Release/QA-Vorbereitung; Phase: [CM-1](ROADMAP.md#cm-1).
+
+- Beschreibung: Unabhängige Signer-/Provenienz-/Distributionsgates und reproduzierbare nichtinstallierende sowie getrennt zu autorisierende reale VM-Szenarien konkretisieren.
+- Technische Evidenz: Main f744d63 ist unsigned Entwicklungsartefakt; CI ersetzt keine Publisheridentität oder frische VM-Abnahme.
+- Dateien/Module: docs/release-trust-plan.md; docs/qa/windows-v1-acceptance.md
+- Abhängigkeiten/Freigaben: Signer-/Schlüsselentscheidung, VMbereitstellung und echte Installationsfreigabe bleiben extern; CM-001/005 nicht als abgeschlossen ausgeben.
+- Akzeptanzkriterien: Konkrete Quelle/Build/Signatur/Verifikation/Rotation/Freigabe-Kette; Matrix für OS/DPI/Rechte/Version/Architektur/Wiederholung/Fehler mit sicheren ausführbaren Befehlen; keine Releaseaktivierung.
+- Verifikation: Dokumentationslinks/Status/Scope und git diff --check; vorhandener kompletter Windows-CI-Lauf 43564614212, keine neue echte Zielsystemausführung behauptet.
 
 ## Priorisierte nächste Arbeit
 
