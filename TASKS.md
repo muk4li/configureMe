@@ -549,6 +549,7 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Akzeptanz: reproduzierbares, eindeutiges Offline-Paket und server-/clientseitig strikte Ziel-/Abhängigkeits-/Katalogprüfung; negative Tests für falsches OS, kaputte/ausgetauschte Dateien, Katalogabweichung, unerlaubte Inhalte und Downloadzugriffe. Hash aus dem selben Bundle ersetzt **keinen** unabhängigen Herkunftsnachweis.
 - Tests: synthetische Portal-/Bundle-/Importtests ohne Installationsrechte; echter Download und Host-/VM-Test später separat nach Freigabe.
 - Technischer und Sicherheitsvertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
+- Detailvertrag: [CM-043 Linux-Bundle](docs/cm-043-linux-bundle-contract.md) (Proposed 2026-11-15; Accepted: Transport per `scp` aus dem Host-Browser-Download, Zusatzpakete `jq` und `python3-venv` als Katalogschritte; offen: Ort der Downloadroute, weitere Zusatzpakete).
 
 ## CM-044
 
