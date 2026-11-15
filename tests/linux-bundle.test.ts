@@ -45,8 +45,13 @@ import sys, tarfile, os
 tarfile.open(sys.argv[1]).extractall(sys.argv[2], filter="data")
 root = os.path.join(sys.argv[2], "configureme-bundle")
 sys.path.insert(0, os.path.join(root, "linux"))
-import bundle_manifest, host, linux_plan
-commit, errors = bundle_manifest.verify(host, root)
+import bundle_manifest
+class FileHost:
+    def read_file(self, p):
+        return open(p, "rb").read() if os.path.isfile(p) else None
+    def list_dir(self, p):
+        return sorted(os.listdir(p))
+commit, errors = bundle_manifest.verify(FileHost(), root)
 assert commit == "${COMMIT}" and errors == [], errors
 print("ok")`;
     expect(execFileSync("python3", ["-I", "-c", script, archive, dir], { encoding: "utf8" }).trim()).toBe("ok");
