@@ -6,11 +6,11 @@ Andere Distributionen, Desktop-Linux, DNF/Pacman/Flatpak sowie das Profil `linux
 
 ## Stand: implementiert, getestet, betrieben
 
-| | Stand (2026-11-14) |
+| | Stand (2026-11-15) |
 | --- | --- |
 | Implementiert | Plan-Schema, Policy, Katalog mit festen Quellen und gepinnten Docker-Paketen, Validator, Runner mit Dry-Run und `--apply` (`linux/`). |
 | Getestet | `python3 -m unittest discover -s tests/linux` mit synthetischem Host und synthetischen Fixtures (Python 3.12 und 3.13), CI-Workflow `linux-runner.yml` auf `ubuntu-24.04`. Zusätzlich nur lesende Läufe in einem Ubuntu-24.04-Entwicklungscontainer. Kein echtes `apt-get install` geprüft. Belege: [Prüfprotokoll](audits/linux-runner.md). |
-| Betrieben | **Nein.** Auf `huu-server-01` ist der Runner noch nicht gelaufen. Die reale Installation macht nur der Eigentümer nach eigener Freigabe (Sicherheits-Gate „configureMe-Lauf mit Root-Rechten“ in Centrality ADR-004). |
+| Betrieben | **Ja, einmal:** 2026-11-15 auf `huu-server-01` per Bundle aus `main` `fb258aa` (Eigentümerlauf): Apply `succeeded`, zweiter Dry-Run `no-changes`, Docker-Funktionstest ok. Kein Dauerbetrieb; weitere Läufe nur nach eigener Freigabe. Belege: [Prüfprotokoll](audits/linux-runner.md). |
 
 ## Was der Runner einrichtet
 
@@ -22,7 +22,7 @@ Andere Distributionen, Desktop-Linux, DNF/Pacman/Flatpak sowie das Profil `linux
 | `unattended-upgrades` | Paket plus `/etc/apt/apt.conf.d/20auto-upgrades`; nur Sicherheitsupdates, kein automatischer Neustart; `50unattended-upgrades` wird nicht überschrieben |
 | Option `addInvokingUserToDockerGroup` | nur wenn im Plan `true`: `SUDO_USER` zur Gruppe `docker`. Für `huu-server-01` **`false`** (Gruppe `docker` ist root-gleich). |
 
-Nicht im Umfang: Firewall/ufw und Isolation (myHome-Lab), Caddy/Apps (danach per Compose), Hyper-V, VPN, Secrets.
+Nicht im Umfang: Firewall/ufw und Isolation (myHome-Lab), Hyper-V-Gastdienste `linux-cloud-tools-virtual` (Provisionierung in myHome-Lab HL-013), Caddy/Apps (danach per Compose), Hyper-V, VPN, Secrets.
 
 Der Runner entfernt nichts, startet keine Dienste, rebootet nicht und rollt nicht zurück. Konfliktpakete (`docker.io`, `podman-docker` u. a.), eine alte `docker.list`, ein fremder Schlüssel oder eine neuere Docker-Version als der Pin werden als Fehler gemeldet und müssen manuell geklärt werden.
 

@@ -1,6 +1,6 @@
 # Ausführbares lokales Backlog
 
-Stand: 2026-11-14. Stabile IDs, keine Umnummerierung. Status: **Backlog**, **Ready**, **In Progress**, **Blocked**, **Done**. Ready heißt ausführbar im beschriebenen Umfang, nicht freigegeben für echte Installationen/Secrets/Deployment. Blockierte Teilaufgaben nicht durch ungeprüfte Annahmen entsperren. Abhängigkeiten auf fremde Repos sind nur Vorschläge; dort wurden keine Backlogs verändert. Definition of Done: [AGENTS.md](AGENTS.md).
+Stand: 2026-11-15. Stabile IDs, keine Umnummerierung. Status: **Backlog**, **Ready**, **In Progress**, **Blocked**, **Done**. Ready heißt ausführbar im beschriebenen Umfang, nicht freigegeben für echte Installationen/Secrets/Deployment. Blockierte Teilaufgaben nicht durch ungeprüfte Annahmen entsperren. Abhängigkeiten auf fremde Repos sind nur Vorschläge; dort wurden keine Backlogs verändert. Definition of Done: [AGENTS.md](AGENTS.md).
 
 Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 wesentliche Stabilität/Nachweise; P2 kontrollierter Ausbau; P3 Zukunft. Kein P0 behauptet einen laufenden Angriff. Herkunft aller AF-Befunde: [Initialaudit](docs/audits/initial-audit.md). CM-011/012/013/014/023/024/025 bleiben hinter ihren Freigaben. PD-001..004 autorisieren A/B für öffentliche Planung; keine produktive Distribution.
 
@@ -47,8 +47,8 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-039](#cm-039) | P1 | Done | CM-1 | Legacy-Downloadfehler und Installermodus verständlich anzeigen |
 | [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 | [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
-| [CM-042](#cm-042) | P1 | In Progress | CM-6 | Linux-/Ubuntu-Provisionierung über lokalen Runner (huu-server-01) |
-| [CM-043](#cm-043) | P1 | In Review | CM-6 | Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal |
+| [CM-042](#cm-042) | P1 | Done | CM-6 | Linux-/Ubuntu-Provisionierung über lokalen Runner (huu-server-01) |
+| [CM-043](#cm-043) | P1 | Done | CM-6 | Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal |
 | [CM-044](#cm-044) | P1 | Blocked | CM-6 | Portalzugang aus Ubuntu-VM über kontrollierten LAN-Pfad |
 
 ## CM-001
@@ -528,7 +528,7 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 
 ## CM-042
 
-**Linux-/Ubuntu-Provisionierung über lokalen Runner** — P1; Status: **In Progress** (vorhandener Runner im Integrationsreview; VM-Abnahme offen); Komponente: neuer Linux-Plan, Linux-Katalog, lokaler Runner; Phase: CM-6 (neu, siehe Centrality).
+**Linux-/Ubuntu-Provisionierung über lokalen Runner** — P1; Status: **Done** (2026-11-15: Apply auf `huu-server-01` erfolgreich, zweiter Dry-Run `no-changes`, Eigentümerlauf; Beleg [Prüfprotokoll](docs/audits/linux-runner.md)); Komponente: neuer Linux-Plan, Linux-Katalog, lokaler Runner; Phase: CM-6 (neu, siehe Centrality).
 
 - Beschreibung: Erster Linux-Weg für configureMe. Ein deklarativer, versionierter Plan richtet eine frisch per Autoinstall installierte Ubuntu-Server-24.04-VM ein: Basiswerkzeuge, offizielles Docker-APT-Repo, Docker Engine + Compose-Plugin, unattended-upgrades, optional Docker-Gruppe nur bei ausdrücklicher Planentscheidung. Ausgeführt durch einen **lokalen Runner auf der VM**, den der Eigentümer per SSH startet; das Webportal führt nichts aus.
 - Bezug auf die VM: Der Runner kommt per `git clone` eines festen configureMe-Commits auf die VM und läuft mit einem Plan aus dem Repo.
@@ -541,7 +541,7 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 
 ## CM-043
 
-**Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal** — P1; Status: **In Review** (implementiert auf `feat/cm-043-linux-bundle`, Mocktests grün, nicht real betrieben), **keine** Freigabe für reale Installation oder öffentliche Distribution; Phase: CM-6.
+**Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal** — P1; Status: **Done** (PR #28, `fb258aa`; Bundle per `scp` auf `huu-server-01` übertragen und ausgeführt), **keine** Freigabe für reale Installation oder öffentliche Distribution; Phase: CM-6.
 
 - Auftrag: Ubuntu-24.04/amd64-Profil im lokal auf dem Windows-Host betriebenen configureMe-Webportal auswählen und ein offline prüfbares Paket aus **Linux-Runner, `configureme/linux-plan` v1, Katalog, Manifest, Prüfsummen, Versions-/Commitnachweis und Prüfanleitung** herunterladen. Downloads sind keine Remote-Ausführung.
 - Verantwortung: configureMe für Plan, sichere Auswahl, Quelle und Paket; der Runner wird **auf der VM selbst** gestartet. Bestehende Windows-Plan-/ZIP-/OAuth-/Public-Preview-Grenzen bleiben unverändert.
@@ -550,6 +550,12 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Tests: synthetische Portal-/Bundle-/Importtests ohne Installationsrechte; echter Download und Host-/VM-Test später separat nach Freigabe.
 - Technischer und Sicherheitsvertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
 - Detailvertrag: [CM-043 Linux-Bundle](docs/cm-043-linux-bundle-contract.md) (Accepted 2026-11-15: `scp`, lokaler Modus, alle acht Zusatzpakete).
+
+## CM-045
+
+**Apply-Bericht ohne ausgeführte Aktionen** — P3; Status: **Backlog**.
+
+- Befund 2026-11-15 (Lauf auf `huu-server-01`): Im Apply-Bericht ist `actions` auch bei `succeeded` leer; der Dry-Run zeigt die geplanten Befehle. Apply-Bericht soll die tatsächlich ausgeführten Aktionen enthalten. Kein Sicherheitsproblem, nur Nachvollziehbarkeit.
 
 ## CM-044
 
