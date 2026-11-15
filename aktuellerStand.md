@@ -13,6 +13,7 @@ Technischer Leitfaden: [REPO.md](REPO.md). Prüfprotokolle: [docs/audits/](docs/
 
 ## Protokoll (neueste zuerst)
 
+- 2026-11-15: CM-043 [Linux-Bundle-Vertrag](docs/cm-043-linux-bundle-contract.md) als Proposed; Eigentümer hat Transport `scp` (kein Tunnel, kein CM-044 nötig) und Zusatzpakete `jq`/`python3-venv` entschieden. Planformat v1 bleibt unverändert. Nur Doku.
 - 2026-11-14: CM-042 Eigentümerentscheidungen 1–4 als Accepted in den Linux-Plan-Vertrag übernommen; offene Fragen geschlossen. Nur Doku.
 - 2026-11-14: CM-042 Linux-Plan v1 als Proposed dokumentiert; CM-042 angepasst (Firewall raus, fester Commit per `git clone`). Nur Doku.
 - 2026-11-14: Repo-Doku-Standard ergänzt (`CLAUDE.md`, diese Datei); CM-042 für den Linux-Weg im Backlog angelegt. Nur Doku.
