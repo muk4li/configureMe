@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "node scripts/Start-WebPreview.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "local:linux": "node scripts/Start-LocalLinuxBundle.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.2",

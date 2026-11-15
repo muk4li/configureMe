@@ -48,7 +48,7 @@ Priorität: P0 blockiert die betroffene Sicherheits-/Distributionsfreigabe; P1 w
 | [CM-040](#cm-040) | P1 | Done | CM-1 | OAuth-Statevergleich gegen UTF8-Längenfehler härten |
 | [CM-041](#cm-041) | P1 | In Progress | CM-1 | Fehlende Docker-Checkoutdateien bereitstellen |
 | [CM-042](#cm-042) | P1 | In Progress | CM-6 | Linux-/Ubuntu-Provisionierung über lokalen Runner (huu-server-01) |
-| [CM-043](#cm-043) | P1 | Ready | CM-6 | Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal |
+| [CM-043](#cm-043) | P1 | In Review | CM-6 | Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal |
 | [CM-044](#cm-044) | P1 | Blocked | CM-6 | Portalzugang aus Ubuntu-VM über kontrollierten LAN-Pfad |
 
 ## CM-001
@@ -541,7 +541,7 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 
 ## CM-043
 
-**Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal** — P1; Status: **Ready für Implementierungsentwurf**, **keine** Freigabe für reale Installation oder öffentliche Distribution; Phase: CM-6.
+**Linux-Runner/Plan als geprüftes Bundle aus lokalem Portal** — P1; Status: **In Review** (implementiert auf `feat/cm-043-linux-bundle`, Mocktests grün, nicht real betrieben), **keine** Freigabe für reale Installation oder öffentliche Distribution; Phase: CM-6.
 
 - Auftrag: Ubuntu-24.04/amd64-Profil im lokal auf dem Windows-Host betriebenen configureMe-Webportal auswählen und ein offline prüfbares Paket aus **Linux-Runner, `configureme/linux-plan` v1, Katalog, Manifest, Prüfsummen, Versions-/Commitnachweis und Prüfanleitung** herunterladen. Downloads sind keine Remote-Ausführung.
 - Verantwortung: configureMe für Plan, sichere Auswahl, Quelle und Paket; der Runner wird **auf der VM selbst** gestartet. Bestehende Windows-Plan-/ZIP-/OAuth-/Public-Preview-Grenzen bleiben unverändert.
@@ -549,7 +549,7 @@ Abschluss im begrenzten Vorbereitungs-/Fixumfang: Code `549a85b`, [vollständige
 - Akzeptanz: reproduzierbares, eindeutiges Offline-Paket und server-/clientseitig strikte Ziel-/Abhängigkeits-/Katalogprüfung; negative Tests für falsches OS, kaputte/ausgetauschte Dateien, Katalogabweichung, unerlaubte Inhalte und Downloadzugriffe. Hash aus dem selben Bundle ersetzt **keinen** unabhängigen Herkunftsnachweis.
 - Tests: synthetische Portal-/Bundle-/Importtests ohne Installationsrechte; echter Download und Host-/VM-Test später separat nach Freigabe.
 - Technischer und Sicherheitsvertrag: [Lokaler Portal-Handoff](docs/huu-local-portal-handoff.md).
-- Detailvertrag: [CM-043 Linux-Bundle](docs/cm-043-linux-bundle-contract.md) (Proposed 2026-11-15; Accepted: Transport per `scp` aus dem Host-Browser-Download, Zusatzpakete `jq` und `python3-venv` als Katalogschritte; offen: Ort der Downloadroute, weitere Zusatzpakete).
+- Detailvertrag: [CM-043 Linux-Bundle](docs/cm-043-linux-bundle-contract.md) (Accepted 2026-11-15: `scp`, lokaler Modus, alle acht Zusatzpakete).
 
 ## CM-044
 

@@ -74,7 +74,18 @@ STEP_PACKAGES = {
         "docker-compose-plugin",
     ),
     "unattended-upgrades": ("unattended-upgrades",),
+    "tool-jq": ("jq",),
+    "tool-python3-venv": ("python3-venv",),
+    "tool-htop": ("htop",),
+    "tool-tmux": ("tmux",),
+    "tool-unzip": ("unzip",),
+    "tool-rsync": ("rsync",),
+    "tool-ncdu": ("ncdu",),
+    "tool-tree": ("tree",),
 }
+
+# Optional single-package tools from the Ubuntu archive (CM-043).
+TOOL_STEP_IDS = ("tool-jq", "tool-python3-venv", "tool-htop", "tool-tmux", "tool-unzip", "tool-rsync", "tool-ncdu", "tool-tree",)
 
 # Source of each step's packages. "ubuntu-archive" is never pinned,
 # "docker-apt-repository" is always pinned exactly.
@@ -83,6 +94,14 @@ STEP_SOURCES = {
     "docker-apt-repository": "docker-apt-repository",
     "docker-engine": "docker-apt-repository",
     "unattended-upgrades": "ubuntu-archive",
+    "tool-jq": "ubuntu-archive",
+    "tool-python3-venv": "ubuntu-archive",
+    "tool-htop": "ubuntu-archive",
+    "tool-tmux": "ubuntu-archive",
+    "tool-unzip": "ubuntu-archive",
+    "tool-rsync": "ubuntu-archive",
+    "tool-ncdu": "ubuntu-archive",
+    "tool-tree": "ubuntu-archive",
 }
 
 # The catalog "sources" object must equal this value exactly.

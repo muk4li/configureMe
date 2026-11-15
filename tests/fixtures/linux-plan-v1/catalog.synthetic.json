@@ -90,6 +90,54 @@
           "name": "unattended-upgrades"
         }
       ]
+    },
+    {
+      "id": "tool-jq",
+      "title": "jq – JSON in der Shell lesen und filtern",
+      "dependsOn": [],
+      "packages": [{ "name": "jq" }]
+    },
+    {
+      "id": "tool-python3-venv",
+      "title": "python3-venv – isolierte Python-Umgebungen",
+      "dependsOn": [],
+      "packages": [{ "name": "python3-venv" }]
+    },
+    {
+      "id": "tool-htop",
+      "title": "htop – Prozesse und Last ansehen",
+      "dependsOn": [],
+      "packages": [{ "name": "htop" }]
+    },
+    {
+      "id": "tool-tmux",
+      "title": "tmux – SSH-Sitzungen, die Verbindungsabbrüche überleben",
+      "dependsOn": [],
+      "packages": [{ "name": "tmux" }]
+    },
+    {
+      "id": "tool-unzip",
+      "title": "unzip – ZIP-Archive entpacken",
+      "dependsOn": [],
+      "packages": [{ "name": "unzip" }]
+    },
+    {
+      "id": "tool-rsync",
+      "title": "rsync – Dateien und Backups effizient kopieren",
+      "dependsOn": [],
+      "packages": [{ "name": "rsync" }]
+    },
+    {
+      "id": "tool-ncdu",
+      "title": "ncdu – Plattenbelegung finden",
+      "dependsOn": [],
+      "packages": [{ "name": "ncdu" }]
+    },
+    {
+      "id": "tool-tree",
+      "title": "tree – Verzeichnisstruktur anzeigen",
+      "dependsOn": [],
+      "packages": [{ "name": "tree" }]
     }
   ]
 }

@@ -32,6 +32,7 @@ if sys.version_info < (3, 12):
 import argparse
 import os
 
+import bundle_manifest
 import detect
 import host as host_module
 import linux_plan
@@ -141,6 +142,8 @@ def run_dry_run(host, plan, catalog, report):
 
 def prepare(host, args, catalog_path, repo_root, mode):
     """Validate inputs and run preflight. Returns (report, plan, catalog, ok)."""
+    # A bundle from the local portal (CM-043) is checked against its manifest first.
+    bundle_commit, bundle_errors = bundle_manifest.verify(host, repo_root)
     plan, catalog, plan_bytes, catalog_bytes, errors = load_inputs(host, args.plan, catalog_path)
     report = report_module.new_report(
         mode,
@@ -148,8 +151,12 @@ def prepare(host, args, catalog_path, repo_root, mode):
         os.path.basename(args.plan),
         linux_plan.sha256_hex(plan_bytes),
         linux_plan.sha256_hex(catalog_bytes),
-        report_module.runner_commit(host, repo_root),
+        bundle_commit or report_module.runner_commit(host, repo_root),
     )
+    if bundle_errors:
+        for message in bundle_errors:
+            report["preflight"].append({"check": "bundle-manifest", "status": "failed", "detail": message})
+        return report, None, None, False
     if errors:
         for message in errors:
             report["preflight"].append({"check": "plan-and-catalog", "status": "failed", "detail": message})

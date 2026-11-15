@@ -179,7 +179,7 @@ class DetectionError(Exception):
 
 def detect_step(host, catalog, step_id):
     try:
-        if step_id == "base-tools":
+        if step_id == "base-tools" or step_id in trusted.TOOL_STEP_IDS:
             return _detect_archive_packages(host, catalog, step_id)
         if step_id == "docker-apt-repository":
             return _detect_docker_repository(host)
