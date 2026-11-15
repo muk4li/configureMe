@@ -35,7 +35,21 @@ PLAN_OPTION_KEYS = ("addInvokingUserToDockerGroup",)
 CATALOG_REVISION_PATTERN = r"^[0-9a-f]{64}$"
 
 # Step IDs in their fixed catalog order (= execution order).
-STEP_IDS = ("base-tools", "docker-apt-repository", "docker-engine", "unattended-upgrades")
+STEP_IDS = (
+    "base-tools",
+    "docker-apt-repository",
+    "docker-engine",
+    "unattended-upgrades",
+    # Optional tools from the Ubuntu archive (CM-043), unpinned, no dependencies.
+    "tool-jq",
+    "tool-python3-venv",
+    "tool-htop",
+    "tool-tmux",
+    "tool-unzip",
+    "tool-rsync",
+    "tool-ncdu",
+    "tool-tree",
+)
 
 # --- Catalog constants -------------------------------------------------------
 

@@ -26,11 +26,15 @@ Nicht im Umfang: Firewall/ufw und Isolation (myHome-Lab), Caddy/Apps (danach per
 
 Der Runner entfernt nichts, startet keine Dienste, rebootet nicht und rollt nicht zurück. Konfliktpakete (`docker.io`, `podman-docker` u. a.), eine alte `docker.list`, ein fremder Schlüssel oder eine neuere Docker-Version als der Pin werden als Fehler gemeldet und müssen manuell geklärt werden.
 
+## Bundle aus dem lokalen Portal (CM-043, empfohlen)
+
+Auf dem Windows-Host im Checkout eines sauberen Commits: `npm run local:linux`, dann im Browser `http://127.0.0.1:3000/linux`. Profil `huu-server-01` ist vorausgewählt, Zusatzwerkzeuge (`jq`, `python3-venv`, `htop`, `tmux`, `unzip`, `rsync`, `ncdu`, `tree`) anhaken, „Bundle herunterladen“. Die Seite zeigt SHA-256, Commit und die Befehle (`scp`, `sha256sum`, `tar -xzf`, Dry-Run, Apply); dieselben stehen in `ANLEITUNG.txt` im Archiv. Der Runner prüft `MANIFEST.json` vor jedem Lauf. Details: [CM-043-Vertrag](cm-043-linux-bundle-contract.md). Alternativ weiter per `git clone`:
+
 ## Runner auf huu-server-01 ausführen
 
 Voraussetzung: Ubuntu Server 24.04 per Autoinstall (myHome-Lab), SSH-Zugang mit eigenem Benutzer mit sudo-Rechten. `python3` (3.12) und `git` sind in der Server-Grundinstallation enthalten.
 
-**Fester Stand:** Ausgeführt wird immer ein bestimmter Commit, nie ein Branch-Kopf. Geprüfter Runner-Stand dieser PR-Kette: `8fc72b5cfc741df78f9fdb4a8038b23ee4b9153c` (Branch `cm-042-4-apply`). Nach dem Merge nach `main` erhält der Code einen neuen Commit; dann diesen `main`-SHA verwenden und prüfen, dass `linux/catalog.json` denselben Hash hat (Schritt 3).
+**Fester Stand:** Ausgeführt wird immer ein bestimmter Commit, nie ein Branch-Kopf. Den aktuellen `main`-SHA nach dem Merge von CM-043 verwenden und prüfen, dass `linux/catalog.json` denselben Hash hat (Schritt 3).
 
 1. Anmelden (aus dem LAN):
 
@@ -43,7 +47,7 @@ Voraussetzung: Ubuntu Server 24.04 per Autoinstall (myHome-Lab), SSH-Zugang mit 
    ```bash
    git clone https://github.com/muk4li/configureMe.git
    cd configureMe
-   git checkout 8fc72b5cfc741df78f9fdb4a8038b23ee4b9153c
+   git checkout <main-sha>
    ```
 
 3. Katalog-Hash prüfen (muss zum Prüfprotokoll passen):
@@ -52,7 +56,7 @@ Voraussetzung: Ubuntu Server 24.04 per Autoinstall (myHome-Lab), SSH-Zugang mit 
    sha256sum linux/catalog.json
    ```
 
-   Erwartet: `0b8ceff0a4ee398aa7d06013019d5283cd5567d04fed7168a1ad2ee8b06f47d3`.
+   Erwartet: `22e37f4ae0762feacf34617f34ea755eb4ce7cb3af3167a6f7e6d6569382e65a`.
 
 4. Dry-Run als normaler Benutzer (ohne sudo, ändert nichts):
 

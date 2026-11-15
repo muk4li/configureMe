@@ -52,7 +52,7 @@ def apt_install(host, specs):
 
 
 def apply_step(host, catalog, step_id, docker_group_user=None):
-    if step_id == "base-tools":
+    if step_id == "base-tools" or step_id in trusted.TOOL_STEP_IDS:
         names = [package["name"] for package in linux_plan.catalog_step(catalog, step_id)["packages"]]
         apt_update(host)
         apt_install(host, names)

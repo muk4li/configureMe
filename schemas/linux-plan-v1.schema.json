@@ -53,7 +53,15 @@
           "base-tools",
           "docker-apt-repository",
           "docker-engine",
-          "unattended-upgrades"
+          "unattended-upgrades",
+          "tool-jq",
+          "tool-python3-venv",
+          "tool-htop",
+          "tool-tmux",
+          "tool-unzip",
+          "tool-rsync",
+          "tool-ncdu",
+          "tool-tree"
         ]
       }
     },
