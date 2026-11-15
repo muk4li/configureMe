@@ -56,3 +56,12 @@ Nicht ausgeführt: keine reale Installation, kein Lauf auf `huu-server-01`, kein
 ## Erneute Integration
 
 Vorhandener Quellstand 2780ec8 gegen main e2646fa geprüft und gezielt übernommen. 93 Standardbibliotheks-Mocktests lokal bestanden (ursprünglich 91 plus begrenzte Eingabe/Lesefehler). Erneuter Abruf von Docker-Schlüssel/InRelease/Packages in dieser Umgebung jeweils HTTP 403; historische Prüfung oben ist nicht als heutiger erfolgreicher Abruf umetikettiert. Keine Installation oder echte Ziel-VM. Der Test-/Bundleempfänger muss Pin-/Schlüsselherkunft vor Rootnutzung unabhängig bestätigen.
+
+## Erster Lauf auf huu-server-01 (2026-11-15)
+
+Ausgeführt vom Eigentümer; Bericht von ihm übermittelt, hier zusammengefasst (keine Rohlogs).
+
+- Quelle: CM-043-Bundle aus configureMe `main` `fb258aa338680b4dd93acc2c1974b5e19bfb57b4`, per `scp` übertragen; Katalog `22e37f4ae0762feacf34617f34ea755eb4ce7cb3af3167a6f7e6d6569382e65a`; Ziel Ubuntu 24.04 amd64, Python 3.12.
+- Apply `succeeded`: `docker-apt-repository` (Schlüssel-Fingerprint `9DC8…CD88`), `docker-engine` (docker-ce `5:29.9.3-1~ubuntu.24.04~noble`, containerd.io `2.4.2-4…`, buildx `0.39.0-1…`, compose `5.7.1-1…`, `docker.service` aktiv), `tool-python3-venv`, `tool-unzip`, `tool-ncdu`, `tool-tree` installiert; `base-tools`, `unattended-upgrades`, `tool-jq`, `tool-htop`, `tool-tmux`, `tool-rsync` bereits erfüllt. Docker-Gruppe `false`.
+- Zweiter Dry-Run und Docker-Funktionstest laut Eigentümer erfolgreich.
+- Befund: `actions` im Apply-Bericht leer → CM-045.
