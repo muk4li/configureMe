@@ -48,7 +48,8 @@ class RealPlanTests(unittest.TestCase):
         plan_bytes = (LINUX_DIR / "plans" / "huu-server-01.json").read_bytes()
         plan, _ = linux_plan.validate_plan_bytes(plan_bytes, REAL_CATALOG)
         self.assertEqual(plan["catalogRevision"], linux_plan.sha256_hex(REAL_CATALOG))
-        self.assertEqual(plan["steps"], list(linux_plan.STEP_IDS))
+        # The default plan keeps the four base steps; the CM-043 tools are optional.
+        self.assertEqual(plan["steps"], [step for step in linux_plan.STEP_IDS if not step.startswith("tool-")])
         # Owner decision 3 (2026-11-14): no docker group for huu-server-01.
         self.assertIs(plan["options"]["addInvokingUserToDockerGroup"], False)
 

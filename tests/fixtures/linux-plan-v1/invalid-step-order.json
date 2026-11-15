@@ -1,7 +1,7 @@
 {
   "formatId": "configureme/linux-plan",
   "schemaVersion": 1,
-  "catalogRevision": "ee0df937ee9811942bd7ab58a34aec59b97d9c1a89793eac2d593fb0856a8f88",
+  "catalogRevision": "bb467b6e940918e4eb2beea1839eaac3fd2bd6e1a2be6266c44c890519e844de",
   "authorization": "none",
   "target": {
     "os": "ubuntu-24.04",

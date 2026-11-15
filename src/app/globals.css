@@ -184,3 +184,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 @container software (max-width: 38rem) { .category-tools { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .configuration-grid { grid-template-columns: 1fr; }.public-summary { position: static; max-height: none; overflow: visible; } }
 @media (max-width: 430px) { .public-profile-grid { grid-template-columns: 1fr; }.config-section.panel { padding: .95rem; }.public-header .button { max-width: 200px; text-align: center; }.config-heading h2 { font-size: 15px; } }
+.linux-bundle { max-width: 760px; padding: 48px 0; }
+.linux-bundle fieldset { margin: 22px 0; padding: 14px 16px; border: 1px solid #27333d; border-radius: 9px; }
+.linux-bundle legend { padding: 0 6px; color: var(--mint); font-size: 12px; font-weight: 700; }
+.linux-step { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+.linux-step small { display: block; color: #8996a2; font-size: 11px; font-family: var(--font-mono); }
+.linux-result code, .linux-result pre { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.linux-result pre { padding: 12px; border: 1px solid #27333d; border-radius: 8px; background: #0d1217; white-space: pre-wrap; }
