@@ -1,6 +1,8 @@
 # Aktueller Stand – configureMe
 
-**Stand:** 2026-11-15 · **Basis-Commit:** `fb258aa` auf `main`
+**Dokumentationsabgleich:** 2026-11-22 · aktueller `main` [\`ccdd03b\`](https://github.com/muk4li/configureMe/commit/ccdd03b5f816b46051db78c355943b008f41311f) (keine neue Code-/Live-Prüfung). Die nachstehenden Ausführungsergebnisse bleiben historische Prüfungen vom 15.11.; `huu-server-01` wurde laut [Centrality CURRENT-STATE](https://github.com/muk4li/centrality/blob/main/CURRENT-STATE.md) am 20.11. abgeschaltet und ist **kein** aktueller Betriebsdienst. UI-Feedback nach ADR-011 nur als `CM-FB1` vorgemerkt; der öffentliche feetbackhurts-Ingest ist nicht freigegeben.
+
+**Historischer Stand:** 2026-11-15 · **Basis-Commit:** `fb258aa` auf `main`
 
 - **Läuft:** Öffentlicher Windows-Konfigurator mit synthetischen Fixtures, servervalidierter Setup-Plan v1 (JSON-Export), geschütztes Portal mit GitHub-OAuth, eigenständiges Windows-Server-2022-Setup inkl. gehärtetem Installer-Handoff. Linux-Runner für Ubuntu 24.04 (CM-042) mit lokalem Bundle-Download (CM-043, `npm run local:linux`). Web-, Windows- und Linux-Runner-CI vorhanden.
 - **Betrieben:** Runner einmal auf `huu-server-01` (2026-11-15, Eigentümerlauf, erfolgreich). Siehe [docs/linux.md](docs/linux.md).
