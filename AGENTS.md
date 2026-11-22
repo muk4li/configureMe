@@ -59,3 +59,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Feedback-Standard (nur Web-UI, kein Integrationsauftrag)
+
+Bei der nächsten passenden Web-UI-Planung [Centrality ADR-011](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-011-ECOSYSTEM-FEEDBACK.md) und `CM-FB1` beachten: keine öffentliche Feedback-Übertragung vor dem sicheren feetbackhurts-Ingest, keine automatischen Geräte-/Setupdaten und kein GitHub-Token im Portal. Setup-Runner, Installer und CLIs gehören nicht pauschal zum UI-Standard.

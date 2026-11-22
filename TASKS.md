@@ -582,3 +582,10 @@ CM-009 ist ein kleiner parallel ausführbarer lokaler Korrektur-PR; CM-005 bleib
 CM-012-Präzisierung durch PD-002: kein GitHub-Runtimeprovider für die öffentliche Seite. Ein künftiger Reader wäre höchstens ein separat autorisierter manueller Snapshotimport; CM-003/011/023 müssen zuerst erfüllt sein.
 
 A/B-Abschlussnachweis: [Web-CI 43454638089](https://github.com/muk4li/configureMe/actions/runs/43454638089) für c5bcdba, beide Plattformjobs erfolgreich; lokal 39 Unit-/API-Tests plus 1 expliziter Linux-Skip, 12 Browserfälle, Preview-Smoke und Scopeprüfung. CM-017..022 Done bedeutet keine C/D-, Release-, Deployment- oder globale Architekturfreigabe.
+
+## CM-FB1 – Feedback in menschenbedienten Web-UIs (nur Backlog)
+
+- **Status:** Backlog; keine UI-/Installer-/API-Änderung. Gilt nur für das menschenbediente Webportal, **nicht** für Setup-Bundles, CLIs oder den Windows/Linux-Runner.
+- Grundlage: [Centrality ADR-011](https://github.com/muk4li/centrality/blob/main/docs/decisions/ADR-011-ECOSYSTEM-FEEDBACK.md), [feetbackhurts v1](https://github.com/muk4li/feetbackhurts/blob/main/docs/CONTRACT.md); feste `appId=configure-me`.
+- Der spätere kleine Link „Feedback geben“ und Fehler-/Ideen-Dialog dürfen **keine** Geräteinformationen, geplante Aktionen, Profile, Installationsdaten, Geheimnisse, Tokens oder Querystrings automatisch versenden.
+- **Abhängigkeit:** öffentlicher feetbackhurts-POST-Ingest mit Security-, Datenschutz- und Restore-Freigabe (FH-003), danach eigener PR mit lokalem End-to-End-Test. Kein GitHub-Token im Browser.
