@@ -1,6 +1,6 @@
 # Aktueller Stand – configureMe
 
-**Dokumentationsabgleich:** 2026-11-22 · aktueller `main` [\`ccdd03b\`](https://github.com/muk4li/configureMe/commit/ccdd03b5f816b46051db78c355943b008f41311f) (keine neue Code-/Live-Prüfung). Die nachstehenden Ausführungsergebnisse bleiben historische Prüfungen vom 15.11.; `huu-server-01` wurde laut [Centrality CURRENT-STATE](https://github.com/muk4li/centrality/blob/main/CURRENT-STATE.md) am 20.11. abgeschaltet und ist **kein** aktueller Betriebsdienst. UI-Feedback nach ADR-011 nur als `CM-FB1` vorgemerkt; der öffentliche feetbackhurts-Ingest ist nicht freigegeben.
+**Dokumentationsabgleich:** 2026-11-22 · aktueller `main` [`ccdd03b`](https://github.com/muk4li/configureMe/commit/ccdd03b5f816b46051db78c355943b008f41311f) (keine neue Code-/Live-Prüfung). Die nachstehenden Ausführungsergebnisse bleiben historische Prüfungen vom 15.11.; `huu-server-01` wurde laut [Centrality CURRENT-STATE](https://github.com/muk4li/centrality/blob/main/CURRENT-STATE.md) am 20.11. abgeschaltet und ist **kein** aktueller Betriebsdienst. UI-Feedback nach ADR-011 nur als `CM-FB1` vorgemerkt; der öffentliche feetbackhurts-Ingest ist nicht freigegeben.
 
 **Historischer Stand:** 2026-11-15 · **Basis-Commit:** `fb258aa` auf `main`
 
